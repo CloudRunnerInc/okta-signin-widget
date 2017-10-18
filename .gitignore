@@ -14,4 +14,4 @@ build2
 .idea
 
 # These paths should be included in the published artifact, but not the repo
-/dist
+#/dist
