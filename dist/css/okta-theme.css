@@ -462,6 +462,18 @@
   }
 }
 
+#okta-sign-in.auth-container .mfa-okta-password {
+  /* -- Factor Icons (large): Password -- */
+  background-image: url("../img/icons/mfa/password_70x70.png");
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #okta-sign-in.auth-container .mfa-okta-password {
+    /* -- Factor Icons (high DPI): Password -- */
+    background-image: url("../img/icons/mfa/password@2x.png");
+  }
+}
+
 #okta-sign-in.auth-container .button {
   /* -- Buttons' Colors -- */
   color: #5e5e5e;
@@ -971,6 +983,10 @@
 }
 
 #okta-sign-in.auth-container .mfa-verify-passcode {
+  /* -- Page specific top level selectors -- */
+}
+
+#okta-sign-in.auth-container .mfa-verify-password {
   /* -- Page specific top level selectors -- */
 }
 
