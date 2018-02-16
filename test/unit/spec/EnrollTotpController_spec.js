@@ -47,7 +47,8 @@ function (_, $, Q, OktaAuth, LoginUtil, StringUtil, Util, DeviceTypeForm, Barcod
         el: $sandbox,
         baseUrl: baseUrl,
         authClient: authClient,
-        globalSuccessFn: function () {}
+        globalSuccessFn: function () {},
+        'features.router': startRouter
       }, settings));
       Util.registerRouter(router);
       Util.mockRouterNavigate(router, startRouter);
@@ -339,7 +340,7 @@ function (_, $, Q, OktaAuth, LoginUtil, StringUtil, Util, DeviceTypeForm, Barcod
           .then(function (test) {
             Expect.isVisible(test.passCodeForm.form());
             Expect.isVisible(test.passCodeForm.codeField());
-            expect(test.passCodeForm.codeField().attr('type')).toBe('number');
+            expect(test.passCodeForm.codeField().attr('type')).toBe('tel');
           });
         });
         itp('returns to factor list when browser\'s back button is clicked', function () {
@@ -397,6 +398,7 @@ function (_, $, Q, OktaAuth, LoginUtil, StringUtil, Util, DeviceTypeForm, Barcod
           .then(function (test) {
             Expect.isVisible(test.passCodeForm.form());
             Expect.isVisible(test.passCodeForm.codeField());
+            expect(test.passCodeForm.codeField().attr('type')).toBe('tel');
           });
         });
         itp('shows error in case of an error response', function () {
@@ -589,6 +591,9 @@ function (_, $, Q, OktaAuth, LoginUtil, StringUtil, Util, DeviceTypeForm, Barcod
           return setupFailurePolling(test);
         })
         .then(function (test) {
+          return test.scanCodeForm.waitForRefreshQrcodeLink(test);
+        })
+        .then(function (test) {
           expect($.ajax.calls.count()).toBe(9);
           expect(test.scanCodeForm.hasManualSetupLink()).toBe(false);
           expect(test.scanCodeForm.hasRefreshQrcodeLink()).toBe(true);
@@ -695,6 +700,12 @@ function (_, $, Q, OktaAuth, LoginUtil, StringUtil, Util, DeviceTypeForm, Barcod
         });
         itp('has correct fields displayed when different dropdown options selected', function () {
           return enrollOktaPushGoCannotScan()
+          .then(function (test) {
+            return test.manualSetupForm.waitForDropdownElement(test);
+          })
+          .then(function (test) {
+            return test.manualSetupForm.waitForCountryCodeSelect(test);
+          })
           .then(function (test) {
             Expect.isVisible(test.manualSetupForm.dropdownElement());
             // sms (default)
@@ -924,6 +935,9 @@ function (_, $, Q, OktaAuth, LoginUtil, StringUtil, Util, DeviceTypeForm, Barcod
             Expect.isVisible(test.passCodeForm.form());
             test.passCodeForm.backLink().click();
             return Expect.waitForManualSetupPush(test);
+          })
+          .then(function (test) {
+            return test.manualSetupForm.waitForCountryCodeSelect(test);
           })
           .then(function (test) {
             expect($.ajax.calls.count()).toBe(0);

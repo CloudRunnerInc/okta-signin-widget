@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-/* eslint complexity: [2, 8] */
+/* eslint complexity: [2, 8], max-depth: [2, 3] */
 define(['okta'], function (Okta) {
 
   var Util = {};
@@ -44,6 +44,11 @@ define(['okta'], function (Okta) {
       var errorMsg = Okta.loc('errors.' + xhr.responseJSON.errorCode, 'login');
       if (errorMsg.indexOf('L10N_ERROR[') === -1) {
         xhr.responseJSON.errorSummary = errorMsg;
+        if (xhr.responseJSON && xhr.responseJSON.errorCauses && xhr.responseJSON.errorCauses.length) {
+          // BaseForm will consume errorCauses before errorSummary if it is an array,
+          // so, we have to make sure to remove it when we have a valid error code
+          delete xhr.responseJSON.errorCauses;
+        }
       }
     }
     return xhr;

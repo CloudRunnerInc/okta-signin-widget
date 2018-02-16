@@ -98,6 +98,10 @@ function (Okta, Util, OAuth2Util, Enums, BrowserFeatures, Errors, ErrorCodes) {
       return;
     }
 
+    fn.handleResponseStatus(router, err, res);
+  };
+
+  fn.handleResponseStatus = function (router, err, res) {
     switch (res.status) {
     case 'SUCCESS':
       if(res.recoveryType === Enums.RECOVERY_TYPE_UNLOCK) {
@@ -211,7 +215,7 @@ function (Okta, Util, OAuth2Util, Enums, BrowserFeatures, Errors, ErrorCodes) {
       }
       return;
     case 'UNAUTHENTICATED':
-      router.navigate('signin', { trigger: true });
+      router.navigate('', { trigger: true });
       return;
     default:
       throw new Error('Unknown status: ' + res.status);

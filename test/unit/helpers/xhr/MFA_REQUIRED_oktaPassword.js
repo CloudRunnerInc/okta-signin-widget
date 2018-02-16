@@ -21,30 +21,26 @@ define({
         "rememberDeviceLifetimeInMinutes": 0,
         "rememberDeviceByDefault": false
       },
-      "factors": [{
-        "id": "ufshpdkgNun3xNE3W0g3",
-        "factorType": "question",
-        "provider": "OKTA",
-        "vendorName": "OKTA",
-        "profile": {
-          "question": "disliked_food",
-          "questionText": "What is the food you least liked as a child?"
-        },
-        "_links": {
-          "verify": {
-            "href": "https:\/\/foo.com\/api\/v1\/authn\/factors\/ufshpdkgNun3xNE3W0g3\/verify",
-            "hints": {
-              "allow": [
-                "POST"
-              ]
-            }
-          }
-        }
-      }]
+      "factors":[
+        {
+          "id": "password",
+          "factorType": "password",
+          "provider": "OKTA",
+          "vendorName": "OKTA",
+         "_links": {
+           "verify": {
+             "href": "http://rain.okta1.com:1802/api/v1/authn/factors/password/verify", 
+             "hints": {
+               "allow": ["POST"]
+             }
+           }
+         }
+       }
+     ]
     },
     "_links": {
       "cancel": {
-        "href": "https:\/\/foo.com\/api\/v1\/authn\/cancel",
+        "href": "http:\/\/rain.okta1.com:1802\/api\/v1\/authn\/cancel",
         "hints": {
           "allow": [
             "POST"

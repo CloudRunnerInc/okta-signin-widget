@@ -36,7 +36,8 @@ function (Q, _, $, OktaAuth, LoginUtil, Util, Form, Beacon, Expect, $sandbox,
         el: $sandbox,
         baseUrl: baseUrl,
         authClient: authClient,
-        globalSuccessFn: function () {}
+        globalSuccessFn: function () {},
+        'features.router': startRouter
       });
       Util.registerRouter(router);
       Util.mockRouterNavigate(router, startRouter);
@@ -487,6 +488,7 @@ function (Q, _, $, OktaAuth, LoginUtil, Util, Form, Beacon, Expect, $sandbox,
       itp('shows enter code input', function () {
         return setupAndSendValidCode().then(function (test) {
           Expect.isVisible(test.form.codeField());
+          expect(test.form.codeField().attr('type')).toBe('tel');
         });
       });
       itp('shows verify button when enrolled', function () {

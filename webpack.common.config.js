@@ -8,6 +8,7 @@ var VENDOR = path.resolve(__dirname, 'packages/@okta/courage/src/vendor');
 module.exports = function (outputFilename) {
   return {
     entry: ['./target/js/widget/OktaSignIn.js'],
+    devtool: 'source-map',
     output: {
       path: TARGET_JS,
       filename: outputFilename,
@@ -22,9 +23,10 @@ module.exports = function (outputFilename) {
         'nls': '@okta/i18n/dist/json',
         'okta/jquery': SHARED_JS + '/util/jquery-wrapper',
         'okta/underscore': SHARED_JS + '/util/underscore-wrapper',
-        'okta/handlebars': 'handlebars/dist/handlebars',
+        'okta/handlebars': SHARED_JS + '/util/handlebars-wrapper',
         'okta/moment': 'moment/moment',
-        'okta/moment-tz': VENDOR + '/lib/moment-timezone-with-data-2010-2020',
+        'okta/moment-tz': EMPTY,
+
         'okta/jqueryui': EMPTY,
         'okta': 'shared/util/Okta',
         'shared/util/Bundles': 'util/Bundles',
@@ -40,28 +42,6 @@ module.exports = function (outputFilename) {
         // v2 version. Continue to use the vendor file that is checked into
         // source.
         'duo': 'vendor/Duo-Web-v2.6',
-
-        // Modules from courage that we are not using. Be proactive about
-        // checking these - new modules need to be blacklisted here.
-        // Note: If the module is included relatively in the source file,
-        // override it in the null-loader configs below.
-        'jqueryui': EMPTY,
-        'selectize': EMPTY,
-        'shared/util/Bundle.js': EMPTY,
-        'shared/views/datalist/DeadSimpleDataList': EMPTY,
-        'shared/views/Backbone.TableView': EMPTY,
-        'shared/util/TabbedRouter': EMPTY,
-        'shared/util/DataListController': EMPTY,
-        'shared/views/components/BaseFormDialog': EMPTY,
-        'shared/views/components/BaseModalDialog': EMPTY,
-        'shared/views/components/ConfirmationDialog': EMPTY,
-        'shared/views/components/MultiViewModalDialog': EMPTY,
-        'shared/views/components/DropDown': EMPTY,
-        'shared/util/markdownToHtml': EMPTY,
-        'shared/views/wizard/BaseWizard': EMPTY,
-        'shared/framework/frameworkBundle': EMPTY,
-        'shared/models/modelsBundle': EMPTY,
-        'vendor/plugins/vkbeautify.0.99.00.beta': EMPTY
       }
     },
 
@@ -78,8 +58,14 @@ module.exports = function (outputFilename) {
         {
           loader: 'null-loader',
           include: [
+            'framework/frameworkBundle',
             'util/TimezoneUtil',
             'util/Metrics',
+            'util/TabbedRouter',
+            'util/DataListController',
+            'util/markdownToHtml',
+            'util/Bundle.js',
+            'models/modelsBundle',
             'views/Backbone.TableVie',
             'views/datalist/SimpleDataList',
             'views/datalist/Table',
@@ -91,6 +77,7 @@ module.exports = function (outputFilename) {
             'views/forms/inputs/SUOrgsPicker',
             'views/forms/inputs/UserPicker',
             'views/forms/inputs/BasePicker',
+            'views/forms/inputs/BaseSelect',
             'views/forms/inputs/BaseSelectize',
             'views/forms/inputs/ZonePicker',
             'views/forms/inputs/TextArea',
@@ -100,10 +87,34 @@ module.exports = function (outputFilename) {
             'views/forms/inputs/TextSelect',
             'views/forms/components/ReadModeBar',
             'views/forms/inputs/ListInput',
-            'views/forms/inputs/SimpleCheckBoxSet'
+            'views/forms/inputs/SimpleCheckBoxSet',
+            'views/forms/inputs/GroupSelect',
+            'views/forms/inputs/BaseSearchableSelect',
+            'views/forms/inputs/MultiSearchableSelect',
+            'views/forms/inputs/SearchableSelect',
+            'views/Backbone.TableView',
+            'views/datalist/datalistBundle',
+            'views/tabs/tabsBundle',
+            'views/uploader/uploaderBundle',
+            'views/components/BaseFormDialog',
+            'views/components/BaseModalDialog',
+            'views/components/BaseWizard',
+            'views/components/ConfirmationDialog',
+            'views/components/MultiViewModalDialog',
+            'views/components/DropDown',
+            'views/wizard/BaseWizard',
           ].map(function (file) {
             return path.resolve(TARGET_JS, 'shared', file);
-          })
+          }).concat([
+            /moment-tz/,
+            /vendor\/plugins\/vkbeautify/,
+            /vendor\/plugins\/jquery.simplemodal/,
+            /vendor\/plugins\/spin/,
+            'jqueryui',
+            'selectize',
+            'vendor/lib/json2',
+            'vendor/plugins/select2',
+          ])
         },
         // Babel
         {
@@ -111,7 +122,8 @@ module.exports = function (outputFilename) {
           exclude: /node_modules/,
           loader: 'babel-loader',
           query: {
-            presets: ['env']
+            presets: ['env'],
+            plugins: ['transform-runtime']
           }
         },
       ]

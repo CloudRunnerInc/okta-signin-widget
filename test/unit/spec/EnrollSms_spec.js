@@ -37,7 +37,8 @@ function (Q, _, $, OktaAuth, LoginUtil, Util, AuthContainer, Form, Beacon, Expec
         el: $sandbox,
         baseUrl: baseUrl,
         authClient: authClient,
-        globalSuccessFn: function () {}
+        globalSuccessFn: function () {},
+        'features.router': startRouter
       });
       Util.registerRouter(router);
       Util.mockRouterNavigate(router, startRouter);
@@ -184,7 +185,13 @@ function (Q, _, $, OktaAuth, LoginUtil, Util, AuthContainer, Form, Beacon, Expec
         });
       });
       itp('defaults to United States for the country', function () {
-        return setup().then(function (test) {
+        return setup()
+        .then(function (test) {
+          return Expect.wait(function () {
+            return test.form.hasCountriesList();
+          }, test);
+        })
+        .then(function (test) {
           expect(test.form.selectedCountry()).toBe('United States');
         });
       });
@@ -520,7 +527,7 @@ function (Q, _, $, OktaAuth, LoginUtil, Util, AuthContainer, Form, Beacon, Expec
         return setupAndSendValidCode()
         .then(function (test) {
           $.ajax.calls.reset();
-          expect(test.form.codeField().attr('type')).toBe('number');
+          expect(test.form.codeField().attr('type')).toBe('tel');
           test.form.setCode(123456);
           test.setNextResponse(resEnrollSuccess);
           test.form.submit();

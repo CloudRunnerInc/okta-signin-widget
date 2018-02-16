@@ -43,6 +43,7 @@ Contributors should read our [contributing guidelines](./CONTRIBUTING.md) if the
   * [Language and text](#language-and-text)
   * [Links](#links)
   * [Buttons](#buttons)
+  * [Registration](#registration)
   * [OpenId Connect](#openid-connect)
   * [Bootstrapping from a recovery token](#bootstrapping-from-a-recovery-token)
   * [Feature flags](#feature-flags)
@@ -64,18 +65,18 @@ Loading our assets directly from the CDN is a good choice if you want an easy wa
 To use the CDN, include links to the JS and CSS files in your HTML:
 
 ```html
-<!-- Latest CDN production Javascript and CSS: 1.11.0 -->
+<!-- Latest CDN production Javascript and CSS: 2.6.0 -->
 <script
-  src="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/1.11.0/js/okta-sign-in.min.js"
+  src="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/2.6.0/js/okta-sign-in.min.js"
   type="text/javascript"></script>
 <link
-  href="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/1.11.0/css/okta-sign-in.min.css"
+  href="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/2.6.0/css/okta-sign-in.min.css"
   type="text/css"
   rel="stylesheet"/>
 
 <!-- Theme file: Customize or replace this file if you want to override our default styles -->
 <link
-  href="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/1.11.0/css/okta-theme.css"
+  href="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/2.6.0/css/okta-theme.css"
   type="text/css"
   rel="stylesheet"/>
 ```
@@ -157,6 +158,8 @@ After running `npm install`:
     --noparse=$PWD/node_modules/@okta/okta-signin-widget/dist/js-okta-sign-in.entry.js \
     --outfile=bundle.js
     ```
+
+3. Make sure you include ES6 polyfills with your bundler if you need the broadest browser support. We recommend babel-polyfill.
 
 # API
 
@@ -685,6 +688,7 @@ var signIn = new OktaSignIn(config);
   - `cs` - Czech
   - `da` - Danish
   - `de` - German
+  - `el` - Greek
   - `en` - English
   - `es` - Spanish
   - `fi` - Finnish
@@ -853,6 +857,129 @@ registration: {
 ```
 - **registration.click** - Function that is called when the registration button is clicked
 
+
+## Registration
+
+> **:warning: Beta feature:** The registration feature is currently a [Beta feature](https://developer.okta.com/docs/api/getting_started/releases-at-okta#beta). This widget functionality won't work unless your Okta organization is part of the Beta program. For help, contact support@okta.com.
+
+To add registration into your application, configure your Okta admin settings to allow users to self register into your app. Then, set `features.registration` in the widget. You can add additional configs under the registration key on the [`OktaSignIn`](#new-oktasigninconfig) object.
+
+```javascript
+    var signIn = new OktaSignIn({
+      baseUrl: 'https://acme.okta.com',
+      clientId: '{{myClientId}}', // REQUIRED
+      registration: {
+        parseSchema: function(schema, onSuccess, onFailure) {
+           // handle parseSchema callback
+           onSuccess(schema);
+        },
+        preSubmit: function (postData, onSuccess, onFailure) {
+           // handle preSubmit callback
+           onSuccess(postData);
+        },
+        postSubmit: function (response, onSuccess, onFailure) {
+            // handle postsubmit callback
+           onSuccess(response);
+        }
+      },
+      features: {
+        // Used to enable registration feature on the widget.
+        // https://github.com/okta/okta-signin-widget#feature-flags
+         registration: true // REQUIRED
+      }
+    });
+```
+
+Optional configuration:
+
+- **parseSchema:** Callback used to mold the JSON schema that comes back from the Okta API.
+
+    ```javascript
+    // The callback function is passed 3 arguments: schema, onSuccess, onFailure
+    // 1) schema: json schema returned from the API.
+    // 2) onSuccess: success callback.
+    // 3) onFailure: failure callback. Note: accepts an errorObject that can be used to show form level or field level errors.
+
+    parseSchema: function (schema, onSuccess, onFailure) {
+      // This example will add an additional field to the registration form
+        schema.profileSchema.properties.address = {
+          'type': 'string',
+          'description': 'Street Address',
+          'default': 'Enter your street address',
+          'maxLength': 255
+        };
+        schema.profileSchema.fieldOrder.push('address');
+        onSuccess(schema);
+    }
+    ```
+ - **preSubmit:** Callback used primarily to modify the request parameters sent to the Okta API.
+
+    ```javascript
+     // The callback function is passed 3 arguments: postData, onSuccess, onFailure
+     // 1) postData: form data that will be posted to the registration API.
+     // 2) onSuccess: success callback.
+     // 3) onFailure: failure callback. Note: accepts a errorObject that can be used to show form level or field level errors.
+    preSubmit: function (postData, onSuccess, onFailure) {
+      // This example will add @companyname.com to the email if user fails to add it during registration
+      if (postData.username.indexOf('@acme.com') > 1) {
+        return postData.username;
+      } else {
+        return postData.username + '@acme.com';
+      }
+    }
+    ```
+ - **postSubmit:** Callback used to primarily get control and to modify the behavior post submission to registration API .
+
+    ```javascript
+     // The callback function is passed 3 arguments: response, onSuccess, onFailure
+     // 1) response: response returned from the API post registration.
+     // 2) onSuccess: success callback.
+     // 3) onFailure: failure callback. Note: accepts an errorObject that can be used to show form level or field level errors.
+    postSubmit: function (response, onSuccess, onFailure) {
+      // In this example postSubmit callback is used to log the server response to the browser console before completing registration flow
+      console.log(response);
+      // call onSuccess to finish registration flow
+      onSuccess(response);
+    }
+    ```
+- **onFailure and ErrorObject:** The onFailure callback accepts an error object that can be used to show a form level vs field level error on the registration form.
+
+    ####  Use the default error
+    ```javascript
+    preSubmit: function (postData, onSuccess, onFailure) {
+      // A Default form level error is shown if no error object is provided
+      onFailure();
+    }
+    ```
+
+    #### Use form level error
+     ```javascript
+    preSubmit: function (postData, onSuccess, onFailure) {
+      var error = {
+        "errorSummary": "Custom form level error"
+      };
+      onFailure(error);
+    }
+    ```
+
+    #### Use field level error
+    ```javascript
+      preSubmit: function (postData, onSuccess, onFailure) {
+        var error = {
+            "errorSummary": "API Error",
+            "errorCauses": [
+                {
+                    "errorSummary": "Custom field level error",
+                    "reason": "registration.error.address",
+                    "resource": "User",
+                    "property": "address", //should match field name
+                    "arguments": []
+                }
+            ]
+        };
+        onFailure(error);
+     }
+    ```
 ## OpenId Connect
 
 Options for the [OpenId Connect](http://developer.okta.com/docs/api/resources/oidc.html) authentication flow. This flow is required for social authentication, and requires OAuth client registration with Okta. For instructions, see [Social Authentication](http://developer.okta.com/docs/api/resources/social_authentication.html).

@@ -1,7 +1,7 @@
 {
   "name": "@okta/okta-signin-widget",
   "description": "The Okta Sign-In Widget",
-  "version": "2.3.0",
+  "version": "2.6.0",
   "homepage": "https://github.com/okta/okta-signin-widget",
   "license": "Apache-2.0",
   "repository": {
@@ -10,9 +10,6 @@
   },
   "bugs": {
     "url": "https://github.com/okta/okta-signin-widget/issues"
-  },
-  "publishConfig": {
-    "registry": "https://artifacts.aue1d.saasure.com/artifactory/api/npm/npm-okta"
   },
   "files": [
     "dist"
@@ -27,7 +24,14 @@
     "lint:report": "grunt lint --checkstyle",
     "lint": "grunt lint",
     "test": "grunt test",
-    "test:e2e": "grunt test-e2e",
+    "install:react": "npm install --prefix test/e2e/react-app",
+    "prestart:react": "kill -9 $(lsof -t -i:3001 -sTCP:LISTEN) || true",
+    "start:react": "npm start --prefix test/e2e/react-app & wait-on http-get://localhost:3001",
+    "install:angular": "npm install --prefix test/e2e/angular-app",
+    "prestart:angular": "kill -9 $(lsof -t -i:4200 -sTCP:LISTEN) || true",
+    "start:angular": "npm start --prefix test/e2e/angular-app & wait-on http-get://localhost:4200",
+    "pretest:e2e": "npm run install:react && npm run install:angular && node pretest.js",
+    "test:e2e": "npm run start:react && npm run start:angular && grunt test-e2e",
     "protractor": "webdriver-manager update && protractor target/e2e/conf.js",
     "build:dev": "grunt build:dev",
     "build:release": "grunt build:release",
@@ -46,6 +50,7 @@
     "axe-webdriverjs": "0.4.0",
     "babel-core": "6",
     "babel-loader": "6",
+    "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-env": "^1.6.0",
     "cssnano": "3.10.0",
     "fs-extra": "1.0.0",
@@ -75,16 +80,18 @@
     "null-loader": "0.1.1",
     "open": "0.0.5",
     "phantomjs": "1.9.20",
-    "protractor": "4.0.4",
+    "protractor": "5.2.2",
     "request-promise": "2.0.0",
     "semver": "5.1.0",
     "time-grunt": "1.4.0",
-    "webdriver-manager": "10.2.5",
+    "wait-on": "2.0.2",
+    "webdriver-manager": "12.0.6",
     "webpack": "1.13.1"
   },
   "dependencies": {
-    "@okta/okta-auth-js": "1.8.0",
+    "@okta/okta-auth-js": "1.11.0",
     "babel-polyfill": "^6.23.0",
+    "babel-runtime": "^6.26.0",
     "backbone": "1.2.1",
     "clipboard": "1.6.1",
     "handlebars": "4.0.5",

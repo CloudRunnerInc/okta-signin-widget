@@ -1,4 +1,4 @@
-/* eslint max-params: [2, 31], max-statements: [2, 37], max-len: [2, 180], camelcase:0 */
+/* eslint max-params: [2, 32], max-statements: [2, 43], max-len: [2, 180], camelcase:0 */
 define([
   'okta',
   'vendor/lib/q',
@@ -13,6 +13,7 @@ define([
   'LoginRouter',
   'sandbox',
   'helpers/dom/PrimaryAuthForm',
+  'helpers/dom/IDPDiscoveryForm',
   'helpers/dom/RecoveryQuestionForm',
   'helpers/dom/MfaVerifyForm',
   'helpers/dom/EnrollCallForm',
@@ -33,7 +34,7 @@ define([
   'helpers/xhr/labels_country_ja'
 ],
 function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAuth, Util, Expect, Router,
-          $sandbox, PrimaryAuthForm, RecoveryForm, MfaVerifyForm, EnrollCallForm, resSuccess, resRecovery,
+          $sandbox, PrimaryAuthForm, IDPDiscoveryForm, RecoveryForm, MfaVerifyForm, EnrollCallForm, resSuccess, resRecovery,
           resMfa, resMfaRequiredDuo, resMfaRequiredOktaVerify, resMfaChallengeDuo, resMfaChallengePush,
           resMfaEnroll, errorInvalidToken, resUnauthenticated, resSuccessStepUp, Errors, BrowserFeatures,
           labelsLoginJa, labelsCountryJa) {
@@ -162,6 +163,11 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
           form: new EnrollCallForm($sandbox),
           loadingSpy: loadingSpy
         }));
+      })
+      .then(function (test) {
+        return Expect.wait(function () {
+          return test.form.hasCountriesList();
+        }, test);
       });
     }
 
@@ -208,7 +214,7 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
     itp('set pushState true if pushState is supported', function () {
       spyOn(BrowserFeatures, 'supportsPushState').and.returnValue(true);
       spyOn(Okta.Router.prototype, 'start');
-      return setup().then(function (test) {
+      return setup({ 'features.router': true }).then(function (test) {
         test.router.start();
         expect(Okta.Router.prototype.start).toHaveBeenCalledWith({ pushState: true });
       });
@@ -216,7 +222,7 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
     itp('set pushState false if pushState is not supported', function () {
       spyOn(BrowserFeatures, 'supportsPushState').and.returnValue(false);
       spyOn(Okta.Router.prototype, 'start');
-      return setup().then(function (test) {
+      return setup({ 'features.router': true }).then(function (test) {
         test.router.start();
         expect(Okta.Router.prototype.start).toHaveBeenCalledWith({ pushState: false });
       });
@@ -342,6 +348,54 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
         expect(form.isPrimaryAuth()).toBe(true);
       });
     });
+    itp('navigates to IDPDiscovery if features.idpDiscovery is set to true', function () {
+      return setup({'features.idpDiscovery': true})
+      .then(function (test) {
+        Util.mockRouterNavigate(test.router);
+        test.router.navigate('');
+        return Expect.waitForIDPDiscovery();
+      })
+      .then(function () {
+        var form = new IDPDiscoveryForm($sandbox);
+        expect(form.isIDPDiscovery()).toBe(true);
+      });
+    });
+    itp('navigates to IDPDiscovery for /login/login.htm when features.idpDiscovery is true', function () {
+      return setup({'features.idpDiscovery': true})
+      .then(function (test) {
+        Util.mockRouterNavigate(test.router);
+        test.router.navigate('login/login.htm');
+        return Expect.waitForIDPDiscovery();
+      })
+      .then(function () {
+        var form = new IDPDiscoveryForm($sandbox);
+        expect(form.isIDPDiscovery()).toBe(true);
+      });
+    });
+    itp('navigates to PrimaryAuth for /login/login.htm when features.idpDiscovery is false', function () {
+      return setup()
+      .then(function (test) {
+        Util.mockRouterNavigate(test.router);
+        test.router.navigate('login/login.htm');
+        return Expect.waitForPrimaryAuth();
+      })
+      .then(function () {
+        var form = new PrimaryAuthForm($sandbox);
+        expect(form.isPrimaryAuth()).toBe(true);
+      });
+    });
+    itp('navigates to PrimaryAuth for all other wildcard routes', function () {
+      return setup({'features.idpDiscovery': true})
+      .then(function (test) {
+        Util.mockRouterNavigate(test.router);
+        test.router.navigate('login/default');
+        return Expect.waitForPrimaryAuth();
+      })
+      .then(function () {
+        var form = new PrimaryAuthForm($sandbox);
+        expect(form.isPrimaryAuth()).toBe(true);
+      });
+    });
     itp('refreshes auth state on stateful url if it needs a refresh', function () {
       return setup()
       .then(function (test) {
@@ -417,7 +471,7 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
         expect(form.hasErrors()).toBe(false);
       });
     });
-    itp('navigates to PrimaryAuth if status is UNAUTHENTICATED', function () {
+    itp('navigates to PrimaryAuth if status is UNAUTHENTICATED, and IDP_DISCOVERY is disabled', function () {
       return setup({ stateToken: 'aStateToken' })
       .then(function (test) {
         Util.mockRouterNavigate(test.router);
@@ -436,6 +490,39 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
         expect(test.router.appState.get('isUnauthenticated')).toBe(true);
         var form = new PrimaryAuthForm($sandbox);
         expect(form.isPrimaryAuth()).toBe(true);
+      });
+    });
+    itp('navigates to IDPDiscovery if status is UNAUTHENTICATED, and IDP_DISCOVERY is enabled', function () {
+      return setup({ stateToken: 'aStateToken', 'features.idpDiscovery': true })
+      .then(function (test) {
+        Util.mockRouterNavigate(test.router);
+        test.setNextResponse(resUnauthenticated);
+        test.router.navigate('/app/sso');
+        return Expect.waitForIDPDiscovery(test);
+      })
+      .then(function (test) {
+        expect($.ajax.calls.count()).toBe(1);
+        Expect.isJsonPost($.ajax.calls.argsFor(0), {
+          url: 'https://foo.com/api/v1/authn',
+          data: {
+            stateToken: 'aStateToken'
+          }
+        });
+        expect(test.router.appState.get('isUnauthenticated')).toBe(true);
+        var form = new IDPDiscoveryForm($sandbox);
+        expect(form.isIDPDiscovery()).toBe(true);
+      });
+    });
+    itp('navigates to default route when status is UNAUTHENTICATED', function () {
+      return setup({ stateToken: 'aStateToken' })
+      .then(function (test) {
+        Util.mockRouterNavigate(test.router);
+        test.setNextResponse(resUnauthenticated);
+        test.router.navigate('/app/sso');
+        return Expect.waitForPrimaryAuth(test);
+      })
+      .then(function (test) {
+        expect(test.router.navigate).toHaveBeenCalledWith('', { trigger: true });
       });
     });
     itp('does not show two forms if the duo fetchInitialData request fails with an expired stateToken', function () {
@@ -1242,9 +1329,9 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
             var userLanguages = args[1];
             expect(userLanguages).toEqual(['ja', 'ko', 'en']);
             expect(supported).toEqual([
-              'en', 'cs', 'da', 'de', 'es', 'fi', 'fr', 'hu', 'id', 'in', 'it',
-              'ja', 'ko', 'ms', 'nl-NL', 'pl', 'pt-BR', 'ro', 'ru', 'sv', 'th',
-              'tr', 'uk', 'zh-CN', 'zh-TW'
+              'en', 'cs', 'da', 'de', 'el', 'es', 'fi', 'fr', 'hu', 'id', 'in',
+              'it', 'ja', 'ko', 'ms', 'nl-NL', 'pl', 'pt-BR', 'ro', 'ru', 'sv',
+              'th', 'tr', 'uk', 'zh-CN', 'zh-TW'
             ]);
           });
         });
@@ -1318,6 +1405,7 @@ function (Okta, Q, Backbone, SharedUtil, CryptoUtil, CookieUtil, Logger, OktaAut
             test.router.enrollCall();
             return Expect.waitForEnrollCall(test);
           })
+          .then(tick) // Wait for Chosen items to update
           .then(expectZz);
         });
         itp('caches the language after the initial fetch', function () {

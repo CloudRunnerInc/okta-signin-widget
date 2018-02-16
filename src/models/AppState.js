@@ -28,6 +28,7 @@ function (Okta, Q, Factor, BrowserFeatures, Errors) {
   var $ = Okta.$;
   var compile = Okta.Handlebars.compile;
 
+  var DEFAULT_APP_LOGO = '/img/logos/default.png';
   var USER_NOT_SEEN_ON_DEVICE = '/img/security/unknown.png';
   var UNDEFINED_USER = '/img/security/default.png';
   var NEW_USER = '/img/security/unknown-device.png';
@@ -37,7 +38,7 @@ function (Okta, Q, Factor, BrowserFeatures, Errors) {
 
   var securityImageUrlTpl = compile('{{baseUrl}}/login/getimage?username={{username}}');
 
-  function getSecurityImage(baseUrl, username) {
+  function getSecurityImage(baseUrl, username, deviceFingerprint) {
     var url = securityImageUrlTpl({ baseUrl: baseUrl, username: username });
 
     // When the username is empty, we want to show the default image.
@@ -48,7 +49,15 @@ function (Okta, Q, Factor, BrowserFeatures, Errors) {
       });
     }
 
-    return Q($.get(url)).then(function (res) {
+    var data = {
+      url: url,
+      dataType: 'json'
+    };
+    if (deviceFingerprint) {
+      data['headers']= { 'X-Device-Fingerprint': deviceFingerprint };
+    }
+    return Q($.ajax(data))
+    .then(function (res) {
       if (res.pwdImg === USER_NOT_SEEN_ON_DEVICE) {
         // When we get an unknown.png security image from OKTA,
         // we want to show the unknown-device security image.
@@ -90,11 +99,11 @@ function (Okta, Q, Factor, BrowserFeatures, Errors) {
       if (this.settings.get('features.securityImage')) {
         var self = this;
         this.listenTo(this, 'change:username', function (model, username) {
-          getSecurityImage(this.get('baseUrl'), username)
+          getSecurityImage(this.get('baseUrl'), username, this.get('deviceFingerprint'))
           .then(function (image) {
             model.set('securityImage', image.securityImage);
-            model.set(
-              'securityImageDescription', image.securityImageDescription);
+            model.set('securityImageDescription', image.securityImageDescription);
+            model.unset('deviceFingerprint'); //Fingerprint can only be used once
           })
           .fail(function (jqXhr) {
             // Only notify the consumer on a CORS error
@@ -128,12 +137,15 @@ function (Okta, Q, Factor, BrowserFeatures, Errors) {
       factorActivationType: 'string',
       flashError: 'object',
       beaconType: 'string',
+      deviceFingerprint: 'string', // valid only once
 
       // Note: languageCode is special in that it is shared between Settings
       // and AppState. Settings is the *configured* language, and is static.
       // AppState is the dynamic language state - it can be changed via a
       // language picker, etc.
-      languageCode: ['string', true]
+      languageCode: ['string', true],
+      disableUsername: ['boolean', false, false],
+      trapMfaRequiredResponse: ['boolean', false, false]
     },
 
     setAuthResponse: function (res) {
@@ -434,6 +446,12 @@ function (Okta, Q, Factor, BrowserFeatures, Errors) {
           return userProfile.firstName + ' ' + userProfile.lastName;
         }
       },
+      'defaultAppLogo' : {
+        deps: ['baseUrl'],
+        fn: function (baseUrl) {
+          return baseUrl + DEFAULT_APP_LOGO;
+        }
+      },
       'expiresAt': {
         deps: ['lastAuthResponse'],
         fn: function (res) {
@@ -483,6 +501,15 @@ function (Okta, Q, Factor, BrowserFeatures, Errors) {
             return null;
           }
           return target._links['privacy-policy'];
+        }
+      },
+      'targetClientURI': {
+        deps: ['target'],
+        fn: function (target) {
+          if (!target || !target._links) {
+            return null;
+          }
+          return target._links['client-uri'];
         }
       },
       'scopes': {

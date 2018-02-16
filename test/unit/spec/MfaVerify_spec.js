@@ -1,4 +1,4 @@
-/* eslint max-params: [2, 50], max-statements: [2, 38], camelcase: 0 */
+/* eslint max-params: [2, 50], max-statements: [2, 42], camelcase: 0 */
 define([
   'okta',
   'vendor/lib/q',
@@ -23,6 +23,7 @@ define([
   'helpers/xhr/MFA_REQUIRED_allFactors_OnPrem',
   'helpers/xhr/MFA_REQUIRED_oktaVerifyTotpOnly',
   'helpers/xhr/MFA_REQUIRED_webauthn',
+  'helpers/xhr/MFA_REQUIRED_oktaPassword',
   'helpers/xhr/MFA_CHALLENGE_duo',
   'helpers/xhr/MFA_CHALLENGE_sms',
   'helpers/xhr/MFA_CHALLENGE_call',
@@ -34,15 +35,11 @@ define([
   'helpers/xhr/MFA_CHALLENGE_push_timeout',
   'helpers/xhr/SUCCESS',
   'helpers/xhr/MFA_VERIFY_invalid_answer',
+  'helpers/xhr/MFA_VERIFY_invalid_password',
   'helpers/xhr/MFA_VERIFY_totp_invalid_answer',
   'helpers/xhr/SMS_RESEND_error',
   'helpers/xhr/MFA_LOCKED_FAILED_ATEMPTS',
-  'helpers/xhr/MFA_REQUIRED_policy_device_based',
-  'helpers/xhr/MFA_REQUIRED_policy_time_based',
   'helpers/xhr/MFA_REQUIRED_policy_always',
-  'helpers/xhr/MFA_REQUIRED_policy_time_based_min',
-  'helpers/xhr/MFA_REQUIRED_policy_time_based_hours',
-  'helpers/xhr/MFA_REQUIRED_policy_time_based_days',
   'helpers/xhr/labels_login_ja',
   'helpers/xhr/labels_country_ja'
 ],
@@ -69,6 +66,7 @@ function (Okta,
           resAllFactorsOnPrem,
           resVerifyTOTPOnly,
           resRequiredWebauthn,
+          resPassword,
           resChallengeDuo,
           resChallengeSms,
           resChallengeCall,
@@ -80,15 +78,11 @@ function (Okta,
           resTimeoutPush,
           resSuccess,
           resInvalid,
+          resInvalidPassword,
           resInvalidTotp,
           resResendError,
           resMfaLocked,
-          resMfaDevicePolicy,
-          resMfaTimePolicy,
           resMfaAlwaysPolicy,
-          resMfaTimePolicy_1Min,
-          resMfaTimePolicy_2Hrs,
-          resMfaTimePolicy_2Days,
           labelsLoginJa,
           labelsCountryJa) {
 
@@ -203,6 +197,23 @@ function (Okta,
       });
     }
 
+    function setupWithMfaPolicy(options) {
+      var res = JSON.parse(JSON.stringify(resMfaAlwaysPolicy));
+
+      if (options) {
+        if (options.hasOwnProperty('minutes')) {
+          res.response._embedded.policy.allowRememberDevice = true;
+          res.response._embedded.policy.rememberDeviceLifetimeInMinutes = options.minutes;
+        }
+
+        if (options.hasOwnProperty('byDefault')) {
+          res.response._embedded.policy.rememberDeviceByDefault = options.byDefault;
+        }
+      }
+
+      return setup(res);
+    }
+
     var setupSecurityQuestion = _.partial(setup, resAllFactors, { factorType: 'question' });
     var setupGoogleTOTP = _.partial(setup, resAllFactors, { factorType: 'token:software:totp', provider: 'GOOGLE' });
     var setupRsaTOTP = _.partial(setup, resAllFactors, { factorType: 'token', provider: 'RSA' });
@@ -215,7 +226,8 @@ function (Okta,
     var setupOktaPush = _.partial(setup, resAllFactors, { factorType: 'push', provider: 'OKTA' });
     var setupOktaTOTP = _.partial(setup, resVerifyTOTPOnly, { factorType: 'token:software:totp' });
     var setupWebauthn = _.partial(setup, resAllFactors, {  factorType: 'webauthn', provider: 'FIDO' });
-    var setupAllFactors = _.partial(setup, resAllFactors);
+    var setupPassword = _.partial(setup, resPassword, { factorType: 'password' });
+    var setupAllFactorsWithRouter = _.partial(setup, resAllFactors, null, { 'features.router': true });
     function setupSecurityQuestionLocalized(options) {
       spyOn(BrowserFeatures, 'localStorageIsNotSupported').and.returnValue(options.localStorageIsNotSupported);
       spyOn(BrowserFeatures, 'getUserLanguages').and.returnValue(['ja', 'en']);
@@ -415,10 +427,18 @@ function (Okta,
       expect(answer.attr('type')).toEqual(fieldType);
     }
 
+    function expectHasPasswordField(test, fieldType) {
+      fieldType || (fieldType = 'text');
+      var password = test.form.passwordField();
+      expect(password.length).toBe(1);
+      expect(password.attr('type')).toEqual(fieldType);
+    }
+
     function expectHasRightPlaceholderText(test, placeholderText){
       var answer = test.form.answerField();
       expect(answer.attr('placeholder')).toEqual(placeholderText);
     }
+
     Expect.describe('General', function () {
       Expect.describe('Defaults to the last used factor', function () {
         itp('Security Question', function () {
@@ -517,30 +537,30 @@ function (Okta,
           });
         });
         itp('has the right text for device based policy', function () {
-          return setup(resMfaDevicePolicy).then(function (test) {
+          return setupWithMfaPolicy({ minutes: 0 }).then(function (test) {
             expect(test.form.rememberDeviceLabelText()).toEqual('Do not challenge me on this device again');
           });
         });
         itp('has the right text for time based policy (1 minute)', function () {
-          return setup(resMfaTimePolicy_1Min).then(function (test) {
+          return setupWithMfaPolicy({ minutes: 1 }).then(function (test) {
             expect(test.form.rememberDeviceLabelText()).toEqual(
               'Do not challenge me on this device for the next minute');
           });
         });
         itp('has the right text for time based policy (minutes)', function () {
-          return setup(resMfaTimePolicy).then(function (test) {
+          return setupWithMfaPolicy({ minutes: 15 }).then(function (test) {
             expect(test.form.rememberDeviceLabelText()).toEqual(
               'Do not challenge me on this device for the next 15 minutes');
           });
         });
         itp('has the right text for time based policy (hours)', function () {
-          return setup(resMfaTimePolicy_2Hrs).then(function (test) {
+          return setupWithMfaPolicy({ minutes: 120 }).then(function (test) {
             expect(test.form.rememberDeviceLabelText()).toEqual(
               'Do not challenge me on this device for the next 2 hours');
           });
         });
         itp('has the right text for time based policy (days)', function () {
-          return setup(resMfaTimePolicy_2Days).then(function (test) {
+          return setupWithMfaPolicy({ minutes: 2880 }).then(function (test) {
             expect(test.form.rememberDeviceLabelText()).toEqual(
               'Do not challenge me on this device for the next 2 days');
           });
@@ -551,12 +571,12 @@ function (Okta,
           });
         });
         itp('is checked by default if policy rememberDeviceByDefault is true', function () {
-          return setup(resMfaTimePolicy).then(function (test) {
+          return setupWithMfaPolicy({ minutes: 15, byDefault: true }).then(function (test) {
             expect(test.form.isRememberDeviceChecked()).toBe(true);
           });
         });
         itp('is not checked by default if policy rememberDeviceByDefault is false', function () {
-          return setup(resMfaDevicePolicy).then(function (test) {
+          return setupWithMfaPolicy({ minutes: 0 }).then(function (test) {
             expect(test.form.isRememberDeviceChecked()).toBe(false);
           });
         });
@@ -789,7 +809,7 @@ function (Okta,
         });
         itp('has a passCode field', function () {
           return setupGoogleTOTP().then(function (test) {
-            expectHasAnswerField(test);
+            expectHasAnswerField(test, 'tel');
           });
         });
         itp('has a masked passCode field for RSA', function () {
@@ -1073,7 +1093,7 @@ function (Okta,
         });
         itp('has a passCode field', function () {
           return setupSMS().then(function (test) {
-            expectHasAnswerField(test);
+            expectHasAnswerField(test, 'tel');
           });
         });
         itp('has remember device checkbox', function () {
@@ -1373,7 +1393,7 @@ function (Okta,
         });
         itp('has a passCode field', function () {
           return setupCall().then(function (test) {
-            expectHasAnswerField(test);
+            expectHasAnswerField(test, 'tel');
           });
         });
         itp('clears the passcode text field on clicking the "Call" button', function () {
@@ -1659,7 +1679,7 @@ function (Okta,
         });
         itp('has a passCode field', function () {
           return setupEmail().then(function (test) {
-            expectHasAnswerField(test);
+            expectHasAnswerField(test, 'tel');
           });
         });
         itp('has remember device checkbox', function () {
@@ -2099,9 +2119,7 @@ function (Okta,
                   failureResponse, failureResponse, failureResponse, failureResponse]);
                 test.form = test.form[0];
                 test.form.submit();
-                return tick(test)    // 1: submit verifyFactor
-                    .then(function () { return tick(test); }) // 2: submit verifyFactor poll
-                    .then(function () { return tick(test); }); // 3: Failure requests
+                return Expect.waitForFormError(test.form, test);
               }
               return setupOktaPush().then(function (test) {
                 spyOn(test.router.settings, 'callGlobalError');
@@ -2178,7 +2196,7 @@ function (Okta,
               var form = test.form[1];
               form.inlineTOTPAdd().click();
               expect(form.inlineTOTPAdd().length).toBe(0);
-              Expect.isTextField(form.answerField());
+              expectHasAnswerField({ form: form }, 'tel');
               Expect.isLink(form.inlineTOTPVerify());
               expect(test.form[1].inlineTOTPVerifyText()).toEqual('Verify');
             });
@@ -2209,6 +2227,7 @@ function (Okta,
               var pushForm = test.form[0],
                   inlineForm = test.form[1];
               return setupPolling(test, resRejectedPush)
+              .then(function () { return tick(test); }) // Final response - REJECTED
               .then(function () {
                 return Expect.waitForFormError(pushForm, {
                   test: test,
@@ -2263,6 +2282,21 @@ function (Okta,
             .then(function (form) {
               expect(form.hasErrors()).toBe(true);
               expect(form.errorMessage()).toBe('Invalid Passcode/Answer');
+            });
+          });
+          itp('shows errors if verify button is clicked and answer is empty', function () {
+            return setupOktaPush()
+            .then(function (test) {
+              var form = test.form[1];
+              $.ajax.calls.reset();
+              form.inlineTOTPAdd().click();
+              form.inlineTOTPVerify().click();
+              return Expect.waitForFormError(form, form);
+            })
+            .then(function (form) {
+              expect($.ajax).not.toHaveBeenCalled();
+              expect(form.errorMessage()).toBe('We found some errors. Please review the form and make corrections.');
+              expect(form.passCodeErrorField().text()).toBe('The field cannot be left blank');
             });
           });
           itp('sets the transaction on the appState on success response', function () {
@@ -2625,6 +2659,160 @@ function (Okta,
           });
         });
       });
+      Expect.describe('Password', function () {
+        itp('is password', function () {
+          return setupPassword().then(function (test) {
+            expect(test.form.isPassword()).toBe(true);
+          });
+        });
+        itp('shows the right beacon', function () {
+          return setupPassword().then(function (test) {
+            expectHasRightBeaconImage(test, 'mfa-okta-password');
+          });
+        });
+        itp('shows the right title', function () {
+          return setupPassword().then(function (test) {
+            expectTitleToBe(test, 'Password');
+          });
+        });
+        itp('has a password field', function () {
+          return setupPassword().then(function (test) {
+            expectHasPasswordField(test, 'password');
+          });
+        });
+        itp('has remember device checkbox', function () {
+          return setupPassword().then(function (test) {
+            Expect.isVisible(test.form.rememberDeviceCheckbox());
+          });
+        });
+        itp('no auto push checkbox', function () {
+          return setupPassword({'features.autoPush': true}).then(function (test) {
+            expect(test.form.autoPushCheckbox().length).toBe(0);
+          });
+        });
+        itp('when the "show" button is clicked, the buttons container has class "password-toggle-on",\
+          and doesn\'t have it after clicking the "hide" button', function () {
+          return setupPassword().then(function (test) {
+            var buttonsContainer = test.form.passwordButtonsContainer();
+
+            expect(buttonsContainer.hasClass('password-toggle-on')).toBe(false);
+
+            test.form.showPasswordButton().click();
+            expect(buttonsContainer.hasClass('password-toggle-on')).toBe(true);
+
+            test.form.hidePasswordButton().click();
+            expect(buttonsContainer.hasClass('password-toggle-on')).toBe(false);
+          });
+        });
+        itp('a password field type is "password" initially and can be switched between "text" and "password" \
+          by clicking on "show"/"hide" buttons', function () {
+          return setupPassword().then(function (test) {
+            var answer = test.form.passwordField();
+            expect(answer.attr('type')).toEqual('password');
+
+            test.form.showPasswordButton().click();
+            expect(test.form.passwordField().attr('type')).toEqual('text');
+
+            test.form.hidePasswordButton().click();
+            expect(test.form.passwordField().attr('type')).toEqual('password');
+          });
+        });
+        itp('calls authClient verifyFactor with correct args when submitted', function () {
+          return setupPassword().then(function (test) {
+            $.ajax.calls.reset();
+            test.form.setPassword('Abcd1234');
+            test.form.setRememberDevice(true);
+            test.setNextResponse(resSuccess);
+            test.form.submit();
+            return Expect.waitForSpyCall(test.successSpy);
+          })
+          .then(function () {
+            expect($.ajax.calls.count()).toBe(1);
+            Expect.isJsonPost($.ajax.calls.argsFor(0), {
+              url: 'http://rain.okta1.com:1802/api/v1/authn/factors/password/verify?rememberDevice=true',
+              data: {
+                password: 'Abcd1234',
+                stateToken: 'testStateToken'
+              }
+            });
+          });
+        });
+        itp('disables the "verify button" when clicked', function () {
+          return setupPassword().then(function (test) {
+            $.ajax.calls.reset();
+            test.form.setPassword('Abcd');
+            test.setNextResponse(resInvalidPassword);
+            test.form.submit();
+            var button = test.form.submitButton();
+            var buttonClass = button.attr('class');
+            expect(buttonClass).toContain('link-button-disabled');
+            expect(button.prop('disabled')).toBe(true);
+            return Expect.waitForFormError(test.form, test);
+          })
+          .then(function (test) {
+            var button = test.form.submitButton();
+            var buttonClass = button.attr('class');
+            expect(buttonClass).not.toContain('link-button-disabled');
+            expect(button.prop('disabled')).toBe(false);
+          });
+        });
+        itp('shows an error if error response from authClient', function () {
+          return setupPassword()
+          .then(function (test) {
+            test.setNextResponse(resInvalidPassword);
+            test.form.setPassword('wrong');
+            test.form.submit();
+            return Expect.waitForFormError(test.form, test);
+          })
+          .then(function (test) {
+            expect(test.form.hasErrors()).toBe(true);
+            expect(test.form.errorMessage()).toBe('Password is incorrect');
+          });
+        });
+        itp('shows errors if verify button is clicked and password is empty', function () {
+          return setupPassword()
+          .then(function (test) {
+            $.ajax.calls.reset();
+            test.form.setPassword('');
+            test.form.submit();
+            return Expect.waitForFormError(test.form, test);
+          })
+          .then(function (test) {
+            expect($.ajax).not.toHaveBeenCalled();
+            expect(test.form.passwordErrorField().length).toBe(1);
+            expect(test.form.passwordErrorField().text()).toBe('Please enter a password');
+            expect(test.form.errorMessage()).toBe('We found some errors. Please review the form and make corrections.');
+          });
+        });
+        itp('sets the transaction on the appState on success response', function () {
+          return setupPassword()
+          .then(function (test) {
+            mockTransactions(test.router.controller);
+            $.ajax.calls.reset();
+            test.form.setPassword('Abcd1234');
+            test.setNextResponse(resSuccess);
+            test.form.submit();
+            return Expect.waitForSpyCall(test.successSpy, test);
+          })
+          .then(function (test) {
+            expectSetTransaction(test.router, resSuccess);
+          });
+        });
+        itp('sets the transaction error on the appState on error response', function () {
+          return setupPassword()
+          .then(function (test) {
+            mockTransactions(test.router.controller);
+            $.ajax.calls.reset();
+            test.form.setPassword('Abcd1234');
+            test.setNextResponse(resInvalidPassword);
+            test.form.submit();
+            return Expect.waitForFormError(test.form, test);
+          })
+          .then(function (test) {
+            expectSetTransactionError(test.router, resInvalidPassword);
+          });
+        });
+      });
     });
 
     Expect.describe('Beacon', function () {
@@ -2793,10 +2981,14 @@ function (Okta,
       });
       itp('Verify Okta TOTP on active Push MFA_CHALLENGE', function () {
         return setupOktaPush().then(function (test) {
-          return setupPolling(test, resAllFactors)
+          // using resTimeoutPush here for the test. This needs to be resTimeoutPush
+          // or resRejectedPush, to set the transaction to MFA_CHALLENGE state and
+          // mimic an active poll (Note: The transaction state is not set to MFA_CHALLENGE
+          // during polling).
+          return setupPolling(test, resTimeoutPush)
           .then(function (test) {
             $.ajax.calls.reset();
-            test.setNextResponse(resSuccess);
+            test.setNextResponse([resAllFactors, resSuccess]);
             test.totpForm = new MfaVerifyForm($($sandbox.find('.o-form')[1]));
             // click or enter code in the the Totp form
             test.totpForm.inlineTOTPAdd().click();
@@ -2805,8 +2997,8 @@ function (Okta,
             return tick(test);
           })
           .then(function () {
-            expect($.ajax.calls.count()).toBe(1);
-            Expect.isJsonPost($.ajax.calls.argsFor(0), {
+            expect($.ajax.calls.count()).toBe(2);
+            Expect.isJsonPost($.ajax.calls.argsFor(1), {
               url: 'https://foo.com/api/v1/authn/factors/osthw62MEvG6YFuHe0g3/verify',
               data: {
                 passCode: '654321',
@@ -2819,6 +3011,7 @@ function (Okta,
       itp('Verify Okta TOTP success on Push MFA_REJECTED', function () {
         return setupOktaPush().then(function (test) {
           return setupPolling(test, resRejectedPush)
+          .then(function () { return tick(test); }) // Final response - REJECTED
           .then(function (test) {
             $.ajax.calls.reset();
             test.setNextResponse([resAllFactors, resSuccess]);
@@ -2851,6 +3044,7 @@ function (Okta,
       itp('Verify Okta TOTP success (after Push MFA_REJECTED) sets the transaction on the appState', function () {
         return setupOktaPush().then(function (test) {
           return setupPolling(test, resRejectedPush)
+          .then(function () { return tick(test); }) // Final response - REJECTED
           .then(function (test) {
             mockTransactions(test.router.controller, true);
             test.setNextResponse([resAllFactors, resSuccess]);
@@ -2887,7 +3081,7 @@ function (Okta,
 
     Expect.describe('Browser back button does not change view', function () {
       itp('from mfa verify controller', function () {
-        return setupAllFactors().then(function (test) {
+        return setupAllFactorsWithRouter().then(function (test) {
           spyOn(window, 'addEventListener');
           test.router.start();
           expectHasRightBeaconImage(test, 'mfa-okta-security-question');
@@ -2907,7 +3101,7 @@ function (Okta,
         });
       });
       itp('from duo controller', function () {
-        return setupAllFactors().then(function (test) {
+        return setupAllFactorsWithRouter().then(function (test) {
           spyOn(window, 'addEventListener');
           test.router.start();
           expectHasRightBeaconImage(test, 'mfa-okta-security-question');
@@ -2930,7 +3124,7 @@ function (Okta,
       });
       itp('from windows hello controller', function () {
         return emulateWindows()
-        .then(setupAllFactors)
+        .then(setupAllFactorsWithRouter)
         .then(function (test) {
           spyOn(window, 'addEventListener');
           test.router.start();
@@ -2952,7 +3146,7 @@ function (Okta,
         });
       });
       itp('from u2f controller', function () {
-        return setupAllFactors().then(function (test) {
+        return setupAllFactorsWithRouter().then(function (test) {
           spyOn(window, 'addEventListener');
           test.router.start();
           expectHasRightBeaconImage(test, 'mfa-okta-security-question');
@@ -2979,6 +3173,64 @@ function (Okta,
           //view is still the same
           expectHasRightBeaconImage(test, 'mfa-u2f');
           Util.stopRouter();
+        });
+      });
+    });
+
+    Expect.describe('The auth response', function () {
+      itp('is NOT TRAPPED when Mfa verify follows password re-auth', function () {
+        return setupPassword().then(function (test) {
+          spyOn(RouterUtil, 'handleResponseStatus').and.callThrough();
+          $.ajax.calls.reset();
+          test.form.setPassword('Abcd1234');
+          test.form.setRememberDevice(true);
+          test.setNextResponse(resAllFactors);
+          test.form.submit();
+          return Expect.waitForVerifyQuestion(test);
+        })
+        .then(function (test) {
+          test.questionForm = new MfaVerifyForm($sandbox.find('.o-form'));
+          expect(test.questionForm.isSecurityQuestion()).toBe(true);
+          // trapAuthResponse does not prevent handleResponseStatus from being called
+          expect(RouterUtil.handleResponseStatus.calls.count()).toBe(1);
+        });
+      });
+      itp('is TRAPPED on any factor change through the dropdown', function () {
+        return setupSMS().then(function (test) {
+          spyOn(RouterUtil, 'handleResponseStatus').and.callThrough();
+          test.setNextResponse(resChallengeSms);
+          test.form.smsSendCode().click();
+          return tick(test);
+        })
+        .then(function (test) {
+          test.setNextResponse(resAllFactors);
+          test.beacon.dropDownButton().click();
+          clickFactorInDropdown(test, 'QUESTION');
+          return Expect.waitForVerifyQuestion(test);
+        })
+        .then(function () {
+          // trapAuthResponse prevents handleResponseStatus from being called
+          expect(RouterUtil.handleResponseStatus.calls.count()).toBe(0);
+        });
+      });
+      itp('is TRAPPED during verify of inline totp with Okta Verify Push', function () {
+        return setupOktaPush().then(function (test) {
+          return setupPolling(test, resRejectedPush)
+          .then(function () { return tick(test); }) // Final response - REJECTED
+          .then(function (test) {
+            spyOn(RouterUtil, 'handleResponseStatus').and.callThrough();
+            test.totpForm = new MfaVerifyForm($($sandbox.find('.o-form')[1]));
+            test.totpForm.inlineTOTPAdd().click();
+            test.totpForm.setAnswer('654321');
+            test.setNextResponse([resAllFactors, resSuccess]);
+            test.totpForm.inlineTOTPVerify().click();
+            return Expect.waitForSpyCall(test.successSpy);
+          })
+          .then(function () {
+            // clicking on inline totp should trap auth response, SUCCESS response will
+            // call handleResponseStatus.
+            expect(RouterUtil.handleResponseStatus.calls.count()).toBe(1);
+          });
         });
       });
     });
