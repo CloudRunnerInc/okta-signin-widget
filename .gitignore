@@ -13,6 +13,6 @@ build2
 src/config/config.json
 packages/@okta/courage-dist/*.html
 packages/@okta/courage-dist/*.map
-/dist
 .yalc
 .env
+okta-auth-js
