@@ -212,6 +212,7 @@ var OktaSignIn = (function () {
 
     var authClient = new OktaAuth({
       url: options.baseUrl,
+      oktaUrl: options.oktaUrl,
       transformErrorXHR: Util.transformErrorXHR,
       headers: {
         'X-Okta-User-Agent-Extended': 'okta-signin-widget-' + config.version
