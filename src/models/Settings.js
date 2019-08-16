@@ -89,6 +89,8 @@ function (Okta, Q, Errors, BrowserFeatures, Util, Logger, config) {
       'features.trackTypingPattern': ['boolean', false, false],
       'features.redirectByFormSubmit': ['boolean', false, false],
       'features.useDeviceFingerprintForSecurityImage': ['boolean', false, true],
+      'features.restrictRedirectToForeground': ['boolean', true, false],
+      'features.hideDefaultTip': ['boolean', false, true],
 
       // I18N
       'language': ['any', false], // Can be a string or a function
@@ -160,7 +162,10 @@ function (Okta, Q, Errors, BrowserFeatures, Util, Logger, config) {
       'idpDiscovery.requestContext': 'string',
 
       //Colors
-      'colors.brand': 'string'
+      'colors.brand': 'string',
+
+      //Descriptions
+      'brandName': 'string'
     },
 
     derived: {

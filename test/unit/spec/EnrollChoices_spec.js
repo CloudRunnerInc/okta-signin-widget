@@ -1,4 +1,4 @@
-/* eslint max-params: [2, 15] */
+/* eslint max-params: [2, 19] */
 /*global JSON */
 define([
   'okta',
@@ -11,16 +11,21 @@ define([
   'LoginRouter',
   'sandbox',
   'helpers/xhr/MFA_ENROLL_allFactors',
+  'helpers/xhr/MFA_ENROLL_allFactorsProfile',
   'helpers/xhr/MFA_ENROLL_allFactors_OnPrem',
   'helpers/xhr/MFA_ENROLL_push',
   'helpers/xhr/MFA_ENROLL_multipleU2F',
   'helpers/xhr/MFA_ENROLL_multipleOktaVerify',
+  'helpers/xhr/MFA_ENROLL_multipleWebauthn',
+  'helpers/xhr/MFA_ENROLL_multipleWebauthnProfile',
   'helpers/xhr/MFA_ENROLL_enrolledHotp',
   'helpers/xhr/SUCCESS'
 ],
+
 function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, Router,
-  $sandbox, resAllFactors, resAllFactorsOnPrem, resPush, resMultipleU2F,
-  resMultipleOktaVerify, resEnrolledHotp, resSuccess) {
+  $sandbox, resAllFactors, resAllFactorsProfile, resAllFactorsOnPrem, resPush, resMultipleU2F,
+  resMultipleOktaVerify, resMultipleWebauthn, resMultipleWebauthnProfile, resEnrolledHotp,
+  resSuccess) {
 
   var { $, _ } = Okta;
   var itp = Expect.itp;
@@ -62,7 +67,7 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
       index:      8,
       factorType: 'web'
     },
-    'WINDOWS_HELLO': {
+    'WEBAUTHN': {
       index:      9,
       factorType: 'webauthn'
     },
@@ -70,33 +75,48 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
       index:      10,
       factorType: 'u2f'
     },
-    'GENERIC_SAML': {
+    'CUSTOM_CLAIMS': {
       index:      11,
+      factorType: 'claims_provider'
+    },
+    'GENERIC_SAML': {
+      index:      12,
       factorType: 'assertion:saml2'
     },
     'GENERIC_OIDC': {
-      index:      12,
+      index:      13,
       factorType: 'assertion:oidc'
     }
+  };
+  const enrolledWebauthnFactor = {
+    'factorId': '12345',
+    'factorType': 'webauthn',
+    'provider': 'FIDO',
+    'vendorName': 'FIDO',
   };
 
   Expect.describe('EnrollChoices', function () {
 
-    function setup (res, showSecurityImage, webauthnEnabled) {
+    function setup (res, showSecurityImage, webauthnEnabled, brandName) {
+      var settings = {};
+      if (webauthnEnabled) {
+        settings['features.webauthn'] = true;
+      }
       var setNextResponse = Util.mockAjax();
       var baseUrl = 'https://foo.com';
       var authClient = new OktaAuth({
         url: baseUrl
       });
-      var router = new Router({
+      var router = new Router(_.extend({
         el: $sandbox,
         baseUrl: baseUrl,
         features: {
           securityImage: showSecurityImage,
           webauthn: webauthnEnabled
         },
-        authClient: authClient
-      });
+        authClient: authClient,
+        brandName: brandName
+      }, settings));
       Util.registerRouter(router);
       Util.mockRouterNavigate(router);
       Util.mockJqueryCss();
@@ -116,13 +136,25 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
       return JSON.parse(JSON.stringify(res));
     }
 
-    function setupWithRequiredNoneEnrolled () {
+    function setGracePeriodEndDate (res, endDate) {
+      var policy = res.response._embedded.policy || {};
+      res.response._embedded.policy = _.extend(policy, {
+        gracePeriod: {
+          endDate
+        }
+      });
+    }
+
+    function setupWithRequiredNoneEnrolled (brandName, endDate) {
       var res = deepClone(resAllFactors);
       res.response._embedded.factors[0].enrollment = 'REQUIRED';
       res.response._embedded.factors[1].enrollment = 'REQUIRED';
       res.response._embedded.factors[2].enrollment = 'REQUIRED';
       res.response._embedded.factors[3].enrollment = 'REQUIRED';
-      return setup(res);
+      if (endDate) {
+        setGracePeriodEndDate(res, endDate);
+      }
+      return setup(res, false, false, brandName);
     }
 
     function setupWithRequiredNoneEnrolledOnPrem () {
@@ -135,35 +167,46 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
       return setup(res);
     }
 
-    function setupWithRequiredSomeRequiredEnrolled () {
+    function setupWithRequiredSomeRequiredEnrolled (endDate) {
       var res = deepClone(resAllFactors);
       res.response._embedded.factors[0].enrollment = 'REQUIRED';
       res.response._embedded.factors[1].enrollment = 'REQUIRED';
       res.response._embedded.factors[2].enrollment = 'REQUIRED';
       res.response._embedded.factors[2].status = 'ACTIVE';
+      if (endDate) {
+        setGracePeriodEndDate(res, endDate);
+      }
       return setup(res);
     }
 
-    function setupWithRequiredAllRequiredEnrolled (includeOnPrem) {
+    function setupWithRequiredAllRequiredEnrolled (includeOnPrem, endDate) {
       var response = includeOnPrem ? resAllFactorsOnPrem : resAllFactors;
       var res = deepClone(response);
       res.response._embedded.factors[0].enrollment = 'REQUIRED';
       res.response._embedded.factors[0].status = 'ACTIVE';
       res.response._embedded.factors[1].enrollment = 'REQUIRED';
       res.response._embedded.factors[1].status = 'ACTIVE';
+      if (endDate) {
+        setGracePeriodEndDate(res, endDate);
+      }
       return setup(res);
     }
 
-    function setupWithAllOptionalNoneEnrolled () {
-      // This is the default resAllFactors response. Creating this function for
-      // consistency
-      return setup(resAllFactors);
+    function setupWithAllOptionalNoneEnrolled (brandName, endDate) {
+      var res = deepClone(resAllFactors);
+      if (endDate) {
+        setGracePeriodEndDate(res, endDate);
+      }
+      return setup(res, false, false, brandName);
     }
 
-    function setupWithAllOptionalSomeEnrolled (includeOnPrem) {
+    function setupWithAllOptionalSomeEnrolled (includeOnPrem, endDate) {
       var response = includeOnPrem ? resAllFactorsOnPrem : resAllFactors;
       var res = deepClone(response);
       res.response._embedded.factors[0].status = 'ACTIVE';
+      if (endDate) {
+        setGracePeriodEndDate(res, endDate);
+      }
       return setup(res);
     }
 
@@ -187,39 +230,57 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
       return setup(res);
     }
 
-    function setupMultipleFactorEnrollments (factorName, status, enrollment, policyEnrollment, singleFactorRes) {
-      var res = singleFactorRes ? deepClone(singleFactorRes) : deepClone(resAllFactors);
-      var index = singleFactorRes ? 0 : factorEnrollList[factorName].index;
-      res.response._embedded.factors[index].status = status;
-      res.response._embedded.factors[index].enrollment = enrollment;
-      res.response._embedded.factors[index].policy.enrollment = policyEnrollment;
-      return setup(res);
+    function setupMultipleFactorEnrollments (options) {
+      var res = options.singleFactorRes ? deepClone(options.singleFactorRes) : 
+        options.useProfiles ? deepClone(resAllFactorsProfile) : deepClone(resAllFactors);
+      var index = options.singleFactorRes ? 0 : factorEnrollList[options.factorName].index;
+      var factor = res.response._embedded.factors[index];
+      factor.status = options.status;
+      factor.enrollment = options.enrollment;
+      if (options.useProfiles) {
+        setProfileData(factor.profiles[0], options.cardinality, options.enrolledFactor);
+      }
+      else {
+        factor.policy.enrollment = options.cardinality;
+      }
+      return setup(res, false, options.webauthnEnabled);
     }
 
-    function setupMultipleRequiredActiveEnrollmentsForFactorAndAnotherFactorRequired (factorName, policyEnrollment) {
-      var index = factorEnrollList[factorName].index;
+    function setProfileData (profile, cardinality, enrolledFactor) {
+      var cardinalityData = {
+        min: cardinality.minimum,
+        max: cardinality.maximum
+      };
+      profile._embedded.features[0].cardinality = cardinalityData;
+      for (var i = 0; i < cardinality.enrolled; i++) {
+        profile._embedded.enrolledFactors.push(enrolledFactor);
+      }
+    }
+
+    function setupMultipleRequiredActiveEnrollmentsForFactorAndAnotherFactorRequired (options) {
+      var index = factorEnrollList[options.factorName].index;
       var res = deepClone(resAllFactors);
       // setting question to required
       res.response._embedded.factors[0].enrollment = 'REQUIRED';
       res.response._embedded.factors[index].status = 'ACTIVE';
       res.response._embedded.factors[index].enrollment = 'REQUIRED';
-      res.response._embedded.factors[index].policy.enrollment = policyEnrollment;
-      return setup(res);
+      res.response._embedded.factors[index].policy.enrollment = options.cardinality;
+      return setup(res, false, options.webauthnEnabled);
     }
 
-    function itHasIconAndText (factorName, iconClass, title, subtitle, res, webauthnEnabled) {
+    function itHasIconAndText (factorName, iconClass, title, subtitle, res, webauthnEnabled, brandName) {
       itp('has right icon', function () {
-        return setup(res, false, webauthnEnabled).then(function (test) {
+        return setup(res, false, webauthnEnabled, brandName).then(function (test) {
           expect(test.form.factorIconClass(factorName)).toBe('factor-icon ' + iconClass);
         });
       });
       itp('has right title', function () {
-        return setup(res, false, webauthnEnabled).then(function (test) {
+        return setup(res, false, webauthnEnabled, brandName).then(function (test) {
           expect(test.form.factorTitle(factorName)).toBe(title);
         });
       });
       itp('has right subtitle', function () {
-        return setup(res, false, webauthnEnabled).then(function (test) {
+        return setup(res, false, webauthnEnabled, brandName).then(function (test) {
           expect(test.form.factorSubtitle(factorName)).toBe(subtitle);
         });
       });
@@ -245,7 +306,15 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
           return setupWithRequiredNoneEnrolled().then(function (test) {
             expect(test.form.subtitleText()).toBe(
               'Your company requires multifactor authentication to add an ' +
-              'additional layer of security when signing in to your Okta account'
+              'additional layer of security when signing in to your account'
+            );
+          });
+        });
+        itp('has the correct subtitle text if config has a brandName', function () {
+          return setupWithRequiredNoneEnrolled('Spaghett Inc.').then(function (test) {
+            expect(test.form.subtitleText()).toBe(
+              'Your company requires multifactor authentication to add an ' +
+              'additional layer of security when signing in to your Spaghett Inc. account'
             );
           });
         });
@@ -288,6 +357,7 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
             expect(test.form.factorRow('SMS').length).toBe(0);
             expect(test.form.factorRow('GENERIC_SAML').length).toBe(0);
             expect(test.form.factorRow('GENERIC_OIDC').length).toBe(0);
+            expect(test.form.factorRow('CUSTOM_CLAIMS').length).toBe(0);
           });
         });
         itp('has the button text "Configure factor" if no required factors have been enrolled', function () {
@@ -338,7 +408,15 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
           return setupWithAllOptionalNoneEnrolled().then(function (test) {
             expect(test.form.subtitleText()).toBe(
               'Your company requires multifactor authentication to add an ' +
-              'additional layer of security when signing in to your Okta account'
+              'additional layer of security when signing in to your account'
+            );
+          });
+        });
+        itp('displays the specific subtitle if there are only optional factors and none are enrolled if config has a brandName', function () {
+          return setupWithAllOptionalNoneEnrolled('Spaghetti Inc.').then(function (test) {
+            expect(test.form.subtitleText()).toBe(
+              'Your company requires multifactor authentication to add an ' +
+              'additional layer of security when signing in to your Spaghetti Inc. account'
             );
           });
         });
@@ -406,10 +484,12 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
             expect(test.form.isFactorMinimized('SYMANTEC_VIP')).toBe(false);
             expect(test.form.isFactorMinimized('RSA_SECURID')).toBe(false);
             expect(test.form.isFactorMinimized('DUO')).toBe(false);
+            expect(test.form.isFactorMinimized('WINDOWS_HELLO')).toBe(false);
             expect(test.form.isFactorMinimized('SMS')).toBe(false);
             expect(test.form.isFactorMinimized('CALL')).toBe(false);
             expect(test.form.isFactorMinimized('GENERIC_SAML')).toBe(false);
             expect(test.form.isFactorMinimized('GENERIC_OIDC')).toBe(false);
+            expect(test.form.isFactorMinimized('CUSTOM_CLAIMS')).toBe(false);
           });
         });
         itp('shows optional factors in their expanded title + description state (On-Prem)', function () {
@@ -418,9 +498,11 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
             expect(test.form.isFactorMinimized('SYMANTEC_VIP')).toBe(false);
             expect(test.form.isFactorMinimized('ON_PREM')).toBe(false);
             expect(test.form.isFactorMinimized('DUO')).toBe(false);
+            expect(test.form.isFactorMinimized('WINDOWS_HELLO')).toBe(false);
             expect(test.form.isFactorMinimized('SMS')).toBe(false);
             expect(test.form.isFactorMinimized('GENERIC_SAML')).toBe(false);
             expect(test.form.isFactorMinimized('GENERIC_OIDC')).toBe(false);
+            expect(test.form.isFactorMinimized('CUSTOM_CLAIMS')).toBe(false);
           });
         });
         itp('has a setup button for each unenrolled optional factor which navigates to the correct page', function () {
@@ -430,10 +512,12 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
             expect(test.form.factorButton('SYMANTEC_VIP').length).toBe(1);
             expect(test.form.factorButton('RSA_SECURID').length).toBe(1);
             expect(test.form.factorButton('DUO').length).toBe(1);
+            expect(test.form.factorButton('WINDOWS_HELLO').length).toBe(1);
             expect(test.form.factorButton('SMS').length).toBe(1);
             expect(test.form.factorButton('CALL').length).toBe(1);
             expect(test.form.factorButton('GENERIC_SAML').length).toBe(1);
             expect(test.form.factorButton('GENERIC_OIDC').length).toBe(1);
+            expect(test.form.factorButton('CUSTOM_CLAIMS').length).toBe(1);
             test.form.factorButton('SMS').click();
             expect(test.router.navigate)
               .toHaveBeenCalledWith('signin/enroll/okta/sms', { trigger: true });
@@ -455,6 +539,7 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
               expect(test.form.factorButton('SMS').length).toBe(1);
               expect(test.form.factorButton('GENERIC_SAML').length).toBe(1);
               expect(test.form.factorButton('GENERIC_OIDC').length).toBe(1);
+              expect(test.form.factorButton('CUSTOM_CLAIMS').length).toBe(1);
               test.form.factorButton('SMS').click();
               expect(test.router.navigate)
                 .toHaveBeenCalledWith('signin/enroll/okta/sms', { trigger: true });
@@ -496,6 +581,89 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
         });
       });
 
+      Expect.describe('Grace period', function () {
+        beforeEach(function () {
+          var today = new Date('2019-06-25T00:00:00.000Z');
+          jasmine.clock().mockDate(today);
+        });
+        Expect.describe('all factors are required and none are enrolled', function () {
+          itp('has default subtitle', function () {
+            return setupWithRequiredNoneEnrolled(null, '2019-06-28T00:00:00.000Z').then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'Your company requires multifactor authentication to add an ' +
+                'additional layer of security when signing in to your account'
+              );
+            });
+          });
+        });
+        Expect.describe('all factors are required and at least one is enrolled', function () {
+          itp('has default subtitle when endDate is null', function () {
+            return setupWithRequiredSomeRequiredEnrolled(null).then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'Your company requires multifactor authentication to add an additional ' +
+                'layer of security when signing in to your account'
+              );
+            });
+          });
+          itp('has grace period subtitle when endDate is not null', function () {
+            return setupWithRequiredSomeRequiredEnrolled('2019-06-28T00:00:00.000Z').then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'Your company recommends setting up additional factors for authentication. ' +
+                'Set up will be required in: 3 day(s).'
+              );
+            });
+          });
+          itp('has grace period less than one day subtitle when time remaining is less \
+          than a day', function () {
+            var today = new Date('2019-06-25T11:59:59.000Z');
+            jasmine.clock().mockDate(today);
+            return setupWithRequiredSomeRequiredEnrolled('2019-06-26T00:00:00.000Z').then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'Your company recommends setting up additional factors for authentication. ' +
+                'Set up will be required in: less than 1 day.'
+              );
+            });
+          });
+          itp('has default subtitle when todays date is past endDate', function () {
+            var today = new Date('2019-06-26T11:59:59.000Z');
+            jasmine.clock().mockDate(today);
+            return setupWithRequiredSomeRequiredEnrolled('2019-06-26T00:00:00.000Z').then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'Your company requires multifactor authentication to add an additional ' +
+                'layer of security when signing in to your account'
+              );
+            });
+          });
+        });
+        Expect.describe('all factors are required and all are enrolled', function () {
+          itp('has optional subtitle', function () {
+            return setupWithRequiredAllRequiredEnrolled(null, '2019-06-28T00:00:00.000Z').then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'You can configure any additional optional factor or click finish'
+              );
+            });
+          });
+        });
+        Expect.describe('all factors optional and none are enrolled', function () {
+          itp('has default subtitle', function () {
+            return setupWithAllOptionalNoneEnrolled(null, '2019-06-28T00:00:00.000Z').then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'Your company requires multifactor authentication to add an ' +
+                'additional layer of security when signing in to your account'
+              );
+            });
+          });
+        });
+        Expect.describe('all factors optional and some are enrolled', function () {
+          itp('has optional subtitle', function () {
+            return setupWithAllOptionalSomeEnrolled(null, '2019-06-28T00:00:00.000Z').then(function (test) {
+              expect(test.form.subtitleText()).toBe(
+                'You can configure any additional optional factor or click finish'
+              );
+            });
+          });
+        });
+      });
     });
 
     Expect.describe('Factor list', function () {
@@ -629,8 +797,19 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
           'U2F',
           'mfa-u2f',
           'Security Key (U2F)',
-          'Use a Universal 2nd Factor (U2F) security key to sign on to Okta.',
+          'Use a Universal 2nd Factor (U2F) security key to sign in.',
           resAllFactors
+        );
+      });
+      Expect.describe('U2F WITH BRANDNAME', function () {
+        itHasIconAndText(
+          'U2F',
+          'mfa-u2f',
+          'Security Key (U2F)',
+          'Use a Universal 2nd Factor (U2F) security key to sign in to Spaghetti Inc..',
+          resAllFactors,
+          false,
+          'Spaghetti Inc.'
         );
       });
       Expect.describe('WEBAUTHN', function () {
@@ -668,13 +847,33 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
           resAllFactors
         );
       });
+      Expect.describe('CUSTOM CLAIMS FACTOR', function () {
+        itHasIconAndText(
+          'CUSTOM_CLAIMS',
+          'mfa-custom-factor',
+          'IDP factor',
+          'Redirect to a third party MFA provider to sign in to Okta.',
+          resAllFactors
+        );
+      });
       Expect.describe('CUSTOM SAML FACTOR', function () {
         itHasIconAndText(
           'GENERIC_SAML',
           'mfa-custom-factor',
           'Third Party Factor',
-          'Redirect to a third party MFA provider to sign in to Okta.',
+          'Redirect to a third party MFA provider to sign in.',
           resAllFactors
+        );
+      });
+      Expect.describe('CUSTOM SAML FACTOR WITH BRANDNAME', function () {
+        itHasIconAndText(
+          'GENERIC_SAML',
+          'mfa-custom-factor',
+          'Third Party Factor',
+          'Redirect to a third party MFA provider to sign in to Spaghetti Inc..',
+          resAllFactors,
+          false,
+          'Spaghetti Inc.'
         );
       });
       Expect.describe('CUSTOM OIDC FACTOR', function () {
@@ -682,8 +881,19 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
           'GENERIC_OIDC',
           'mfa-custom-factor',
           'OIDC Factor',
-          'Redirect to a third party MFA provider to sign in to Okta.',
+          'Redirect to a third party MFA provider to sign in.',
           resAllFactors
+        );
+      });
+      Expect.describe('CUSTOM OIDC FACTOR WITH BRANDNAME', function () {
+        itHasIconAndText(
+          'GENERIC_OIDC',
+          'mfa-custom-factor',
+          'OIDC Factor',
+          'Redirect to a third party MFA provider to sign in to Spaghetti Inc..',
+          resAllFactors,
+          false,
+          'Spaghetti Inc.'
         );
       });
     });
@@ -693,245 +903,361 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
         return setup(resAllFactors).then(function (test) {
           var factorList = test.form.getFactorList();
           expect(factorList).toEqual(['OKTA_VERIFY', 'U2F', 'WINDOWS_HELLO', 'YUBIKEY', 'GOOGLE_AUTH', 'CUSTOM_HOTP',
-            'SMS', 'CALL', 'QUESTION', 'DUO', 'SYMANTEC_VIP', 'RSA_SECURID', 'GENERIC_SAML', 'GENERIC_OIDC']);
+            'SMS', 'CALL', 'QUESTION', 'DUO', 'SYMANTEC_VIP', 'RSA_SECURID', 'CUSTOM_CLAIMS', 'GENERIC_SAML', 'GENERIC_OIDC']);
         });
       });
       itp('with push and onPrem is in correct order', function () {
         return setup(resAllFactorsOnPrem).then(function (test) {
           var factorList = test.form.getFactorList();
           expect(factorList).toEqual(['OKTA_VERIFY_PUSH', 'U2F', 'WINDOWS_HELLO', 'YUBIKEY', 'GOOGLE_AUTH',
-            'SMS', 'CALL', 'QUESTION', 'DUO', 'SYMANTEC_VIP', 'ON_PREM', 'GENERIC_SAML', 'GENERIC_OIDC']);
+            'SMS', 'CALL', 'QUESTION', 'DUO', 'SYMANTEC_VIP', 'ON_PREM', 'CUSTOM_CLAIMS', 'GENERIC_SAML', 'GENERIC_OIDC']);
         });
       });
     });
 
     Expect.describe('Multiple Enrollments', function () {
-      function testMultipleEnrollmentsForFactor (factorName) {
+      function testMultipleEnrollmentsForFactor (factorName, webauthnEnabled, useProfiles, enrolledFactor) {
         itp('does not display cardinality text if it is optional', function () {
-          return setup(resAllFactors).then(function (test) {
+          var res = useProfiles ? resAllFactorsProfile : resAllFactors;
+          return setup(res, false, webauthnEnabled).then(function (test) {
             expect(test.form.factorButtonText(factorName)).toBe('Setup');
             expect(test.form.factorCardinalityText(factorName)).toBe('');
           });
         });
+        itp('does not display cardinality text when factor is REQUIRED and maximum=1', function () {
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'NOT_SETUP',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 0, 'minimum': 0, 'maximum': 1},
+            webauthnEnabled,
+            useProfiles,
+          }).then(function (test) {
+            expect(test.form.factorButtonText(factorName)).toBe('');
+            expect(test.form.factorCardinalityText(factorName)).toBe('');
+            expect(test.form.submitButtonText()).toBe('Configure factor');
+          });
+        });
         itp('displays correct button and cardinality text when enrolled=1 optional=2', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'OPTIONAL',
-            {'enrolled': 1, 'minimum': 0, 'maximum': 3})
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays one row for enrolled, one for optional
-              expect(factorRows.length).toBe(2);
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'OPTIONAL',
+            cardinality: {'enrolled': 1, 'minimum': 0, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays one row for enrolled, one for optional
+            expect(factorRows.length).toBe(2);
 
-              var enrolledFactorRow = factorRows[0],
-                  optionalFactorRow = factorRows[1];
-              //enrolled factor row should have success check and no cardinality text
-              expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
-              expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('');
-              //optional factor should have button and no cardinality text
-              expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
-              expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
-            });
+            var enrolledFactorRow = factorRows[0],
+                optionalFactorRow = factorRows[1];
+            //enrolled factor row should have success check and no cardinality text
+            expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
+            expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('');
+            //optional factor should have button and no cardinality text
+            expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
+            expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
+          });
         });
         itp('displays correct button and cardinality text when enrolled=2 optional=1', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'OPTIONAL',
-            {'enrolled': 2, 'minimum': 0, 'maximum': 3})
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays one row for enrolled, one for optional
-              expect(factorRows.length).toBe(2);
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'OPTIONAL',
+            cardinality: {'enrolled': 2, 'minimum': 0, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays one row for enrolled, one for optional
+            expect(factorRows.length).toBe(2);
 
-              var enrolledFactorRow = factorRows[0],
-                  optionalFactorRow = factorRows[1];
-              //enrolled factor row should have success check and cardinality text
-              expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
-              expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
-              //optional factor should have button and no cardinality text
-              expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
-              expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
-            });
+            var enrolledFactorRow = factorRows[0],
+                optionalFactorRow = factorRows[1];
+            //enrolled factor row should have success check and cardinality text
+            expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
+            expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
+            //optional factor should have button and no cardinality text
+            expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
+            expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
+          });
         });
         itp('displays correct button and cardinality text when enrolled=3 optional=0', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'OPTIONAL',
-            {'enrolled': 3, 'minimum': 0, 'maximum': 3})
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays only one row for enrolled, none for optional
-              expect(factorRows.length).toBe(1);
-              //enrolled factor row should have success check and cardinality text
-              expect(test.form.factorHasSuccessCheck(factorName)).toBe(true);
-              expect(test.form.factorCardinalityText(factorName)).toBe('(3 set up)');
-            });
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'OPTIONAL',
+            cardinality: {'enrolled': 3, 'minimum': 0, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays only one row for enrolled, none for optional
+            expect(factorRows.length).toBe(1);
+            //enrolled factor row should have success check and cardinality text
+            expect(test.form.factorHasSuccessCheck(factorName)).toBe(true);
+            expect(test.form.factorCardinalityText(factorName)).toBe('(3 set up)');
+          });
         });
         itp('displays correct cardinality text when enrolled=0 required=2', function () {
-          return setupMultipleFactorEnrollments(factorName, 'NOT_SETUP', 'REQUIRED',
-            {'enrolled': 0, 'minimum': 2, 'maximum': 3})
-            .then(function (test) {
-              //enrolled factor row should have pending check and cardinality text
-              expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
-              expect(test.form.factorCardinalityText(factorName)).toBe('(0 of 2 set up)');
-            });
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'NOT_SETUP',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 0, 'minimum': 2, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles
+          }).then(function (test) {
+            //enrolled factor row should have pending check and cardinality text
+            expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
+            expect(test.form.factorCardinalityText(factorName)).toBe('(0 of 2 set up)');
+          });
         });
         itp('displays correct cardinality text when enrolled=1 required=1', function () {
-          return setupMultipleFactorEnrollments(factorName, 'NOT_SETUP', 'REQUIRED',
-            {'enrolled': 1, 'minimum': 2, 'maximum': 3})
-            .then(function (test) {
-              //enrolled factor row should have pending check and cardinality text
-              expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
-              expect(test.form.factorCardinalityText(factorName)).toBe('(1 of 2 set up)');
-            });
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'NOT_SETUP',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 1, 'minimum': 2, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            //enrolled factor row should have pending check and cardinality text
+            expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
+            expect(test.form.factorCardinalityText(factorName)).toBe('(1 of 2 set up)');
+          });
         });
         itp('does not have skip set up link when enrolled=1 required=1', function () {
-          return setupMultipleFactorEnrollments(factorName, 'NOT_SETUP', 'REQUIRED',
-            {'enrolled': 1, 'minimum': 2, 'maximum': 3})
-            .then(function (test) {
-              expect(test.form.skipSetUpLink().length).toBe(0);
-            });
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'NOT_SETUP',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 1, 'minimum': 2, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            expect(test.form.skipSetUpLink().length).toBe(0);
+          });
         });
         itp('displays correct cardinality text when enrolled=2 required=0 and question required', function () {
-          return setupMultipleRequiredActiveEnrollmentsForFactorAndAnotherFactorRequired(
-            factorName, {'enrolled': 2, 'minimum': 2, 'maximum': 3}
-          ).then(function (test) {
+          return setupMultipleRequiredActiveEnrollmentsForFactorAndAnotherFactorRequired({
+            factorName,
+            cardinality: {'enrolled': 2, 'minimum': 2, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
             //enrolled factor row should have success check and cardinality text
             expect(test.form.factorHasSuccessCheck(factorName)).toBe(true);
             expect(test.form.factorCardinalityText(factorName)).toBe('(2 set up)');
           });
         });
         itp('has skip set up link when it is in the response and enrolled=2 required=0 and question required', function () {
-          return setupMultipleRequiredActiveEnrollmentsForFactorAndAnotherFactorRequired(
-            factorName, {'enrolled': 2, 'minimum': 2, 'maximum': 3}
-          ).then(function (test) {
+          return setupMultipleRequiredActiveEnrollmentsForFactorAndAnotherFactorRequired({
+            factorName,
+            cardinality: {'enrolled': 2, 'minimum': 2, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
             expect(test.form.skipSetUpLink().length).toBe(1);
           });
         });
         itp('displays correct cardinality text when enrolled=2 required=0 optional=1', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'REQUIRED',
-            {'enrolled': 2, 'minimum': 2, 'maximum': 3})
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays one row for enrolled, one for optional
-              expect(factorRows.length).toBe(2);
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 2, 'minimum': 2, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays one row for enrolled, one for optional
+            expect(factorRows.length).toBe(2);
 
-              var enrolledFactorRow = factorRows[0],
-                  optionalFactorRow = factorRows[1];
-              //enrolled factor row should have success check and cardinality text
-              expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
-              expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
-              //optional factor should have button and no cardinality text
-              expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
-              expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
-            });
+            var enrolledFactorRow = factorRows[0],
+                optionalFactorRow = factorRows[1];
+            //enrolled factor row should have success check and cardinality text
+            expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
+            expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
+            //optional factor should have button and no cardinality text
+            expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
+            expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
+          });
         });
         itp('displays correct cardinality text when enrolled=3 required=0 optional=0', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'REQUIRED',
-            {'enrolled': 3, 'minimum': 2, 'maximum': 3})
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays only one row for enrolled, none for optional
-              expect(factorRows.length).toBe(1);
-              //enrolled factor row should have success check and cardinality text
-              expect(test.form.factorHasSuccessCheck(factorName)).toBe(true);
-              expect(test.form.factorCardinalityText(factorName)).toBe('(3 set up)');
-            });
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 3, 'minimum': 2, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays only one row for enrolled, none for optional
+            expect(factorRows.length).toBe(1);
+            //enrolled factor row should have success check and cardinality text
+            expect(test.form.factorHasSuccessCheck(factorName)).toBe(true);
+            expect(test.form.factorCardinalityText(factorName)).toBe('(3 set up)');
+          });
         });
         itp('checks that the order of factors is correct during enroll if enrollment OPTIONAL', function () {
-          return setupMultipleFactorEnrollments(
-            factorName, 'ACTIVE', 'OPTIONAL',{'enrolled': 1, 'minimum': 0, 'maximum': 3}
-          ).then(function (test) {
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'OPTIONAL',
+            cardinality: {'enrolled': 1, 'minimum': 0, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
             var factorRows = test.form.optionalFactorList();
             var factorIndex = factorRows.find(`[data-se="${factorName}"]`).index();
-            var expectedIndex = FactorUtil.getFactorSortOrder(factorEnrollList[factorName].provider, factorEnrollList[factorName].factorType) - 1;
+            var expectedIndex = FactorUtil.getFactorSortOrder.call(test.router, factorEnrollList[factorName].provider, factorEnrollList[factorName].factorType) - 1;
             expect(factorIndex).toBe(expectedIndex);
           });
         });
         itp('checks that the order of factors is correct during enroll if enrollment REQUIRED', function () {
-          return setupMultipleFactorEnrollments(
-            factorName, 'ACTIVE', 'REQUIRED',{'enrolled': 1, 'minimum': 1, 'maximum': 3}
-          ).then(function (test) {
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 1, 'minimum': 1, 'maximum': 3},
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
             var factorRows = test.form.optionalFactorList();
             var factorIndex = factorRows.find(`[data-se="${factorName}"]`).index();
-            var expectedIndex = FactorUtil.getFactorSortOrder(factorEnrollList[factorName].provider, factorEnrollList[factorName].factorType) - 1;
+            var expectedIndex = FactorUtil.getFactorSortOrder.call(test.router, factorEnrollList[factorName].provider, factorEnrollList[factorName].factorType) - 1;
             expect(factorIndex).toBe(expectedIndex);
           });
         });
       }
 
-      function testMultipleEnrollmentsWhenSingleFactor (factorName, singleFactorResponse) {
+      function testMultipleEnrollmentsWhenSingleFactor (factorName, singleFactorRes, webauthnEnabled, useProfiles, enrolledFactor) {
         itp('does not display cardinality text if factor is optional', function () {
-          return setup(singleFactorResponse).then(function (test) {
+          return setup(singleFactorRes, false, webauthnEnabled).then(function (test) {
             expect(test.form.factorButtonText(factorName)).toBe('Setup');
             expect(test.form.factorCardinalityText(factorName)).toBe('');
           });
         });
         itp('displays correct button and cardinality text when enrolled=1 optional=2', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'OPTIONAL',
-            {'enrolled': 1, 'minimum': 0, 'maximum': 3}, singleFactorResponse)
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays one row for enrolled, one for optional
-              expect(factorRows.length).toBe(2);
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'OPTIONAL',
+            cardinality: {'enrolled': 1, 'minimum': 0, 'maximum': 3},
+            singleFactorRes,
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays one row for enrolled, one for optional
+            expect(factorRows.length).toBe(2);
 
-              var enrolledFactorRow = factorRows[0],
-                  optionalFactorRow = factorRows[1];
-              //enrolled factor row should have success check and no cardinality text
-              expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
-              expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('');
-              //optional factor should have button and no cardinality text
-              expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
-              expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
-            });
+            var enrolledFactorRow = factorRows[0],
+                optionalFactorRow = factorRows[1];
+            //enrolled factor row should have success check and no cardinality text
+            expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
+            expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('');
+            //optional factor should have button and no cardinality text
+            expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
+            expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
+          });
         });
         itp('displays correct button and cardinality text when enrolled=2 optional=1', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'OPTIONAL',
-            {'enrolled': 2, 'minimum': 0, 'maximum': 3}, singleFactorResponse)
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays one row for enrolled, one for optional
-              expect(factorRows.length).toBe(2);
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'OPTIONAL',
+            cardinality: {'enrolled': 2, 'minimum': 0, 'maximum': 3},
+            singleFactorRes,
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays one row for enrolled, one for optional
+            expect(factorRows.length).toBe(2);
 
-              var enrolledFactorRow = factorRows[0],
-                  optionalFactorRow = factorRows[1];
-              //enrolled factor row should have success check and cardinality text
-              expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
-              expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
-              //optional factor should have button and no cardinality text
-              expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
-              expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
-            });
+            var enrolledFactorRow = factorRows[0],
+                optionalFactorRow = factorRows[1];
+            //enrolled factor row should have success check and cardinality text
+            expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
+            expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
+            //optional factor should have button and no cardinality text
+            expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
+            expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
+          });
         });
         itp('displays correct cardinality text when enrolled=0 required=2', function () {
-          return setupMultipleFactorEnrollments(factorName, 'NOT_SETUP', 'REQUIRED',
-            {'enrolled': 0, 'minimum': 2, 'maximum': 3}, singleFactorResponse)
-            .then(function (test) {
-              //enrolled factor row should have pending check and cardinality text
-              expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
-              expect(test.form.factorCardinalityText(factorName)).toBe('(0 of 2 set up)');
-            });
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'NOT_SETUP',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 0, 'minimum': 2, 'maximum': 3},
+            singleFactorRes,
+            webauthnEnabled,
+            useProfiles
+          }).then(function (test) {
+            //enrolled factor row should have pending check and cardinality text
+            expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
+            expect(test.form.factorCardinalityText(factorName)).toBe('(0 of 2 set up)');
+          });
         });
         itp('displays correct cardinality text when enrolled=1 required=1', function () {
-          return setupMultipleFactorEnrollments(factorName, 'NOT_SETUP', 'REQUIRED',
-            {'enrolled': 1, 'minimum': 2, 'maximum': 3}, singleFactorResponse)
-            .then(function (test) {
-              //enrolled factor row should have pending check and cardinality text
-              expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
-              expect(test.form.factorCardinalityText(factorName)).toBe('(1 of 2 set up)');
-            });
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'NOT_SETUP',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 1, 'minimum': 2, 'maximum': 3},
+            singleFactorRes,
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            //enrolled factor row should have pending check and cardinality text
+            expect(test.form.factorHasPendingCheck(factorName)).toBe(true);
+            expect(test.form.factorCardinalityText(factorName)).toBe('(1 of 2 set up)');
+          });
         });
         itp('displays correct cardinality text when enrolled=2 required=0 optional=1', function () {
-          return setupMultipleFactorEnrollments(factorName, 'ACTIVE', 'REQUIRED',
-            {'enrolled': 2, 'minimum': 2, 'maximum': 3}, singleFactorResponse)
-            .then(function (test) {
-              var factorRows = test.form.factorRow(factorName);
-              //displays one row for enrolled, one for optional
-              expect(factorRows.length).toBe(2);
+          return setupMultipleFactorEnrollments({
+            factorName,
+            status: 'ACTIVE',
+            enrollment: 'REQUIRED',
+            cardinality: {'enrolled': 2, 'minimum': 2, 'maximum': 3},
+            singleFactorRes,
+            webauthnEnabled,
+            useProfiles,
+            enrolledFactor
+          }).then(function (test) {
+            var factorRows = test.form.factorRow(factorName);
+            //displays one row for enrolled, one for optional
+            expect(factorRows.length).toBe(2);
 
-              var enrolledFactorRow = factorRows[0],
-                  optionalFactorRow = factorRows[1];
-              //enrolled factor row should have success check and cardinality text
-              expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
-              expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
-              //optional factor should have button and no cardinality text
-              expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
-              expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
-            });
+            var enrolledFactorRow = factorRows[0],
+                optionalFactorRow = factorRows[1];
+            //enrolled factor row should have success check and cardinality text
+            expect(test.form.factorHasSuccessCheck(null, enrolledFactorRow)).toBe(true);
+            expect(test.form.factorCardinalityText(null, enrolledFactorRow)).toBe('(2 set up)');
+            //optional factor should have button and no cardinality text
+            expect(test.form.factorButtonText(null, optionalFactorRow)).toBe('Set up another');
+            expect(test.form.factorCardinalityText(null, optionalFactorRow)).toBe('');
+          });
         });
       }
 
@@ -940,6 +1266,18 @@ function (Okta, OktaAuth, Util, EnrollChoicesForm, Beacon, Expect, FactorUtil, R
       });
       Expect.describe('with only U2F configured', function () {
         testMultipleEnrollmentsWhenSingleFactor('U2F', resMultipleU2F);
+      });
+      Expect.describe('WEBAUTHN', function () {
+        testMultipleEnrollmentsForFactor('WEBAUTHN', true);
+      });
+      Expect.describe('with only WEBAUTHN configured', function () {
+        testMultipleEnrollmentsWhenSingleFactor('WEBAUTHN', resMultipleWebauthn, true);
+      });
+      Expect.describe('WEBAUTHN with profiles', function () {
+        testMultipleEnrollmentsForFactor('WEBAUTHN', true, true, enrolledWebauthnFactor);
+      });
+      Expect.describe('with only WEBAUTHN configured with profiles', function () {
+        testMultipleEnrollmentsWhenSingleFactor('WEBAUTHN', resMultipleWebauthnProfile, true, true, enrolledWebauthnFactor);
       });
       Expect.describe('Okta Verify', function () {
         testMultipleEnrollmentsForFactor('OKTA_VERIFY');

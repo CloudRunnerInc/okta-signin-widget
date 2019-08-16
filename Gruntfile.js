@@ -104,7 +104,7 @@ module.exports = function (grunt) {
                 tpl = Handlebars.compile(content),
                 tplVars = {
                   browserName: browserName,
-              
+
                   // To include accessibility check in the test, pass in -a11y option, i.e.
                   // "grunt test-e2e --browserName chrome -a11y"
                   CHECK_A11Y: !!grunt.option('a11y')
@@ -231,11 +231,6 @@ module.exports = function (grunt) {
         files: {
           'target/css/okta-sign-in.css': SASS + '/okta-sign-in.scss'
         }
-      },
-      buildtheme: {
-        files: {
-          'target/css/okta-theme.css': SASS + '/okta-theme.scss'
-        }
       }
     },
     postcss: {
@@ -249,9 +244,6 @@ module.exports = function (grunt) {
       },
       build: {
         src: 'target/css/okta-sign-in.css'
-      },
-      buildtheme: {
-        src: 'target/css/okta-theme.css'
       },
       minify: {
         options: {
@@ -285,6 +277,13 @@ module.exports = function (grunt) {
       }
     },
 
+    propertiesToJSON: {
+      main: {
+        src: ['packages/@okta/i18n/dist/properties/*.properties'],
+        dest: 'packages/@okta/i18n/dist/json'
+      }
+    },
+
   });
 
   grunt.task.registerTask(
@@ -305,7 +304,7 @@ module.exports = function (grunt) {
       }
 
       grunt.log.writeln('Testing against: ' + process.env.WIDGET_TEST_SERVER);
-  
+
       grunt.task.run([
         'copy:e2e',
         'copy:e2e-pages',
@@ -322,8 +321,6 @@ module.exports = function (grunt) {
       'exec:generate-config', // populates src/config.json with supported languages
       'copy:app-to-target',
       'exec:generate-jsonp', // generates jsonp wrappers for json files in target dir
-      'sass:buildtheme',
-      'postcss:buildtheme',
       'sass:build',
     ];
 
@@ -350,6 +347,7 @@ module.exports = function (grunt) {
     grunt.task.run([
       'exec:clean',
       'exec:retirejs',
+      'propertiesToJSON',
       `assets:${target}`,
       ...buildTasks,
       ...postBuildTasks,

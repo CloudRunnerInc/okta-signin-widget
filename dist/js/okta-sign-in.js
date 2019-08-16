@@ -78,10 +78,10 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ (function(module, exports, __webpack_require__) {
 
 var global = __webpack_require__(4);
-var core = __webpack_require__(30);
-var hide = __webpack_require__(23);
-var redefine = __webpack_require__(24);
-var ctx = __webpack_require__(31);
+var core = __webpack_require__(31);
+var hide = __webpack_require__(24);
+var redefine = __webpack_require__(25);
+var ctx = __webpack_require__(32);
 var PROTOTYPE = 'prototype';
 
 var $export = function (type, name, source) {
@@ -133,7 +133,7 @@ var _stringify = __webpack_require__(148);
 
 var _stringify2 = _interopRequireDefault2(_stringify);
 
-var _typeof2 = __webpack_require__(85);
+var _typeof2 = __webpack_require__(106);
 
 var _typeof3 = _interopRequireDefault2(_typeof2);
 
@@ -143,7 +143,7 @@ var _defineProperty2 = _interopRequireDefault2(_defineProperty);
 
 function _interopRequireDefault2(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-/*! THIS FILE IS GENERATED FROM PACKAGE @okta/courage@4.6.0-beta.2416.g73309fe */
+/*! THIS FILE IS GENERATED FROM PACKAGE @okta/courage@4.6.0-beta.2670.g173eed7 */
 module.exports =
 /******/function (modules) {
   // webpackBootstrap
@@ -926,7 +926,7 @@ module.exports =
   /* eslint max-params: [2, 6] */
 
   var LABEL_OPTIONS = ['model', 'id', 'inputId', 'type', 'label', 'sublabel', 'tooltip', 'name'];
-  var CONTAINER_OPTIONS = ['wide', 'multi', 'input', 'explain', 'customExplain', 'model', 'name', 'type', 'autoRender'];
+  var CONTAINER_OPTIONS = ['wide', 'multi', 'input', 'label-top', 'explain', 'explain-top', 'customExplain', 'model', 'name', 'type', 'autoRender'];
   var WRAPPER_OPTIONS = ['model', 'name', 'label-top', 'readOnly', 'events', 'initialize', 'showWhen', 'bindings', 'render', 'className', 'data-se', 'toggleWhen'];
   var INPUT_OPTIONS = ['model', 'name', 'inputId', 'type', // base options
   'input', // custom input
@@ -1761,7 +1761,7 @@ module.exports =
 /* 12 */
 /***/function (module, exports) {
 
-  module.exports = __webpack_require__(89);
+  module.exports = __webpack_require__(115);
 
   /***/
 },
@@ -6251,13 +6251,17 @@ module.exports =
   /* harmony default export */__webpack_exports__["default"] = __WEBPACK_IMPORTED_MODULE_5__views_BaseView__["default"].extend(
   /** @lends module:Okta.Controller.prototype */{
     constructor: function constructor(options) {
-      /* eslint max-statements: [2, 13], complexity: [2, 7]*/
+      /* eslint max-statements: [2, 15], complexity: [2, 9]*/
       options || (options = {});
 
-      var stateData = __WEBPACK_IMPORTED_MODULE_1__underscore_wrapper__["default"].defaults(clean(options.state), this.state || {});
-
-      this.state = new __WEBPACK_IMPORTED_MODULE_4__StateMachine__["a" /* default */](stateData);
-      delete options.state;
+      // If 'state' is passed down as options, use it, else create a 'new StateMachine()'
+      if (options.state instanceof __WEBPACK_IMPORTED_MODULE_4__StateMachine__["a" /* default */] || this.state instanceof __WEBPACK_IMPORTED_MODULE_4__StateMachine__["a" /* default */]) {
+        this.state = options.state || this.state;
+      } else {
+        var stateData = __WEBPACK_IMPORTED_MODULE_1__underscore_wrapper__["default"].defaults(clean(options.state), this.state || {});
+        this.state = new __WEBPACK_IMPORTED_MODULE_4__StateMachine__["a" /* default */](stateData);
+        delete options.state;
+      }
 
       if (options.settings) {
         this.settings = options.settings;
@@ -7073,6 +7077,8 @@ module.exports =
   "use strict";
   /* harmony import */
   var __WEBPACK_IMPORTED_MODULE_0__View__ = __webpack_require__(22);
+  /* harmony import */var __WEBPACK_IMPORTED_MODULE_1__util_underscore_wrapper__ = __webpack_require__(0);
+  /* eslint-disable max-statements */
 
   /**
      * Archer.ListView is a {@link src/framework/View} that operates on a
@@ -7116,7 +7122,12 @@ module.exports =
       }
       this.listenTo(this.collection, 'reset sort', this.reset);
       this.listenTo(this.collection, 'add', this.addItem);
-      this.collection.each(this.addItem, this);
+
+      if (this.fetchCollection) {
+        this.collection.fetch();
+      } else {
+        this.collection.each(this.addItem, this);
+      }
     },
 
     /**
@@ -7137,8 +7148,12 @@ module.exports =
        * @protected
        */
     reset: function reset() {
+      var _this3 = this;
+
       this.removeChildren();
-      this.collection.each(this.addItem, this);
+      this.collection.each(function (model, index) {
+        _this3.addItem(model, index);
+      });
       return this;
     },
 
@@ -7155,7 +7170,9 @@ module.exports =
       var view = this.add(this.item, this.itemSelector, { options: { model: model } }).last();
       view.listenTo(model, 'destroy remove', view.remove);
       return this;
-    }
+    },
+
+    addShowMore: __WEBPACK_IMPORTED_MODULE_1__util_underscore_wrapper__["default"].noop
 
   });
 
@@ -7386,6 +7403,17 @@ module.exports =
     return savingStateEvent.join(' ');
   };
 
+  var getErrorSummary = function getErrorSummary() {
+    var responseJSON = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+    if (Array.isArray(responseJSON.errorCauses) && responseJSON.errorCauses.length > 0) {
+      //set errorSummary from first errorCause which is not field specific error
+      return responseJSON.errorCauses[0].errorSummary;
+    } else {
+      //set errorSummary from top level errorSummary
+      return responseJSON.errorSummary;
+    }
+  };
   /**
    * A Form utility framework
    *
@@ -7515,13 +7543,13 @@ module.exports =
 
       if (this.getAttribute('autoSave')) {
         this.listenTo(this, 'save', function (model) {
-          var _this3 = this;
+          var _this4 = this;
 
           var xhr = model.save();
 
           if (xhr && xhr.done) {
             xhr.done(function () {
-              _this3.trigger('saved', model);
+              _this4.trigger('saved', model);
             });
           }
         });
@@ -7923,8 +7951,20 @@ module.exports =
     },
 
     /**
-     * Function can be overridden to alter error summary
+     * Function can be overridden to alter top level error summary.
      * @param {Object} responseJSON
+     *
+     * @example
+     * // responseJSON object
+     * {
+     *  errorCauses: [{errorSummary: "At least one of Proxy Status, Location, or ASN should be configured."}]
+     *  errorSummary: "At least one of Proxy Status, Location, or ASN should be configured."
+     *  errorCode: "E0000001"
+     *  errorId: "oaepsrTCHrhT-eIi8XTm6KWWg"
+     *  errorLink: "E0000001"
+     *  errorSummary: "Api validation failed: networkZone"
+     * }
+     *
      * @method
      * @default _.identity
      */
@@ -7946,7 +7986,6 @@ module.exports =
         var validationErrors = __WEBPACK_IMPORTED_MODULE_8__helpers_ErrorParser__["a" /* default */].parseFieldErrors(resp);
 
         // trigger events for field validation errors
-
         if (__WEBPACK_IMPORTED_MODULE_1__util_underscore_wrapper__["default"].size(validationErrors)) {
           __WEBPACK_IMPORTED_MODULE_1__util_underscore_wrapper__["default"].each(validationErrors, function (errors, field) {
             this.model.trigger('form:field-error', this.__errorFields[field] || field, __WEBPACK_IMPORTED_MODULE_1__util_underscore_wrapper__["default"].map(errors, function (error) {
@@ -7954,13 +7993,9 @@ module.exports =
               );
             }));
           }, this);
-        } else if (responseJSON && Array.isArray(responseJSON.errorCauses) && responseJSON.errorCauses.length > 0) {
-          //set errorSummary from first errorCause which is not field specific error
-          errorSummary = responseJSON.errorCauses[0].errorSummary;
         } else {
-          //set errorSummary from top level errorSummary
           responseJSON = this.parseErrorMessage(responseJSON);
-          errorSummary = responseJSON && responseJSON.errorSummary;
+          errorSummary = getErrorSummary(responseJSON);
         }
 
         // show the error message
@@ -8056,7 +8091,7 @@ module.exports =
      * Add a form input
      * @param {Object} options Options to describe the input
      * @param {String} options.type The input type.
-     * The options are: `text`, `textarea`, `select`, `checkbox`, `radio`,
+     * The options are: `text`, `textarea`, `select`, `checkbox`, `radio`, `switch`,
      * `password`, `number`, `textselect`, `date`, `grouppicker`, `su-orgspicker`
      * `file/image`, `file/cert`, `checkboxset`, `list`, `group`, `zonepicker`
      * @param {String} options.name The name of the model field this input mutates
@@ -8072,6 +8107,7 @@ module.exports =
      * @param {Boolean} [options.disabled=false] Make this input disabled
      * @param {Boolean} [options.wide=false] Use a wide input layout
      * @param {Boolean} [options.label-top=false] position label on top of an input
+     * @param {Boolean} [options.explain-top=false] position explain on top of an input (requires label-top=true)
      * @param {Number} [options.multi] have multiple in-line inputs. useful when `input` is passed as an array of inputs
      * @param {String} [options.errorField] The API error field here that maps to this input
      * @param {Boolean} [options.inlineValidation=true] Validate input on focusout
@@ -8532,14 +8568,14 @@ module.exports =
       /* eslint max-statements: [2, 18] */
       __WEBPACK_IMPORTED_MODULE_5__BaseView__["default"].apply(this, arguments);
 
-      // we want to append the input *before* the explain text
+      var explainTop = this.options['explain-top'] && this.options['label-top'];
       if (this.options.input) {
         if (__WEBPACK_IMPORTED_MODULE_0__util_underscore_wrapper__["default"].isArray(this.options.input)) {
           __WEBPACK_IMPORTED_MODULE_0__util_underscore_wrapper__["default"].each(this.options.input, function (inputItem) {
-            this.add(inputItem, { prepend: true });
+            this.add(inputItem, { prepend: !explainTop });
           }, this);
         } else {
-          this.add(this.options.input, { prepend: true });
+          this.add(this.options.input, { prepend: !explainTop });
         }
       }
 
@@ -8549,7 +8585,7 @@ module.exports =
 
       this.listenTo(this.model, 'form:field-error', function (name, errors) {
         if (__WEBPACK_IMPORTED_MODULE_0__util_underscore_wrapper__["default"].contains(names, name)) {
-          this.__setError(errors);
+          this.__setError(errors, explainTop);
         }
       });
 
@@ -8608,7 +8644,7 @@ module.exports =
      * Adds an explaination message of the error
      * @private
      */
-    __setError: function __setError(errors) {
+    __setError: function __setError(errors, explainTop) {
       this.__errorState = true;
       this.$el.addClass('o-form-has-errors');
 
@@ -8624,7 +8660,7 @@ module.exports =
 
       var $elExplain = this.$('.o-form-explain').not('.o-form-input-error').first();
 
-      if ($elExplain.length) {
+      if ($elExplain.length && !explainTop) {
         $elExplain.before(html);
       } else {
         this.$el.append(html);
@@ -8638,7 +8674,7 @@ module.exports =
      * @private
      */
     __clearError: function __clearError() {
-      var _this4 = this;
+      var _this5 = this;
 
       if (this.__errorState) {
         this.$('.o-form-input-error').remove();
@@ -8646,7 +8682,7 @@ module.exports =
         this.$el.removeClass('o-form-has-errors');
         this.__errorState = false;
         __WEBPACK_IMPORTED_MODULE_0__util_underscore_wrapper__["default"].defer(function () {
-          _this4.model.trigger('form:resize');
+          _this5.model.trigger('form:resize');
         });
       }
     },
@@ -10453,12 +10489,12 @@ module.exports =
 
   var events = {
     'click .infobox-dismiss-link': function clickInfoboxDismissLink(e) {
-      var _this5 = this;
+      var _this6 = this;
 
       e.preventDefault();
       this.$el.fadeOut(__WEBPACK_IMPORTED_MODULE_1__util_Time__["a" /* default */].UNLOADING_FADE, function () {
-        _this5.trigger('dismissed');
-        _this5.remove();
+        _this6.trigger('dismissed');
+        _this6.remove();
       });
     }
   };
@@ -10806,12 +10842,12 @@ module.exports =
     },
 
     remove: function remove() {
-      var _this6 = this,
+      var _this7 = this,
           _arguments = arguments;
 
       this.trigger(updateArrayEvent, null);
       this.$el.slideUp(function () {
-        __WEBPACK_IMPORTED_MODULE_5__BaseView__["default"].prototype.remove.call(_this6, _arguments);
+        __WEBPACK_IMPORTED_MODULE_5__BaseView__["default"].prototype.remove.call(_this7, _arguments);
       });
     },
 
@@ -10852,7 +10888,7 @@ module.exports =
     },
 
     parseInt: function (_parseInt2) {
-      function parseInt(_x3) {
+      function parseInt(_x4) {
         return _parseInt2.apply(this, arguments);
       }
 
@@ -11009,13 +11045,13 @@ module.exports =
     },
 
     __showPassword: function __showPassword() {
-      var _this7 = this;
+      var _this8 = this;
 
       __WEBPACK_IMPORTED_MODULE_2__TextBox__["default"].prototype.changeType.apply(this, ['text']);
       this.$('.password-toggle .button-show').hide();
       this.$('.password-toggle .button-hide').show();
       this.passwordToggleTimer = __WEBPACK_IMPORTED_MODULE_0__util_underscore_wrapper__["default"].delay(function () {
-        _this7.__hidePassword();
+        _this8.__hidePassword();
       }, toggleTimeout);
     },
 
@@ -11339,7 +11375,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(79), __webpack_require__(91)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, BaseLoginController, BaseLoginModel) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(79), __webpack_require__(89)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, BaseLoginController, BaseLoginModel) {
   var Toolbar = Okta.internal.views.forms.components.Toolbar;
   var FormUtil = Okta.internal.views.forms.helpers.FormUtil;
 
@@ -11593,7 +11629,7 @@ module.exports = function (it) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var store = __webpack_require__(80)('wks');
-var uid = __webpack_require__(54);
+var uid = __webpack_require__(55);
 var Symbol = __webpack_require__(4).Symbol;
 var USE_SYMBOL = typeof Symbol == 'function';
 
@@ -11610,7 +11646,7 @@ $exports.store = store;
 /***/ (function(module, exports, __webpack_require__) {
 
 // 7.1.15 ToLength
-var toInteger = __webpack_require__(33);
+var toInteger = __webpack_require__(34);
 var min = Math.min;
 module.exports = function (it) {
   return it > 0 ? min(toInteger(it), 0x1fffffffffffff) : 0; // pow(2, 53) - 1 == 9007199254740991
@@ -13687,7 +13723,7 @@ return Q;
 
 var anObject = __webpack_require__(2);
 var IE8_DOM_DEFINE = __webpack_require__(170);
-var toPrimitive = __webpack_require__(36);
+var toPrimitive = __webpack_require__(37);
 var dP = Object.defineProperty;
 
 exports.f = __webpack_require__(11) ? Object.defineProperty : function defineProperty(O, P, Attributes) {
@@ -13726,7 +13762,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 //because we want to be explicit about which TextBox we are extending here
 //and want to avoid the cirucular dependency that occurs if we
 //include Okta
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(67), __webpack_require__(159)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BrowserFeatures) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(68), __webpack_require__(159)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BrowserFeatures) {
   var TextBox = Okta.internal.views.forms.inputs.TextBox;
 
 
@@ -13759,7 +13795,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 /***/ (function(module, exports, __webpack_require__) {
 
 // 7.1.13 ToObject(argument)
-var defined = __webpack_require__(37);
+var defined = __webpack_require__(38);
 module.exports = function (it) {
   return Object(defined(it));
 };
@@ -13792,8 +13828,215 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
+/* eslint complexity: [2, 13], max-depth: [2, 3] */
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(116), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Logger, Enums) {
+
+  var Util = {};
+  var _ = Okta._;
+
+  var buildInputForParameter = function buildInputForParameter(name, value) {
+    var input = document.createElement('input');
+    input.name = name;
+    input.value = decodeURIComponent(value);
+    input.type = 'hidden';
+    return input;
+  };
+
+  var buildDynamicForm = function buildDynamicForm() {
+    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+
+    var splitOnFragment = url.split('#');
+    var fragment = splitOnFragment[1];
+
+    var splitOnQuery = (splitOnFragment[0] || '').split('?');
+    var query = splitOnQuery[1];
+    var targetUrl = splitOnQuery[0];
+    if (fragment) {
+      targetUrl += '#' + fragment;
+    }
+
+    var form = document.createElement('form');
+    form.method = 'get';
+    form.setAttribute('style', 'display: none;');
+    form.action = targetUrl;
+    if (query && query.length) {
+      var queryParts = query.split('&');
+      queryParts.forEach(function (queryPart) {
+        var parameterParts = queryPart.split('=');
+        var input = buildInputForParameter(parameterParts[0], parameterParts[1]);
+        form.appendChild(input);
+      });
+    }
+    return form;
+  };
+
+  Util.hasTokensInHash = function (hash) {
+    return (/((id|access)_token=)/i.test(hash)
+    );
+  };
+
+  Util.transformErrorXHR = function (xhr) {
+    // Handle network connection error
+    if (xhr.status === 0 && _.isEmpty(xhr.responseJSON)) {
+      xhr.responseJSON = { errorSummary: Okta.loc('error.network.connection', 'login') };
+      return xhr;
+    }
+    if (!xhr.responseJSON) {
+      if (!xhr.responseText) {
+        xhr.responseJSON = { errorSummary: Okta.loc('oform.error.unexpected', 'login') };
+        return xhr;
+      }
+      xhr.responseJSON = xhr.responseText;
+    }
+    // Temporary solution to display field errors
+    // Assuming there is only one field error in a response
+    if (xhr.responseJSON && xhr.responseJSON.errorCauses && xhr.responseJSON.errorCauses.length) {
+      xhr.responseJSON.errorSummary = xhr.responseJSON.errorCauses[0].errorSummary;
+    }
+    // Replace error messages
+    if (!_.isEmpty(xhr.responseJSON)) {
+      var errorMsg = Okta.loc('errors.' + xhr.responseJSON.errorCode, 'login');
+      if (errorMsg.indexOf('L10N_ERROR[') === -1) {
+        xhr.responseJSON.errorSummary = errorMsg;
+        if (xhr.responseJSON && xhr.responseJSON.errorCauses && xhr.responseJSON.errorCauses.length) {
+          // BaseForm will consume errorCauses before errorSummary if it is an array,
+          // so, we have to make sure to remove it when we have a valid error code
+          delete xhr.responseJSON.errorCauses;
+        }
+      }
+    }
+    return xhr;
+  };
+
+  // Simple helper function to lowercase all strings in the given array
+  Util.toLower = function (strings) {
+    return _.map(strings, function (str) {
+      return str.toLowerCase();
+    });
+  };
+
+  // A languageCode can be composed of multiple parts, i.e:
+  // {{langage}}-{{region}}-{{dialect}}
+  //
+  // In these cases, it's necessary to generate a list of other possible
+  // combinations that we might support (in preferred order).
+  //
+  // For example:
+  // en-US -> [en-US, en]
+  // de-DE-bavarian -> [de-DE-bavarian, de-DE, de]
+  function expandLanguage(language) {
+    var expanded = [language],
+        parts = language.split('-');
+    while (parts.pop() && parts.length > 0) {
+      expanded.push(parts.join('-'));
+    }
+    return expanded;
+  }
+
+  // Following the rules of expanding one language, this will generate
+  // all potential languages in the given order (where higher priority is
+  // given to expanded languages over other downstream languages).
+  Util.expandLanguages = function (languages) {
+    return _.chain(languages).map(expandLanguage).flatten().uniq().value();
+  };
+
+  //helper to call setTimeout
+  Util.callAfterTimeout = function (callback, time) {
+    return setTimeout(callback, time);
+  };
+
+  // Helper function to provide consistent formatting of template literals
+  // that are logged when in development mode.
+  Util.debugMessage = function (message) {
+    Logger.warn('\n' + message.replace(/^(\s)+/gm, ''));
+  };
+
+  // Trigger an afterError event
+  Util.triggerAfterError = function (controller) {
+    var err = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+    if (!err.statusCode && err.xhr && err.xhr.status) {
+      // Bring the statusCode to the top-level of the Error
+      err.statusCode = err.xhr.status;
+    }
+    // Some controllers return the className as a function - process it here:
+    var className = _.isFunction(controller.className) ? controller.className() : controller.className;
+    var error = _.pick(err, 'name', 'message', 'statusCode', 'xhr');
+    controller.trigger('afterError', { controller: className }, error);
+    // Logs to console only in dev mode
+    Logger.warn('controller: ' + className + ', error: ' + error);
+  };
+
+  /**
+   * Why redirect via Form get rather using `window.location.href`?
+   * At the time of writing, Chrome (<72) in Android would block window location change
+   * at following case
+   * 1. An AJAX is trigger because of user action.
+   * 2. 5+ seconds passed without any further user interaction.
+   * 3. User takes an action results in window location change.
+   *
+   * Luckily we discovered that uses Form submit would work around this problem
+   * even though it changed window location.
+   *
+   * Check the commit history for more details.
+   */
+  Util.redirectWithFormGet = function (url) {
+    if (!url) {
+      Logger.error('Cannot redirect to empty URL: (' + url + ')');
+      return;
+    }
+
+    var mainContainer = document.getElementById(Enums.WIDGET_CONTAINER_ID);
+    if (!mainContainer) {
+      Logger.error('Cannot find okta-sign-in container append to which a form');
+      return;
+    }
+
+    var form = buildDynamicForm(url);
+    mainContainer.appendChild(form);
+    form.submit();
+  };
+
+  /**
+   * When we want to show an explain text, we need to check if this is different from
+   * the label text, to not have an explain that look like a duplicated label.
+   * okta-signin-widget gives the possibility to customize every i18n, so we cannot
+   * know ahead if these two are equal or different, we need to call this function everytime.
+   */
+  Util.createInputExplain = function (explainKey, labelKey, bundleName, explainParams, labelParams) {
+    var explain = explainParams ? Okta.loc(explainKey, bundleName, explainParams) : Okta.loc(explainKey, bundleName);
+    var label = labelParams ? Okta.loc(labelKey, bundleName, labelParams) : Okta.loc(labelKey, bundleName);
+    if (explain === label) {
+      return false;
+    }
+    return explain;
+  };
+
+  return Util;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 18 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
 /* eslint complexity: [2, 38], max-statements: [2, 38] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(520)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, TimeUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(509)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, TimeUtil) {
 
   var _ = Okta._;
 
@@ -13802,61 +14045,65 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
   var factorData = {
     'OKTA_VERIFY': {
       label: 'factor.totpSoft.oktaVerify',
-      description: Okta.loc('factor.totpSoft.description', 'login'),
+      description: 'factor.totpSoft.description',
       iconClassName: 'mfa-okta-verify',
       sortOrder: 1
     },
     'OKTA_VERIFY_PUSH': {
       label: 'factor.oktaVerifyPush',
-      description: Okta.loc('factor.push.description', 'login'),
+      description: 'factor.push.description',
       iconClassName: 'mfa-okta-verify',
       sortOrder: 1
     },
     'U2F': {
       label: 'factor.u2f',
-      description: Okta.loc('factor.u2f.description', 'login'),
+      description: function description(brandName) {
+        return brandName ? 'factor.u2f.description.specific' : 'factor.u2f.description.generic';
+      },
       iconClassName: 'mfa-u2f',
       sortOrder: 2
     },
     'WEBAUTHN': {
       label: 'factor.webauthn',
-      description: Okta.loc('factor.webauthn.description', 'login'),
+      description: 'factor.webauthn.description',
       iconClassName: 'mfa-webauthn',
       sortOrder: 2
     },
     'WINDOWS_HELLO': {
       label: 'factor.windowsHello',
-      description: Okta.loc('factor.windowsHello.signin.description', 'login'),
+      description: function description(brandName) {
+        return brandName ? 'factor.windowsHello.signin.description.specific' : 'factor.windowsHello.signin.description.generic';
+      },
       iconClassName: 'mfa-windows-hello',
       sortOrder: 3
     },
     'YUBIKEY': {
       label: 'factor.totpHard.yubikey',
-      description: Okta.loc('factor.totpHard.yubikey.description', 'login'),
+      description: 'factor.totpHard.yubikey.description',
       iconClassName: 'mfa-yubikey',
       sortOrder: 4
     },
     'GOOGLE_AUTH': {
       label: 'factor.totpSoft.googleAuthenticator',
-      description: Okta.loc('factor.totpSoft.description', 'login'),
+      description: 'factor.totpSoft.description',
       iconClassName: 'mfa-google-auth',
       sortOrder: 5
     },
     'CUSTOM_HOTP': {
       label: '',
-      description: Okta.loc('factor.hotp.description', 'login'),
+      description: 'factor.hotp.description',
       iconClassName: 'mfa-hotp',
       sortOrder: 6
     },
     'SMS': {
       label: 'factor.sms',
-      description: Okta.loc('factor.sms.description', 'login'),
+      description: 'factor.sms.description',
       iconClassName: 'mfa-okta-sms',
       sortOrder: 7
     },
     'CALL': {
       label: 'factor.call',
-      description: Okta.loc('factor.call.description', 'login'),
+      description: 'factor.call.description',
       iconClassName: 'mfa-okta-call',
       sortOrder: 8
     },
@@ -13868,31 +14115,31 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     },
     'QUESTION': {
       label: 'factor.securityQuestion',
-      description: Okta.loc('factor.securityQuestion.description', 'login'),
+      description: 'factor.securityQuestion.description',
       iconClassName: 'mfa-okta-security-question',
       sortOrder: 10
     },
     'DUO': {
       label: 'factor.duo',
-      description: Okta.loc('factor.duo.description', 'login'),
+      description: 'factor.duo.description',
       iconClassName: 'mfa-duo',
       sortOrder: 11
     },
     'SYMANTEC_VIP': {
       label: 'factor.totpHard.symantecVip',
-      description: Okta.loc('factor.totpHard.description', 'login'),
+      description: 'factor.totpHard.description',
       iconClassName: 'mfa-symantec',
       sortOrder: 12
     },
     'RSA_SECURID': {
       label: 'factor.totpHard.rsaSecurId',
-      description: Okta.loc('factor.totpHard.description', 'login'),
+      description: 'factor.totpHard.description',
       iconClassName: 'mfa-rsa',
       sortOrder: 13
     },
     'ON_PREM': {
       label: '',
-      description: Okta.loc('factor.totpHard.description', 'login'),
+      description: 'factor.totpHard.description',
       iconClassName: 'mfa-onprem',
       sortOrder: 14
     },
@@ -13902,17 +14149,27 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       iconClassName: 'mfa-okta-password',
       sortOrder: 15
     },
-    'GENERIC_SAML': {
+    'CUSTOM_CLAIMS': {
       label: '',
-      description: Okta.loc('factor.customFactor.description', 'login'),
+      description: 'factor.customFactor.description',
       iconClassName: 'mfa-custom-factor',
       sortOrder: 16
     },
-    'GENERIC_OIDC': {
+    'GENERIC_SAML': {
       label: '',
-      description: Okta.loc('factor.customFactor.description', 'login'),
+      description: function description(brandName) {
+        return brandName ? 'factor.customFactor.description.specific' : 'factor.customFactor.description.generic';
+      },
       iconClassName: 'mfa-custom-factor',
       sortOrder: 17
+    },
+    'GENERIC_OIDC': {
+      label: '',
+      description: function description(brandName) {
+        return brandName ? 'factor.customFactor.description.specific' : 'factor.customFactor.description.generic';
+      },
+      iconClassName: 'mfa-custom-factor',
+      sortOrder: 18
     }
   };
 
@@ -13982,6 +14239,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     if (factorType === 'token:hotp') {
       return 'CUSTOM_HOTP';
     }
+    if (factorType === 'claims_provider') {
+      return 'CUSTOM_CLAIMS';
+    }
   };
 
   fn.isOktaVerify = function (provider, factorType) {
@@ -13994,7 +14254,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
   };
 
   fn.getFactorDescription = function (provider, factorType) {
-    return factorData[fn.getFactorName.apply(this, [provider, factorType])].description;
+    var descriptionKey = factorData[fn.getFactorName.apply(this, [provider, factorType])].description;
+    if (_.isFunction(descriptionKey)) {
+      var brandName = this.settings.get('brandName');
+      var key = descriptionKey(brandName);
+      return brandName ? Okta.loc(key, 'login', [brandName]) : Okta.loc(key, 'login');
+    } else {
+      return Okta.loc(descriptionKey, 'login');
+    }
   };
 
   fn.getFactorIconClassName = function (provider, factorType) {
@@ -14087,13 +14354,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     return result.join(' ');
   };
 
-  fn.getCardinalityText = function (enrolled, required, policy) {
-    if (policy && policy.enrollment) {
-      var enrollmentInfo = policy.enrollment;
+  fn.getCardinalityText = function (enrolled, required, cardinality) {
+    if (cardinality) {
       if (enrolled) {
-        return enrollmentInfo.enrolled === 1 ? '' : Okta.loc('enroll.choices.cardinality.setup', 'login', [enrollmentInfo.enrolled]);
-      } else if (required) {
-        return Okta.loc('enroll.choices.cardinality.setup.remaining', 'login', [enrollmentInfo.enrolled, enrollmentInfo.minimum]);
+        return cardinality.enrolled === 1 ? '' : Okta.loc('enroll.choices.cardinality.setup', 'login', [cardinality.enrolled]);
+      } else if (required && cardinality.maximum > 1) {
+        return Okta.loc('enroll.choices.cardinality.setup.remaining', 'login', [cardinality.enrolled, cardinality.minimum]);
       }
     }
     return '';
@@ -14113,7 +14379,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14165,7 +14431,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports) {
 
 module.exports = function (it) {
@@ -14175,7 +14441,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports) {
 
 // https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
@@ -14187,12 +14453,12 @@ if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
 
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var store = __webpack_require__(154)('wks');
-var uid = __webpack_require__(112);
-var Symbol = __webpack_require__(20).Symbol;
+var uid = __webpack_require__(111);
+var Symbol = __webpack_require__(21).Symbol;
 var USE_SYMBOL = typeof Symbol == 'function';
 
 var $exports = module.exports = function (name) {
@@ -14204,7 +14470,7 @@ $exports.store = store;
 
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14222,8 +14488,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-/* eslint complexity: [2, 40], max-statements: [2, 30] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(147), __webpack_require__(68), __webpack_require__(8), __webpack_require__(67), __webpack_require__(35), __webpack_require__(542)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, OAuth2Util, Util, Enums, BrowserFeatures, Errors, ErrorCodes) {
+/* eslint complexity: [2, 42], max-statements: [2, 30] */
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(147), __webpack_require__(17), __webpack_require__(8), __webpack_require__(68), __webpack_require__(36), __webpack_require__(545)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, OAuth2Util, Util, Enums, BrowserFeatures, Errors, ErrorCodes) {
   var fn = {};
 
   var verifyUrlTpl = Okta.tpl('signin/verify/{{provider}}/{{factorType}}');
@@ -14234,6 +14500,20 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
   var recoveryUrlTpl = Okta.tpl('signin/recovery/{{recoveryToken}}');
   var refreshUrlTpl = Okta.tpl('signin/refresh-auth-state{{#if token}}/{{token}}{{/if}}');
   var sessionCookieRedirectTpl = Okta.tpl('{{baseUrl}}/login/sessionCookieRedirect?checkAccountSetupComplete=true' + '&token={{{token}}}&redirectUrl={{{redirectUrl}}}');
+
+  fn.isHostBackgroundChromeTab = function () {
+    // Checks if the SIW is loaded in a chrome webview and
+    // it is in an app that is in background.
+    if (navigator.userAgent.match(/Android/) && navigator.userAgent.match(/Chrome/) && document.hidden) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+  fn.isDocumentVisible = function () {
+    return document.visibilityState === 'visible';
+  };
 
   fn.createVerifyUrl = function (provider, factorType, factorIndex) {
     if (provider && factorIndex) {
@@ -14371,7 +14651,17 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
           };
         }
 
-        router.settings.callGlobalSuccess(Enums.SUCCESS, successData);
+        // Check if we need to wait for redirect based on host.
+        if (router.settings.get('features.restrictRedirectToForeground') && fn.isHostBackgroundChromeTab()) {
+          document.addEventListener('visibilitychange', function checkVisibilityAndCallSuccess() {
+            if (fn.isDocumentVisible()) {
+              document.removeEventListener('visibilitychange', checkVisibilityAndCallSuccess);
+              router.settings.callGlobalSuccess(Enums.SUCCESS, successData);
+            }
+          });
+        } else {
+          router.settings.callGlobalSuccess(Enums.SUCCESS, successData);
+        }
         return;
       case 'CONSENT_REQUIRED':
         if (router.settings.get('features.consent')) {
@@ -14467,11 +14757,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 23 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var dP = __webpack_require__(13);
-var createDesc = __webpack_require__(53);
+var createDesc = __webpack_require__(54);
 module.exports = __webpack_require__(11) ? function (object, key, value) {
   return dP.f(object, key, createDesc(1, value));
 } : function (object, key, value) {
@@ -14481,18 +14771,18 @@ module.exports = __webpack_require__(11) ? function (object, key, value) {
 
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var global = __webpack_require__(4);
-var hide = __webpack_require__(23);
-var has = __webpack_require__(26);
-var SRC = __webpack_require__(54)('src');
+var hide = __webpack_require__(24);
+var has = __webpack_require__(27);
+var SRC = __webpack_require__(55)('src');
 var $toString = __webpack_require__(249);
 var TO_STRING = 'toString';
 var TPL = ('' + $toString).split(TO_STRING);
 
-__webpack_require__(30).inspectSource = function (it) {
+__webpack_require__(31).inspectSource = function (it) {
   return $toString.call(it);
 };
 
@@ -14518,12 +14808,12 @@ __webpack_require__(30).inspectSource = function (it) {
 
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var $export = __webpack_require__(0);
 var fails = __webpack_require__(6);
-var defined = __webpack_require__(37);
+var defined = __webpack_require__(38);
 var quot = /"/g;
 // B.2.3.2.1 CreateHTML(string, tag, attribute, value)
 var createHTML = function (string, tag, attribute, value) {
@@ -14543,7 +14833,7 @@ module.exports = function (NAME, exec) {
 
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports) {
 
 var hasOwnProperty = {}.hasOwnProperty;
@@ -14553,26 +14843,26 @@ module.exports = function (it, key) {
 
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // to indexed object, toObject with fallback for non-array-like ES3 strings
 var IObject = __webpack_require__(81);
-var defined = __webpack_require__(37);
+var defined = __webpack_require__(38);
 module.exports = function (it) {
   return IObject(defined(it));
 };
 
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var pIE = __webpack_require__(82);
-var createDesc = __webpack_require__(53);
-var toIObject = __webpack_require__(27);
-var toPrimitive = __webpack_require__(36);
-var has = __webpack_require__(26);
+var createDesc = __webpack_require__(54);
+var toIObject = __webpack_require__(28);
+var toPrimitive = __webpack_require__(37);
+var has = __webpack_require__(27);
 var IE8_DOM_DEFINE = __webpack_require__(170);
 var gOPD = Object.getOwnPropertyDescriptor;
 
@@ -14587,11 +14877,11 @@ exports.f = __webpack_require__(11) ? gOPD : function getOwnPropertyDescriptor(O
 
 
 /***/ }),
-/* 29 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
-var has = __webpack_require__(26);
+var has = __webpack_require__(27);
 var toObject = __webpack_require__(15);
 var IE_PROTO = __webpack_require__(120)('IE_PROTO');
 var ObjectProto = Object.prototype;
@@ -14606,7 +14896,7 @@ module.exports = Object.getPrototypeOf || function (O) {
 
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(module, exports) {
 
 var core = module.exports = { version: '2.6.9' };
@@ -14614,11 +14904,11 @@ if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // optional / simple context binding
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 module.exports = function (fn, that, length) {
   aFunction(fn);
   if (that === undefined) return fn;
@@ -14640,7 +14930,7 @@ module.exports = function (fn, that, length) {
 
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -14651,7 +14941,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports) {
 
 // 7.1.4 ToInteger
@@ -14663,7 +14953,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14679,7 +14969,7 @@ module.exports = function (method, arg) {
 
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14756,7 +15046,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 7.1.1 ToPrimitive(input [, PreferredType])
@@ -14774,7 +15064,7 @@ module.exports = function (it, S) {
 
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(module, exports) {
 
 // 7.2.1 RequireObjectCoercible(argument)
@@ -14785,12 +15075,12 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // most Object methods by ES6 should accept primitives
 var $export = __webpack_require__(0);
-var core = __webpack_require__(30);
+var core = __webpack_require__(31);
 var fails = __webpack_require__(6);
 module.exports = function (KEY, exec) {
   var fn = (core.Object || {})[KEY] || Object[KEY];
@@ -14801,7 +15091,7 @@ module.exports = function (KEY, exec) {
 
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 0 -> Array#forEach
@@ -14811,7 +15101,7 @@ module.exports = function (KEY, exec) {
 // 4 -> Array#every
 // 5 -> Array#find
 // 6 -> Array#findIndex
-var ctx = __webpack_require__(31);
+var ctx = __webpack_require__(32);
 var IObject = __webpack_require__(81);
 var toObject = __webpack_require__(15);
 var toLength = __webpack_require__(10);
@@ -14851,7 +15141,75 @@ module.exports = function (TYPE, $create) {
 
 
 /***/ }),
-/* 40 */
+/* 41 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var global = __webpack_require__(21);
+var core = __webpack_require__(16);
+var ctx = __webpack_require__(108);
+var hide = __webpack_require__(65);
+var has = __webpack_require__(66);
+var PROTOTYPE = 'prototype';
+
+var $export = function (type, name, source) {
+  var IS_FORCED = type & $export.F;
+  var IS_GLOBAL = type & $export.G;
+  var IS_STATIC = type & $export.S;
+  var IS_PROTO = type & $export.P;
+  var IS_BIND = type & $export.B;
+  var IS_WRAP = type & $export.W;
+  var exports = IS_GLOBAL ? core : core[name] || (core[name] = {});
+  var expProto = exports[PROTOTYPE];
+  var target = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE];
+  var key, own, out;
+  if (IS_GLOBAL) source = name;
+  for (key in source) {
+    // contains in native
+    own = !IS_FORCED && target && target[key] !== undefined;
+    if (own && has(exports, key)) continue;
+    // export native or passed
+    out = own ? target[key] : source[key];
+    // prevent global pollution for namespaces
+    exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
+    // bind timers to global for call from export context
+    : IS_BIND && own ? ctx(out, global)
+    // wrap global constructors for prevent change them in library
+    : IS_WRAP && target[key] == out ? (function (C) {
+      var F = function (a, b, c) {
+        if (this instanceof C) {
+          switch (arguments.length) {
+            case 0: return new C();
+            case 1: return new C(a);
+            case 2: return new C(a, b);
+          } return new C(a, b, c);
+        } return C.apply(this, arguments);
+      };
+      F[PROTOTYPE] = C[PROTOTYPE];
+      return F;
+    // make static versions for prototype methods
+    })(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
+    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
+    if (IS_PROTO) {
+      (exports.virtual || (exports.virtual = {}))[key] = out;
+      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
+      if (type & $export.R && expProto && !expProto[key]) hide(expProto, key, out);
+    }
+  }
+};
+// type bitmap
+$export.F = 1;   // forced
+$export.G = 2;   // global
+$export.S = 4;   // static
+$export.P = 8;   // proto
+$export.B = 16;  // bind
+$export.W = 32;  // wrap
+$export.U = 64;  // safe
+$export.R = 128; // real proto method for `library`
+module.exports = $export;
+
+
+/***/ }),
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Thank's IE8 for his funny defineProperty
@@ -14861,7 +15219,7 @@ module.exports = !__webpack_require__(74)(function () {
 
 
 /***/ }),
-/* 41 */
+/* 43 */
 /***/ (function(module, exports) {
 
 /*!
@@ -15137,50 +15495,50 @@ util.isFunction = function(fn) {
 
 
 /***/ }),
-/* 42 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 if (__webpack_require__(11)) {
-  var LIBRARY = __webpack_require__(47);
+  var LIBRARY = __webpack_require__(49);
   var global = __webpack_require__(4);
   var fails = __webpack_require__(6);
   var $export = __webpack_require__(0);
-  var $typed = __webpack_require__(104);
+  var $typed = __webpack_require__(102);
   var $buffer = __webpack_require__(144);
-  var ctx = __webpack_require__(31);
-  var anInstance = __webpack_require__(60);
-  var propertyDesc = __webpack_require__(53);
-  var hide = __webpack_require__(23);
-  var redefineAll = __webpack_require__(62);
-  var toInteger = __webpack_require__(33);
+  var ctx = __webpack_require__(32);
+  var anInstance = __webpack_require__(61);
+  var propertyDesc = __webpack_require__(54);
+  var hide = __webpack_require__(24);
+  var redefineAll = __webpack_require__(63);
+  var toInteger = __webpack_require__(34);
   var toLength = __webpack_require__(10);
   var toIndex = __webpack_require__(198);
-  var toAbsoluteIndex = __webpack_require__(56);
-  var toPrimitive = __webpack_require__(36);
-  var has = __webpack_require__(26);
+  var toAbsoluteIndex = __webpack_require__(57);
+  var toPrimitive = __webpack_require__(37);
+  var has = __webpack_require__(27);
   var classof = __webpack_require__(71);
   var isObject = __webpack_require__(7);
   var toObject = __webpack_require__(15);
   var isArrayIter = __webpack_require__(133);
-  var create = __webpack_require__(57);
-  var getPrototypeOf = __webpack_require__(29);
-  var gOPN = __webpack_require__(58).f;
+  var create = __webpack_require__(58);
+  var getPrototypeOf = __webpack_require__(30);
+  var gOPN = __webpack_require__(59).f;
   var getIterFn = __webpack_require__(135);
-  var uid = __webpack_require__(54);
+  var uid = __webpack_require__(55);
   var wks = __webpack_require__(9);
-  var createArrayMethod = __webpack_require__(39);
-  var createArrayIncludes = __webpack_require__(94);
+  var createArrayMethod = __webpack_require__(40);
+  var createArrayIncludes = __webpack_require__(92);
   var speciesConstructor = __webpack_require__(84);
   var ArrayIterators = __webpack_require__(138);
   var Iterators = __webpack_require__(73);
-  var $iterDetect = __webpack_require__(99);
-  var setSpecies = __webpack_require__(59);
+  var $iterDetect = __webpack_require__(97);
+  var setSpecies = __webpack_require__(60);
   var arrayFill = __webpack_require__(137);
   var arrayCopyWithin = __webpack_require__(187);
   var $DP = __webpack_require__(13);
-  var $GOPD = __webpack_require__(28);
+  var $GOPD = __webpack_require__(29);
   var dP = $DP.f;
   var gOPD = $GOPD.f;
   var RangeError = global.RangeError;
@@ -15624,7 +15982,7 @@ if (__webpack_require__(11)) {
 
 
 /***/ }),
-/* 43 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var Map = __webpack_require__(193);
@@ -15681,78 +16039,10 @@ module.exports = {
 
 
 /***/ }),
-/* 44 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(20);
-var core = __webpack_require__(16);
-var ctx = __webpack_require__(109);
-var hide = __webpack_require__(64);
-var has = __webpack_require__(65);
-var PROTOTYPE = 'prototype';
-
-var $export = function (type, name, source) {
-  var IS_FORCED = type & $export.F;
-  var IS_GLOBAL = type & $export.G;
-  var IS_STATIC = type & $export.S;
-  var IS_PROTO = type & $export.P;
-  var IS_BIND = type & $export.B;
-  var IS_WRAP = type & $export.W;
-  var exports = IS_GLOBAL ? core : core[name] || (core[name] = {});
-  var expProto = exports[PROTOTYPE];
-  var target = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE];
-  var key, own, out;
-  if (IS_GLOBAL) source = name;
-  for (key in source) {
-    // contains in native
-    own = !IS_FORCED && target && target[key] !== undefined;
-    if (own && has(exports, key)) continue;
-    // export native or passed
-    out = own ? target[key] : source[key];
-    // prevent global pollution for namespaces
-    exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
-    // bind timers to global for call from export context
-    : IS_BIND && own ? ctx(out, global)
-    // wrap global constructors for prevent change them in library
-    : IS_WRAP && target[key] == out ? (function (C) {
-      var F = function (a, b, c) {
-        if (this instanceof C) {
-          switch (arguments.length) {
-            case 0: return new C();
-            case 1: return new C(a);
-            case 2: return new C(a, b);
-          } return new C(a, b, c);
-        } return C.apply(this, arguments);
-      };
-      F[PROTOTYPE] = C[PROTOTYPE];
-      return F;
-    // make static versions for prototype methods
-    })(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
-    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
-    if (IS_PROTO) {
-      (exports.virtual || (exports.virtual = {}))[key] = out;
-      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
-      if (type & $export.R && expProto && !expProto[key]) hide(expProto, key, out);
-    }
-  }
-};
-// type bitmap
-$export.F = 1;   // forced
-$export.G = 2;   // global
-$export.S = 4;   // static
-$export.P = 8;   // proto
-$export.B = 16;  // bind
-$export.W = 32;  // wrap
-$export.U = 64;  // safe
-$export.R = 128; // real proto method for `library`
-module.exports = $export;
-
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var isObject = __webpack_require__(51);
+var isObject = __webpack_require__(47);
 module.exports = function (it) {
   if (!isObject(it)) throw TypeError(it + ' is not an object!');
   return it;
@@ -15760,7 +16050,16 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 46 */
+/* 47 */
+/***/ (function(module, exports) {
+
+module.exports = function (it) {
+  return typeof it === 'object' ? it !== null : typeof it === 'function';
+};
+
+
+/***/ }),
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15817,19 +16116,19 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 47 */
+/* 49 */
 /***/ (function(module, exports) {
 
 module.exports = false;
 
 
 /***/ }),
-/* 48 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var META = __webpack_require__(54)('meta');
+var META = __webpack_require__(55)('meta');
 var isObject = __webpack_require__(7);
-var has = __webpack_require__(26);
+var has = __webpack_require__(27);
 var setDesc = __webpack_require__(13).f;
 var id = 0;
 var isExtensible = Object.isExtensible || function () {
@@ -15883,28 +16182,28 @@ var meta = module.exports = {
 
 
 /***/ }),
-/* 49 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 22.1.3.31 Array.prototype[@@unscopables]
 var UNSCOPABLES = __webpack_require__(9)('unscopables');
 var ArrayProto = Array.prototype;
-if (ArrayProto[UNSCOPABLES] == undefined) __webpack_require__(23)(ArrayProto, UNSCOPABLES, {});
+if (ArrayProto[UNSCOPABLES] == undefined) __webpack_require__(24)(ArrayProto, UNSCOPABLES, {});
 module.exports = function (key) {
   ArrayProto[UNSCOPABLES][key] = true;
 };
 
 
 /***/ }),
-/* 50 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var anObject = __webpack_require__(45);
+var anObject = __webpack_require__(46);
 var IE8_DOM_DEFINE = __webpack_require__(207);
 var toPrimitive = __webpack_require__(152);
 var dP = Object.defineProperty;
 
-exports.f = __webpack_require__(40) ? Object.defineProperty : function defineProperty(O, P, Attributes) {
+exports.f = __webpack_require__(42) ? Object.defineProperty : function defineProperty(O, P, Attributes) {
   anObject(O);
   P = toPrimitive(P, true);
   anObject(Attributes);
@@ -15918,16 +16217,7 @@ exports.f = __webpack_require__(40) ? Object.defineProperty : function definePro
 
 
 /***/ }),
-/* 51 */
-/***/ (function(module, exports) {
-
-module.exports = function (it) {
-  return typeof it === 'object' ? it !== null : typeof it === 'function';
-};
-
-
-/***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports) {
 
 /*!
@@ -15961,7 +16251,7 @@ module.exports = AuthSdkError;
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(module, exports) {
 
 module.exports = function (bitmap, value) {
@@ -15975,7 +16265,7 @@ module.exports = function (bitmap, value) {
 
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(module, exports) {
 
 var id = 0;
@@ -15986,7 +16276,7 @@ module.exports = function (key) {
 
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.14 / 15.2.3.14 Object.keys(O)
@@ -15999,10 +16289,10 @@ module.exports = Object.keys || function keys(O) {
 
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var toInteger = __webpack_require__(33);
+var toInteger = __webpack_require__(34);
 var max = Math.max;
 var min = Math.min;
 module.exports = function (index, length) {
@@ -16012,7 +16302,7 @@ module.exports = function (index, length) {
 
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
@@ -16059,7 +16349,7 @@ module.exports = Object.create || function create(O, Properties) {
 
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.7 / 15.2.3.4 Object.getOwnPropertyNames(O)
@@ -16072,7 +16362,7 @@ exports.f = Object.getOwnPropertyNames || function getOwnPropertyNames(O) {
 
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16092,7 +16382,7 @@ module.exports = function (KEY) {
 
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(module, exports) {
 
 module.exports = function (it, Constructor, name, forbiddenField) {
@@ -16103,10 +16393,10 @@ module.exports = function (it, Constructor, name, forbiddenField) {
 
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var ctx = __webpack_require__(31);
+var ctx = __webpack_require__(32);
 var call = __webpack_require__(185);
 var isArrayIter = __webpack_require__(133);
 var anObject = __webpack_require__(2);
@@ -16134,10 +16424,10 @@ exports.RETURN = RETURN;
 
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var redefine = __webpack_require__(24);
+var redefine = __webpack_require__(25);
 module.exports = function (target, src, safe) {
   for (var key in src) redefine(target, key, src[key], safe);
   return target;
@@ -16145,7 +16435,7 @@ module.exports = function (target, src, safe) {
 
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var isObject = __webpack_require__(7);
@@ -16156,12 +16446,12 @@ module.exports = function (it, TYPE) {
 
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var dP = __webpack_require__(50);
-var createDesc = __webpack_require__(111);
-module.exports = __webpack_require__(40) ? function (object, key, value) {
+var dP = __webpack_require__(52);
+var createDesc = __webpack_require__(110);
+module.exports = __webpack_require__(42) ? function (object, key, value) {
   return dP.f(object, key, createDesc(1, value));
 } : function (object, key, value) {
   object[key] = value;
@@ -16170,7 +16460,7 @@ module.exports = __webpack_require__(40) ? function (object, key, value) {
 
 
 /***/ }),
-/* 65 */
+/* 66 */
 /***/ (function(module, exports) {
 
 var hasOwnProperty = {}.hasOwnProperty;
@@ -16180,7 +16470,7 @@ module.exports = function (it, key) {
 
 
 /***/ }),
-/* 66 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // to indexed object, toObject with fallback for non-array-like ES3 strings
@@ -16192,7 +16482,7 @@ module.exports = function (it) {
 
 
 /***/ }),
-/* 67 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16289,197 +16579,6 @@ var __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 68 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-/* eslint complexity: [2, 13], max-depth: [2, 3] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(116), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Logger, Enums) {
-
-  var Util = {};
-  var _ = Okta._;
-
-  var buildInputForParameter = function buildInputForParameter(name, value) {
-    var input = document.createElement('input');
-    input.name = name;
-    input.value = decodeURIComponent(value);
-    input.type = 'hidden';
-    return input;
-  };
-
-  var buildDynamicForm = function buildDynamicForm() {
-    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-
-    var splitOnFragment = url.split('#');
-    var fragment = splitOnFragment[1];
-
-    var splitOnQuery = (splitOnFragment[0] || '').split('?');
-    var query = splitOnQuery[1];
-    var targetUrl = splitOnQuery[0];
-    if (fragment) {
-      targetUrl += '#' + fragment;
-    }
-
-    var form = document.createElement('form');
-    form.method = 'get';
-    form.setAttribute('style', 'display: none;');
-    form.action = targetUrl;
-    if (query && query.length) {
-      var queryParts = query.split('&');
-      queryParts.forEach(function (queryPart) {
-        var parameterParts = queryPart.split('=');
-        var input = buildInputForParameter(parameterParts[0], parameterParts[1]);
-        form.appendChild(input);
-      });
-    }
-    return form;
-  };
-
-  Util.hasTokensInHash = function (hash) {
-    return (/((id|access)_token=)/i.test(hash)
-    );
-  };
-
-  Util.transformErrorXHR = function (xhr) {
-    // Handle network connection error
-    if (xhr.status === 0 && _.isEmpty(xhr.responseJSON)) {
-      xhr.responseJSON = { errorSummary: Okta.loc('error.network.connection', 'login') };
-      return xhr;
-    }
-    if (!xhr.responseJSON) {
-      try {
-        xhr.responseJSON = JSON.parse(xhr.responseText);
-      } catch (parseException) {
-        xhr.responseJSON = { errorSummary: Okta.loc('oform.error.unexpected', 'login') };
-        return xhr;
-      }
-    }
-    // Temporary solution to display field errors
-    // Assuming there is only one field error in a response
-    if (xhr.responseJSON && xhr.responseJSON.errorCauses && xhr.responseJSON.errorCauses.length) {
-      xhr.responseJSON.errorSummary = xhr.responseJSON.errorCauses[0].errorSummary;
-    }
-    // Replace error messages
-    if (!_.isEmpty(xhr.responseJSON)) {
-      var errorMsg = Okta.loc('errors.' + xhr.responseJSON.errorCode, 'login');
-      if (errorMsg.indexOf('L10N_ERROR[') === -1) {
-        xhr.responseJSON.errorSummary = errorMsg;
-        if (xhr.responseJSON && xhr.responseJSON.errorCauses && xhr.responseJSON.errorCauses.length) {
-          // BaseForm will consume errorCauses before errorSummary if it is an array,
-          // so, we have to make sure to remove it when we have a valid error code
-          delete xhr.responseJSON.errorCauses;
-        }
-      }
-    }
-    return xhr;
-  };
-
-  // Simple helper function to lowercase all strings in the given array
-  Util.toLower = function (strings) {
-    return _.map(strings, function (str) {
-      return str.toLowerCase();
-    });
-  };
-
-  // A languageCode can be composed of multiple parts, i.e:
-  // {{langage}}-{{region}}-{{dialect}}
-  //
-  // In these cases, it's necessary to generate a list of other possible
-  // combinations that we might support (in preferred order).
-  //
-  // For example:
-  // en-US -> [en-US, en]
-  // de-DE-bavarian -> [de-DE-bavarian, de-DE, de]
-  function expandLanguage(language) {
-    var expanded = [language],
-        parts = language.split('-');
-    while (parts.pop() && parts.length > 0) {
-      expanded.push(parts.join('-'));
-    }
-    return expanded;
-  }
-
-  // Following the rules of expanding one language, this will generate
-  // all potential languages in the given order (where higher priority is
-  // given to expanded languages over other downstream languages).
-  Util.expandLanguages = function (languages) {
-    return _.chain(languages).map(expandLanguage).flatten().uniq().value();
-  };
-
-  //helper to call setTimeout
-  Util.callAfterTimeout = function (callback, time) {
-    return setTimeout(callback, time);
-  };
-
-  // Helper function to provide consistent formatting of template literals
-  // that are logged when in development mode.
-  Util.debugMessage = function (message) {
-    Logger.warn('\n' + message.replace(/^(\s)+/gm, ''));
-  };
-
-  // Trigger an afterError event
-  Util.triggerAfterError = function (controller) {
-    var err = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    if (!err.statusCode && err.xhr && err.xhr.status) {
-      // Bring the statusCode to the top-level of the Error
-      err.statusCode = err.xhr.status;
-    }
-    // Some controllers return the className as a function - process it here:
-    var className = _.isFunction(controller.className) ? controller.className() : controller.className;
-    var error = _.pick(err, 'name', 'message', 'statusCode', 'xhr');
-    controller.trigger('afterError', { controller: className }, error);
-  };
-
-  /**
-   * Why redirect via Form get rather using `window.location.href`?
-   * At the time of writing, Chrome (<72) in Android would block window location change
-   * at following case
-   * 1. An AJAX is trigger because of user action.
-   * 2. 5+ seconds passed without any further user interaction.
-   * 3. User takes an action results in window location change.
-   *
-   * Luckily we discovered that uses Form submit would work around this problem
-   * even though it changed window location.
-   *
-   * Check the commit history for more details.
-   */
-  Util.redirectWithFormGet = function (url) {
-    if (!url) {
-      Logger.error('Cannot redirect to empty URL: (' + url + ')');
-      return;
-    }
-
-    var mainContainer = document.getElementById(Enums.WIDGET_CONTAINER_ID);
-    if (!mainContainer) {
-      Logger.error('Cannot find okta-sign-in container append to which a form');
-      return;
-    }
-
-    var form = buildDynamicForm(url);
-    mainContainer.appendChild(form);
-    form.submit();
-  };
-
-  return Util;
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
 /* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -16535,7 +16634,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 /***/ (function(module, exports, __webpack_require__) {
 
 var def = __webpack_require__(13).f;
-var has = __webpack_require__(26);
+var has = __webpack_require__(27);
 var TAG = __webpack_require__(9)('toStringTag');
 
 module.exports = function (it, tag, stat) {
@@ -16548,7 +16647,7 @@ module.exports = function (it, tag, stat) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // getting tag from 19.1.3.6 Object.prototype.toString()
-var cof = __webpack_require__(32);
+var cof = __webpack_require__(33);
 var TAG = __webpack_require__(9)('toStringTag');
 // ES3 wrong here
 var ARG = cof(function () { return arguments; }()) == 'Arguments';
@@ -16577,7 +16676,7 @@ module.exports = function (it) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var $export = __webpack_require__(0);
-var defined = __webpack_require__(37);
+var defined = __webpack_require__(38);
 var fails = __webpack_require__(6);
 var spaces = __webpack_require__(124);
 var space = '[' + spaces + ']';
@@ -16685,9 +16784,9 @@ module.exports = {
  */
 
 /* eslint-disable complexity */
-var util = __webpack_require__(41);
+var util = __webpack_require__(43);
 var Q = __webpack_require__(12);
-var AuthApiError = __webpack_require__(484);
+var AuthApiError = __webpack_require__(485);
 var config = __webpack_require__(77);
 
 function httpRequest(sdk, options) {
@@ -16934,7 +17033,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 /* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var core = __webpack_require__(30);
+var core = __webpack_require__(31);
 var global = __webpack_require__(4);
 var SHARED = '__core-js_shared__';
 var store = global[SHARED] || (global[SHARED] = {});
@@ -16943,7 +17042,7 @@ var store = global[SHARED] || (global[SHARED] = {});
   return store[key] || (store[key] = value !== undefined ? value : {});
 })('versions', []).push({
   version: core.version,
-  mode: __webpack_require__(47) ? 'pure' : 'global',
+  mode: __webpack_require__(49) ? 'pure' : 'global',
   copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 });
 
@@ -16953,7 +17052,7 @@ var store = global[SHARED] || (global[SHARED] = {});
 /***/ (function(module, exports, __webpack_require__) {
 
 // fallback for non-array-like ES3 and non-enumerable old V8 strings
-var cof = __webpack_require__(32);
+var cof = __webpack_require__(33);
 // eslint-disable-next-line no-prototype-builtins
 module.exports = Object('z').propertyIsEnumerable(0) ? Object : function (it) {
   return cof(it) == 'String' ? it.split('') : Object(it);
@@ -16993,7 +17092,7 @@ module.exports = function () {
 
 // 7.3.20 SpeciesConstructor(O, defaultConstructor)
 var anObject = __webpack_require__(2);
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var SPECIES = __webpack_require__(9)('species');
 module.exports = function (O, D) {
   var C = anObject(O).constructor;
@@ -17004,6 +17103,772 @@ module.exports = function (O, D) {
 
 /***/ }),
 /* 85 */
+/***/ (function(module, exports) {
+
+module.exports = true;
+
+
+/***/ }),
+/* 86 */
+/***/ (function(module, exports) {
+
+var toString = {}.toString;
+
+module.exports = function (it) {
+  return toString.call(it).slice(8, -1);
+};
+
+
+/***/ }),
+/* 87 */
+/***/ (function(module, exports) {
+
+exports.f = {}.propertyIsEnumerable;
+
+
+/***/ }),
+/* 88 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*!
+ * Copyright (c) 2015-present, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ *
+ */
+
+var Cookies = __webpack_require__(480);
+var storageBuilder = __webpack_require__(219);
+var config = __webpack_require__(77);
+
+// Building this as an object allows us to mock the functions in our tests
+var storageUtil = {};
+
+// IE11 bug that Microsoft doesn't plan to fix
+// https://connect.microsoft.com/IE/Feedback/Details/1496040
+storageUtil.browserHasLocalStorage = function() {
+  try {
+    var storage = storageUtil.getLocalStorage();
+    return storageUtil.testStorage(storage);
+  } catch (e) {
+    return false;
+  }
+};
+
+storageUtil.browserHasSessionStorage = function() {
+  try {
+    var storage = storageUtil.getSessionStorage();
+    return storageUtil.testStorage(storage);
+  } catch (e) {
+    return false;
+  }
+};
+
+storageUtil.getPKCEStorage = function() {
+  if (storageUtil.browserHasLocalStorage()) {
+    return storageBuilder(storageUtil.getLocalStorage(), config.PKCE_STORAGE_NAME);
+  } else if (storageUtil.browserHasSessionStorage()) {
+    return storageBuilder(storageUtil.getSessionStorage(), config.PKCE_STORAGE_NAME);
+  } else {
+    return storageBuilder(storageUtil.getCookieStorage(), config.PKCE_STORAGE_NAME);
+  }
+};
+
+storageUtil.getHttpCache = function() {
+  if (storageUtil.browserHasLocalStorage()) {
+    return storageBuilder(storageUtil.getLocalStorage(), config.CACHE_STORAGE_NAME);
+  } else if (storageUtil.browserHasSessionStorage()) {
+    return storageBuilder(storageUtil.getSessionStorage(), config.CACHE_STORAGE_NAME);
+  } else {
+    return storageBuilder(storageUtil.getCookieStorage(), config.CACHE_STORAGE_NAME);
+  }
+};
+
+storageUtil.getLocalStorage = function() {
+  return localStorage;
+};
+
+storageUtil.getSessionStorage = function() {
+  return sessionStorage;
+};
+
+// Provides webStorage-like interface for cookies
+storageUtil.getCookieStorage = function(options) {
+  options = options || {};
+  return {
+    getItem: storageUtil.storage.get,
+    setItem: function(key, value) {
+      // Cookie shouldn't expire
+      storageUtil.storage.set(key, value, '2200-01-01T00:00:00.000Z', options.secure);
+    }
+  };
+};
+
+storageUtil.testStorage = function(storage) {
+  var key = 'okta-test-storage';
+  try {
+    storage.setItem(key, key);
+    storage.removeItem(key);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+storageUtil.storage = {
+  set: function(name, value, expiresAt, secure) {
+    var cookieOptions = {
+      path: '/',
+      secure: secure
+    };
+
+    // eslint-disable-next-line no-extra-boolean-cast
+    if (!!(Date.parse(expiresAt))) {
+      // Expires value can be converted to a Date object.
+      //
+      // If the 'expiresAt' value is not provided, or the value cannot be
+      // parsed as a Date object, the cookie will set as a session cookie.
+      cookieOptions.expires = new Date(expiresAt);
+    }
+
+    Cookies.set(name, value, cookieOptions);
+    return storageUtil.storage.get(name);
+  },
+
+  get: function(name) {
+    return Cookies.get(name);
+  },
+
+  delete: function(name) {
+    return Cookies.remove(name, { path: '/' });
+  }
+};
+
+module.exports = storageUtil;
+
+
+/***/ }),
+/* 89 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, Enums) {
+
+  var _ = Okta._;
+  var KNOWN_ERRORS = ['OAuthError', 'AuthSdkError', 'AuthPollStopError', 'AuthApiError'];
+
+  return Okta.Model.extend({
+    doTransaction: function doTransaction(fn, rethrow) {
+      var self = this;
+      return fn.call(this, this.appState.get('transaction')).then(function (trans) {
+        self.trigger('setTransaction', trans);
+        return trans;
+      }).fail(function (err) {
+        // Q may still consider AuthPollStopError to be unhandled
+        if (err.name === 'AuthPollStopError' || err.name === Enums.AUTH_STOP_POLL_INITIATION_ERROR) {
+          return;
+        }
+        self.trigger('error', self, err.xhr);
+        self.trigger('setTransactionError', err);
+        if (rethrow || _.indexOf(KNOWN_ERRORS, err.name) === -1) {
+          throw err;
+        }
+      });
+    },
+
+    manageTransaction: function manageTransaction(fn) {
+      var self = this,
+          res = fn.call(this, this.appState.get('transaction'), _.bind(this.setTransaction, this));
+
+      // If it's a promise, listen for failures
+      if (Q.isPromiseAlike(res)) {
+        return res.fail(function (err) {
+          if (err.name === 'AuthPollStopError' || err.name === Enums.AUTH_STOP_POLL_INITIATION_ERROR) {
+            return;
+          }
+          self.trigger('error', self, err.xhr);
+          self.trigger('setTransactionError', err);
+        });
+      }
+
+      return Q.resolve(res);
+    },
+
+    startTransaction: function startTransaction(fn) {
+      var self = this,
+          res = fn.call(this, this.settings.getAuthClient());
+
+      // If it's a promise, then chain to it
+      if (Q.isPromiseAlike(res)) {
+        return res.then(function (trans) {
+          self.trigger('setTransaction', trans);
+          return trans;
+        }).fail(function (err) {
+          self.trigger('error', self, err.xhr);
+          self.trigger('setTransactionError', err);
+          throw err;
+        });
+      }
+
+      return Q.resolve(res);
+    },
+
+    setTransaction: function setTransaction(trans) {
+      this.appState.set('transaction', trans);
+    }
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 90 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
+
+  var fn = {};
+
+  // Validate the 'username' field on the model.
+  fn.validateUsername = function (model) {
+    var username = model.get('username');
+    if (username && username.length > 256) {
+      return {
+        username: Okta.loc('model.validation.field.username', 'login')
+      };
+    }
+  };
+
+  // Validate that the field1 and field2 fields on the model are a match.
+  fn.validateFieldsMatch = function (model, field1, field2, message) {
+    if (model.get(field1) !== model.get(field2)) {
+      var ret = {};
+      ret[field2] = message;
+      return ret;
+    }
+  };
+
+  // Validate that the 'newPassword' and 'confirmPassword' fields on the model are a match.
+  fn.validatePasswordMatch = function (model) {
+    return fn.validateFieldsMatch(model, 'newPassword', 'confirmPassword', Okta.loc('password.error.match', 'login'));
+  };
+
+  return fn;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 91 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+/* 92 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// false -> Array#indexOf
+// true  -> Array#includes
+var toIObject = __webpack_require__(28);
+var toLength = __webpack_require__(10);
+var toAbsoluteIndex = __webpack_require__(57);
+module.exports = function (IS_INCLUDES) {
+  return function ($this, el, fromIndex) {
+    var O = toIObject($this);
+    var length = toLength(O.length);
+    var index = toAbsoluteIndex(fromIndex, length);
+    var value;
+    // Array#includes uses SameValueZero equality algorithm
+    // eslint-disable-next-line no-self-compare
+    if (IS_INCLUDES && el != el) while (length > index) {
+      value = O[index++];
+      // eslint-disable-next-line no-self-compare
+      if (value != value) return true;
+    // Array#indexOf ignores holes, Array#includes - not
+    } else for (;length > index; index++) if (IS_INCLUDES || index in O) {
+      if (O[index] === el) return IS_INCLUDES || index || 0;
+    } return !IS_INCLUDES && -1;
+  };
+};
+
+
+/***/ }),
+/* 93 */
+/***/ (function(module, exports) {
+
+exports.f = Object.getOwnPropertySymbols;
+
+
+/***/ }),
+/* 94 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 7.2.2 IsArray(argument)
+var cof = __webpack_require__(33);
+module.exports = Array.isArray || function isArray(arg) {
+  return cof(arg) == 'Array';
+};
+
+
+/***/ }),
+/* 95 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var toInteger = __webpack_require__(34);
+var defined = __webpack_require__(38);
+// true  -> String#at
+// false -> String#codePointAt
+module.exports = function (TO_STRING) {
+  return function (that, pos) {
+    var s = String(defined(that));
+    var i = toInteger(pos);
+    var l = s.length;
+    var a, b;
+    if (i < 0 || i >= l) return TO_STRING ? '' : undefined;
+    a = s.charCodeAt(i);
+    return a < 0xd800 || a > 0xdbff || i + 1 === l || (b = s.charCodeAt(i + 1)) < 0xdc00 || b > 0xdfff
+      ? TO_STRING ? s.charAt(i) : a
+      : TO_STRING ? s.slice(i, i + 2) : (a - 0xd800 << 10) + (b - 0xdc00) + 0x10000;
+  };
+};
+
+
+/***/ }),
+/* 96 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 7.2.8 IsRegExp(argument)
+var isObject = __webpack_require__(7);
+var cof = __webpack_require__(33);
+var MATCH = __webpack_require__(9)('match');
+module.exports = function (it) {
+  var isRegExp;
+  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : cof(it) == 'RegExp');
+};
+
+
+/***/ }),
+/* 97 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var ITERATOR = __webpack_require__(9)('iterator');
+var SAFE_CLOSING = false;
+
+try {
+  var riter = [7][ITERATOR]();
+  riter['return'] = function () { SAFE_CLOSING = true; };
+  // eslint-disable-next-line no-throw-literal
+  Array.from(riter, function () { throw 2; });
+} catch (e) { /* empty */ }
+
+module.exports = function (exec, skipClosing) {
+  if (!skipClosing && !SAFE_CLOSING) return false;
+  var safe = false;
+  try {
+    var arr = [7];
+    var iter = arr[ITERATOR]();
+    iter.next = function () { return { done: safe = true }; };
+    arr[ITERATOR] = function () { return iter; };
+    exec(arr);
+  } catch (e) { /* empty */ }
+  return safe;
+};
+
+
+/***/ }),
+/* 98 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var classof = __webpack_require__(71);
+var builtinExec = RegExp.prototype.exec;
+
+ // `RegExpExec` abstract operation
+// https://tc39.github.io/ecma262/#sec-regexpexec
+module.exports = function (R, S) {
+  var exec = R.exec;
+  if (typeof exec === 'function') {
+    var result = exec.call(R, S);
+    if (typeof result !== 'object') {
+      throw new TypeError('RegExp exec method returned something other than an Object or null');
+    }
+    return result;
+  }
+  if (classof(R) !== 'RegExp') {
+    throw new TypeError('RegExp#exec called on incompatible receiver');
+  }
+  return builtinExec.call(R, S);
+};
+
+
+/***/ }),
+/* 99 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+__webpack_require__(189);
+var redefine = __webpack_require__(25);
+var hide = __webpack_require__(24);
+var fails = __webpack_require__(6);
+var defined = __webpack_require__(38);
+var wks = __webpack_require__(9);
+var regexpExec = __webpack_require__(139);
+
+var SPECIES = wks('species');
+
+var REPLACE_SUPPORTS_NAMED_GROUPS = !fails(function () {
+  // #replace needs built-in support for named groups.
+  // #match works fine because it just return the exec results, even if it has
+  // a "grops" property.
+  var re = /./;
+  re.exec = function () {
+    var result = [];
+    result.groups = { a: '7' };
+    return result;
+  };
+  return ''.replace(re, '$<a>') !== '7';
+});
+
+var SPLIT_WORKS_WITH_OVERWRITTEN_EXEC = (function () {
+  // Chrome 51 has a buggy "split" implementation when RegExp#exec !== nativeExec
+  var re = /(?:)/;
+  var originalExec = re.exec;
+  re.exec = function () { return originalExec.apply(this, arguments); };
+  var result = 'ab'.split(re);
+  return result.length === 2 && result[0] === 'a' && result[1] === 'b';
+})();
+
+module.exports = function (KEY, length, exec) {
+  var SYMBOL = wks(KEY);
+
+  var DELEGATES_TO_SYMBOL = !fails(function () {
+    // String methods call symbol-named RegEp methods
+    var O = {};
+    O[SYMBOL] = function () { return 7; };
+    return ''[KEY](O) != 7;
+  });
+
+  var DELEGATES_TO_EXEC = DELEGATES_TO_SYMBOL ? !fails(function () {
+    // Symbol-named RegExp methods call .exec
+    var execCalled = false;
+    var re = /a/;
+    re.exec = function () { execCalled = true; return null; };
+    if (KEY === 'split') {
+      // RegExp[@@split] doesn't call the regex's exec method, but first creates
+      // a new one. We need to return the patched regex when creating the new one.
+      re.constructor = {};
+      re.constructor[SPECIES] = function () { return re; };
+    }
+    re[SYMBOL]('');
+    return !execCalled;
+  }) : undefined;
+
+  if (
+    !DELEGATES_TO_SYMBOL ||
+    !DELEGATES_TO_EXEC ||
+    (KEY === 'replace' && !REPLACE_SUPPORTS_NAMED_GROUPS) ||
+    (KEY === 'split' && !SPLIT_WORKS_WITH_OVERWRITTEN_EXEC)
+  ) {
+    var nativeRegExpMethod = /./[SYMBOL];
+    var fns = exec(
+      defined,
+      SYMBOL,
+      ''[KEY],
+      function maybeCallNative(nativeMethod, regexp, str, arg2, forceStringMethod) {
+        if (regexp.exec === regexpExec) {
+          if (DELEGATES_TO_SYMBOL && !forceStringMethod) {
+            // The native String method already delegates to @@method (this
+            // polyfilled function), leasing to infinite recursion.
+            // We avoid it by directly calling the native @@method method.
+            return { done: true, value: nativeRegExpMethod.call(regexp, str, arg2) };
+          }
+          return { done: true, value: nativeMethod.call(str, regexp, arg2) };
+        }
+        return { done: false };
+      }
+    );
+    var strfn = fns[0];
+    var rxfn = fns[1];
+
+    redefine(String.prototype, KEY, strfn);
+    hide(RegExp.prototype, SYMBOL, length == 2
+      // 21.2.5.8 RegExp.prototype[@@replace](string, replaceValue)
+      // 21.2.5.11 RegExp.prototype[@@split](string, limit)
+      ? function (string, arg) { return rxfn.call(string, this, arg); }
+      // 21.2.5.6 RegExp.prototype[@@match](string)
+      // 21.2.5.9 RegExp.prototype[@@search](string)
+      : function (string) { return rxfn.call(string, this); }
+    );
+  }
+};
+
+
+/***/ }),
+/* 100 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var global = __webpack_require__(4);
+var navigator = global.navigator;
+
+module.exports = navigator && navigator.userAgent || '';
+
+
+/***/ }),
+/* 101 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var global = __webpack_require__(4);
+var $export = __webpack_require__(0);
+var redefine = __webpack_require__(25);
+var redefineAll = __webpack_require__(63);
+var meta = __webpack_require__(50);
+var forOf = __webpack_require__(62);
+var anInstance = __webpack_require__(61);
+var isObject = __webpack_require__(7);
+var fails = __webpack_require__(6);
+var $iterDetect = __webpack_require__(97);
+var setToStringTag = __webpack_require__(70);
+var inheritIfRequired = __webpack_require__(125);
+
+module.exports = function (NAME, wrapper, methods, common, IS_MAP, IS_WEAK) {
+  var Base = global[NAME];
+  var C = Base;
+  var ADDER = IS_MAP ? 'set' : 'add';
+  var proto = C && C.prototype;
+  var O = {};
+  var fixMethod = function (KEY) {
+    var fn = proto[KEY];
+    redefine(proto, KEY,
+      KEY == 'delete' ? function (a) {
+        return IS_WEAK && !isObject(a) ? false : fn.call(this, a === 0 ? 0 : a);
+      } : KEY == 'has' ? function has(a) {
+        return IS_WEAK && !isObject(a) ? false : fn.call(this, a === 0 ? 0 : a);
+      } : KEY == 'get' ? function get(a) {
+        return IS_WEAK && !isObject(a) ? undefined : fn.call(this, a === 0 ? 0 : a);
+      } : KEY == 'add' ? function add(a) { fn.call(this, a === 0 ? 0 : a); return this; }
+        : function set(a, b) { fn.call(this, a === 0 ? 0 : a, b); return this; }
+    );
+  };
+  if (typeof C != 'function' || !(IS_WEAK || proto.forEach && !fails(function () {
+    new C().entries().next();
+  }))) {
+    // create collection constructor
+    C = common.getConstructor(wrapper, NAME, IS_MAP, ADDER);
+    redefineAll(C.prototype, methods);
+    meta.NEED = true;
+  } else {
+    var instance = new C();
+    // early implementations not supports chaining
+    var HASNT_CHAINING = instance[ADDER](IS_WEAK ? {} : -0, 1) != instance;
+    // V8 ~  Chromium 40- weak-collections throws on primitives, but should return false
+    var THROWS_ON_PRIMITIVES = fails(function () { instance.has(1); });
+    // most early implementations doesn't supports iterables, most modern - not close it correctly
+    var ACCEPT_ITERABLES = $iterDetect(function (iter) { new C(iter); }); // eslint-disable-line no-new
+    // for early implementations -0 and +0 not the same
+    var BUGGY_ZERO = !IS_WEAK && fails(function () {
+      // V8 ~ Chromium 42- fails only with 5+ elements
+      var $instance = new C();
+      var index = 5;
+      while (index--) $instance[ADDER](index, index);
+      return !$instance.has(-0);
+    });
+    if (!ACCEPT_ITERABLES) {
+      C = wrapper(function (target, iterable) {
+        anInstance(target, C, NAME);
+        var that = inheritIfRequired(new Base(), target, C);
+        if (iterable != undefined) forOf(iterable, IS_MAP, that[ADDER], that);
+        return that;
+      });
+      C.prototype = proto;
+      proto.constructor = C;
+    }
+    if (THROWS_ON_PRIMITIVES || BUGGY_ZERO) {
+      fixMethod('delete');
+      fixMethod('has');
+      IS_MAP && fixMethod('get');
+    }
+    if (BUGGY_ZERO || HASNT_CHAINING) fixMethod(ADDER);
+    // weak collections should not contains .clear method
+    if (IS_WEAK && proto.clear) delete proto.clear;
+  }
+
+  setToStringTag(C, NAME);
+
+  O[NAME] = C;
+  $export($export.G + $export.W + $export.F * (C != Base), O);
+
+  if (!IS_WEAK) common.setStrong(C, NAME, IS_MAP);
+
+  return C;
+};
+
+
+/***/ }),
+/* 102 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var global = __webpack_require__(4);
+var hide = __webpack_require__(24);
+var uid = __webpack_require__(55);
+var TYPED = uid('typed_array');
+var VIEW = uid('view');
+var ABV = !!(global.ArrayBuffer && global.DataView);
+var CONSTR = ABV;
+var i = 0;
+var l = 9;
+var Typed;
+
+var TypedArrayConstructors = (
+  'Int8Array,Uint8Array,Uint8ClampedArray,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array,Float64Array'
+).split(',');
+
+while (i < l) {
+  if (Typed = global[TypedArrayConstructors[i++]]) {
+    hide(Typed.prototype, TYPED, true);
+    hide(Typed.prototype, VIEW, true);
+  } else CONSTR = false;
+}
+
+module.exports = {
+  ABV: ABV,
+  CONSTR: CONSTR,
+  TYPED: TYPED,
+  VIEW: VIEW
+};
+
+
+/***/ }),
+/* 103 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+// Forced replacement prototype accessors methods
+module.exports = __webpack_require__(49) || !__webpack_require__(6)(function () {
+  var K = Math.random();
+  // In FF throws only define methods
+  // eslint-disable-next-line no-undef, no-useless-call
+  __defineSetter__.call(null, K, function () { /* empty */ });
+  delete __webpack_require__(4)[K];
+});
+
+
+/***/ }),
+/* 104 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+// https://tc39.github.io/proposal-setmap-offrom/
+var $export = __webpack_require__(0);
+
+module.exports = function (COLLECTION) {
+  $export($export.S, COLLECTION, { of: function of() {
+    var length = arguments.length;
+    var A = new Array(length);
+    while (length--) A[length] = arguments[length];
+    return new this(A);
+  } });
+};
+
+
+/***/ }),
+/* 105 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+// https://tc39.github.io/proposal-setmap-offrom/
+var $export = __webpack_require__(0);
+var aFunction = __webpack_require__(20);
+var ctx = __webpack_require__(32);
+var forOf = __webpack_require__(62);
+
+module.exports = function (COLLECTION) {
+  $export($export.S, COLLECTION, { from: function from(source /* , mapFn, thisArg */) {
+    var mapFn = arguments[1];
+    var mapping, A, n, cb;
+    aFunction(this);
+    mapping = mapFn !== undefined;
+    if (mapping) aFunction(mapFn);
+    if (source == undefined) return new this();
+    A = [];
+    if (mapping) {
+      n = 0;
+      cb = ctx(mapFn, arguments[2], 2);
+      forOf(source, false, function (nextItem) {
+        A.push(cb(nextItem, n++));
+      });
+    } else {
+      forOf(source, false, A.push, A);
+    }
+    return new this(A);
+  } });
+};
+
+
+/***/ }),
+/* 106 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17030,36 +17895,145 @@ exports.default = typeof _symbol2.default === "function" && _typeof(_iterator2.d
 };
 
 /***/ }),
-/* 86 */
-/***/ (function(module, exports) {
+/* 107 */
+/***/ (function(module, exports, __webpack_require__) {
 
-module.exports = true;
+"use strict";
+
+var $at = __webpack_require__(452)(true);
+
+// 21.1.3.27 String.prototype[@@iterator]()
+__webpack_require__(206)(String, 'String', function (iterated) {
+  this._t = String(iterated); // target
+  this._i = 0;                // next index
+// 21.1.5.2.1 %StringIteratorPrototype%.next()
+}, function () {
+  var O = this._t;
+  var index = this._i;
+  var point;
+  if (index >= O.length) return { value: undefined, done: true };
+  point = $at(O, index);
+  this._i += point.length;
+  return { value: point, done: false };
+});
 
 
 /***/ }),
-/* 87 */
-/***/ (function(module, exports) {
+/* 108 */
+/***/ (function(module, exports, __webpack_require__) {
 
-var toString = {}.toString;
-
-module.exports = function (it) {
-  return toString.call(it).slice(8, -1);
+// optional / simple context binding
+var aFunction = __webpack_require__(109);
+module.exports = function (fn, that, length) {
+  aFunction(fn);
+  if (that === undefined) return fn;
+  switch (length) {
+    case 1: return function (a) {
+      return fn.call(that, a);
+    };
+    case 2: return function (a, b) {
+      return fn.call(that, a, b);
+    };
+    case 3: return function (a, b, c) {
+      return fn.call(that, a, b, c);
+    };
+  }
+  return function (/* ...args */) {
+    return fn.apply(that, arguments);
+  };
 };
 
 
 /***/ }),
-/* 88 */
+/* 109 */
 /***/ (function(module, exports) {
 
-exports.f = {}.propertyIsEnumerable;
+module.exports = function (it) {
+  if (typeof it != 'function') throw TypeError(it + ' is not a function!');
+  return it;
+};
 
 
 /***/ }),
-/* 89 */
+/* 110 */
+/***/ (function(module, exports) {
+
+module.exports = function (bitmap, value) {
+  return {
+    enumerable: !(bitmap & 1),
+    configurable: !(bitmap & 2),
+    writable: !(bitmap & 4),
+    value: value
+  };
+};
+
+
+/***/ }),
+/* 111 */
+/***/ (function(module, exports) {
+
+var id = 0;
+var px = Math.random();
+module.exports = function (key) {
+  return 'Symbol('.concat(key === undefined ? '' : key, ')_', (++id + px).toString(36));
+};
+
+
+/***/ }),
+/* 112 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var def = __webpack_require__(52).f;
+var has = __webpack_require__(66);
+var TAG = __webpack_require__(22)('toStringTag');
+
+module.exports = function (it, tag, stat) {
+  if (it && !has(it = stat ? it : it.prototype, TAG)) def(it, TAG, { configurable: true, value: tag });
+};
+
+
+/***/ }),
+/* 113 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 7.1.13 ToObject(argument)
+var defined = __webpack_require__(150);
+module.exports = function (it) {
+  return Object(defined(it));
+};
+
+
+/***/ }),
+/* 114 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(458);
+var global = __webpack_require__(21);
+var hide = __webpack_require__(65);
+var Iterators = __webpack_require__(75);
+var TO_STRING_TAG = __webpack_require__(22)('toStringTag');
+
+var DOMIterables = ('CSSRuleList,CSSStyleDeclaration,CSSValueList,ClientRectList,DOMRectList,DOMStringList,' +
+  'DOMTokenList,DataTransferItemList,FileList,HTMLAllCollection,HTMLCollection,HTMLFormElement,HTMLSelectElement,' +
+  'MediaList,MimeTypeArray,NamedNodeMap,NodeList,PaintRequestList,Plugin,PluginArray,SVGLengthList,SVGNumberList,' +
+  'SVGPathSegList,SVGPointList,SVGStringList,SVGTransformList,SourceBufferList,StyleSheetList,TextTrackCueList,' +
+  'TextTrackList,TouchList').split(',');
+
+for (var i = 0; i < DOMIterables.length; i++) {
+  var NAME = DOMIterables[i];
+  var Collection = global[NAME];
+  var proto = Collection && Collection.prototype;
+  if (proto && !proto[TO_STRING_TAG]) hide(proto, TO_STRING_TAG, NAME);
+  Iterators[NAME] = Iterators.Array;
+}
+
+
+/***/ }),
+/* 115 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
- * jQuery JavaScript Library v1.12.1
+ * jQuery JavaScript Library v1.12.4
  * http://jquery.com/
  *
  * Includes Sizzle.js
@@ -17069,7 +18043,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
  * Released under the MIT license
  * http://jquery.org/license
  *
- * Date: 2016-02-22T19:07Z
+ * Date: 2017-10-25T15:48Z
  */
 
 (function( global, factory ) {
@@ -17125,7 +18099,7 @@ var support = {};
 
 
 var
-	version = "1.12.1",
+	version = "1.12.4",
 
 	// Define a local copy of jQuery
 	jQuery = function( selector, context ) {
@@ -23732,6 +24706,7 @@ var documentElement = document.documentElement;
 		if ( reliableHiddenOffsetsVal ) {
 			div.style.display = "";
 			div.innerHTML = "<table><tr><td></td><td>t</td></tr></table>";
+			div.childNodes[ 0 ].style.borderCollapse = "separate";
 			contents = div.getElementsByTagName( "td" );
 			contents[ 0 ].style.cssText = "margin:0;border:0;padding:0;display:none";
 			reliableHiddenOffsetsVal = contents[ 0 ].offsetHeight === 0;
@@ -24055,19 +25030,6 @@ function getWidthOrHeight( elem, name, extra ) {
 		styles = getStyles( elem ),
 		isBorderBox = support.boxSizing &&
 			jQuery.css( elem, "boxSizing", false, styles ) === "border-box";
-
-	// Support: IE11 only
-	// In IE 11 fullscreen elements inside of an iframe have
-	// 100x too small dimensions (gh-1764).
-	if ( document.msFullscreenElement && window.top !== window ) {
-
-		// Support: IE11 only
-		// Running getBoundingClientRect on a disconnected node
-		// in IE throws an error.
-		if ( elem.getClientRects().length ) {
-			val = Math.round( elem.getBoundingClientRect()[ name ] * 100 );
-		}
-	}
 
 	// some non-html elements return undefined for offsetWidth, so check for null/undefined
 	// svg - https://bugzilla.mozilla.org/show_bug.cgi?id=649285
@@ -25258,7 +26220,8 @@ jQuery.fn.delay = function( time, type ) {
 } )();
 
 
-var rreturn = /\r/g;
+var rreturn = /\r/g,
+	rspaces = /[\x20\t\r\n\f]+/g;
 
 jQuery.fn.extend( {
 	val: function( value ) {
@@ -25338,7 +26301,9 @@ jQuery.extend( {
 
 					// Support: IE10-11+
 					// option.text throws exceptions (#14686, #14858)
-					jQuery.trim( jQuery.text( elem ) );
+					// Strip and collapse whitespace
+					// https://html.spec.whatwg.org/#strip-and-collapse-whitespace
+					jQuery.trim( jQuery.text( elem ) ).replace( rspaces, " " );
 			}
 		},
 		select: {
@@ -25392,7 +26357,7 @@ jQuery.extend( {
 				while ( i-- ) {
 					option = options[ i ];
 
-					if ( jQuery.inArray( jQuery.valHooks.option.get( option ), values ) >= 0 ) {
+					if ( jQuery.inArray( jQuery.valHooks.option.get( option ), values ) > -1 ) {
 
 						// Support: IE6
 						// When new option element is added to select box we need to
@@ -25811,8 +26776,11 @@ if ( !support.hrefNormalized ) {
 }
 
 // Support: Safari, IE9+
-// mis-reports the default selected property of an option
-// Accessing the parent's selectedIndex property fixes it
+// Accessing the selectedIndex property
+// forces the browser to respect setting selected
+// on the option
+// The getter ensures a default option is selected
+// when in an optgroup
 if ( !support.optSelected ) {
 	jQuery.propHooks.selected = {
 		get: function( elem ) {
@@ -25827,6 +26795,16 @@ if ( !support.optSelected ) {
 				}
 			}
 			return null;
+		},
+		set: function( elem ) {
+			var parent = elem.parentNode;
+			if ( parent ) {
+				parent.selectedIndex;
+
+				if ( parent.parentNode ) {
+					parent.parentNode.selectedIndex;
+				}
+			}
 		}
 	};
 }
@@ -27043,6 +28021,11 @@ function getDisplay( elem ) {
 }
 
 function filterHidden( elem ) {
+
+	// Disconnected elements are considered hidden
+	if ( !jQuery.contains( elem.ownerDocument || document, elem ) ) {
+		return true;
+	}
 	while ( elem && elem.nodeType === 1 ) {
 		if ( getDisplay( elem ) === "none" || elem.type === "hidden" ) {
 			return true;
@@ -27410,6 +28393,7 @@ function createActiveXHR() {
 
 
 // Prevent auto-execution of scripts when no explicit dataType was provided (See gh-2432)
+// https://oktainc.atlassian.net/browse/OKTA-131142
 jQuery.ajaxPrefilter( function( s ) {
 	if ( s.crossDomain ) {
 		s.contents.script = false;
@@ -27602,21 +28586,6 @@ jQuery.ajaxPrefilter( "json jsonp", function( s, originalSettings, jqXHR ) {
 
 
 
-// Support: Safari 8+
-// In Safari 8 documents created via document.implementation.createHTMLDocument
-// collapse sibling forms: the second one becomes a child of the first one.
-// Because of that, this security measure has to be disabled in Safari 8.
-// https://bugs.webkit.org/show_bug.cgi?id=137337
-support.createHTMLDocument = ( function() {
-	if ( !document.implementation.createHTMLDocument ) {
-		return false;
-	}
-	var doc = document.implementation.createHTMLDocument( "" );
-	doc.body.innerHTML = "<form></form><form></form>";
-	return doc.body.childNodes.length === 2;
-} )();
-
-
 // data: string of html
 // context (optional): If specified, the fragment will be created in this context,
 // defaults to document
@@ -27629,12 +28598,7 @@ jQuery.parseHTML = function( data, context, keepScripts ) {
 		keepScripts = context;
 		context = false;
 	}
-
-	// document.implementation stops scripts or inline event handlers from
-	// being executed immediately
-	context = context || ( support.createHTMLDocument ?
-		document.implementation.createHTMLDocument( "" ) :
-		document );
+	context = context || document;
 
 	var parsed = rsingleTag.exec( data ),
 		scripts = !keepScripts && [];
@@ -27716,7 +28680,7 @@ jQuery.fn.load = function( url, params, callback ) {
 		// If it fails, this function gets "jqXHR", "status", "error"
 		} ).always( callback && function( jqXHR, status ) {
 			self.each( function() {
-				callback.apply( self, response || [ jqXHR.responseText, status, jqXHR ] );
+				callback.apply( this, response || [ jqXHR.responseText, status, jqXHR ] );
 			} );
 		} );
 	}
@@ -28079,887 +29043,15 @@ jQuery.noConflict = function( deep ) {
 // Expose jQuery and $ identifiers, even in
 // AMD (#7102#comment:10, https://github.com/jquery/jquery/pull/557)
 // and CommonJS for browser emulators (#13566)
-if ( !noGlobal ) {
+
+//9/10/2018 - OKTA-187649 - Expose jQuery in the global window object to externalize it
+//OKTA-Core used to load separate jquery as part of the saasure.min.js file along with the one that is bundled in dll.common
+if ( !noGlobal || window.__OKTA_EXPORT_JQUERY__ ) {
 	window.jQuery = window.$ = jQuery;
 }
 
 return jQuery;
 }));
-
-
-/***/ }),
-/* 90 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*!
- * Copyright (c) 2015-present, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- *
- */
-
-var Cookies = __webpack_require__(479);
-var storageBuilder = __webpack_require__(219);
-var config = __webpack_require__(77);
-
-// Building this as an object allows us to mock the functions in our tests
-var storageUtil = {};
-
-// IE11 bug that Microsoft doesn't plan to fix
-// https://connect.microsoft.com/IE/Feedback/Details/1496040
-storageUtil.browserHasLocalStorage = function() {
-  try {
-    var storage = storageUtil.getLocalStorage();
-    return storageUtil.testStorage(storage);
-  } catch (e) {
-    return false;
-  }
-};
-
-storageUtil.browserHasSessionStorage = function() {
-  try {
-    var storage = storageUtil.getSessionStorage();
-    return storageUtil.testStorage(storage);
-  } catch (e) {
-    return false;
-  }
-};
-
-storageUtil.getPKCEStorage = function() {
-  if (storageUtil.browserHasLocalStorage()) {
-    return storageBuilder(storageUtil.getLocalStorage(), config.PKCE_STORAGE_NAME);
-  } else if (storageUtil.browserHasSessionStorage()) {
-    return storageBuilder(storageUtil.getSessionStorage(), config.PKCE_STORAGE_NAME);
-  } else {
-    return storageBuilder(storageUtil.getCookieStorage(), config.PKCE_STORAGE_NAME);
-  }
-};
-
-storageUtil.getHttpCache = function() {
-  if (storageUtil.browserHasLocalStorage()) {
-    return storageBuilder(storageUtil.getLocalStorage(), config.CACHE_STORAGE_NAME);
-  } else if (storageUtil.browserHasSessionStorage()) {
-    return storageBuilder(storageUtil.getSessionStorage(), config.CACHE_STORAGE_NAME);
-  } else {
-    return storageBuilder(storageUtil.getCookieStorage(), config.CACHE_STORAGE_NAME);
-  }
-};
-
-storageUtil.getLocalStorage = function() {
-  return localStorage;
-};
-
-storageUtil.getSessionStorage = function() {
-  return sessionStorage;
-};
-
-// Provides webStorage-like interface for cookies
-storageUtil.getCookieStorage = function(options) {
-  options = options || {};
-  return {
-    getItem: storageUtil.storage.get,
-    setItem: function(key, value) {
-      // Cookie shouldn't expire
-      storageUtil.storage.set(key, value, '2200-01-01T00:00:00.000Z', options.secure);
-    }
-  };
-};
-
-storageUtil.testStorage = function(storage) {
-  var key = 'okta-test-storage';
-  try {
-    storage.setItem(key, key);
-    storage.removeItem(key);
-    return true;
-  } catch (e) {
-    return false;
-  }
-};
-
-storageUtil.storage = {
-  set: function(name, value, expiresAt, secure) {
-    var cookieOptions = {
-      path: '/',
-      secure: secure
-    };
-
-    // eslint-disable-next-line no-extra-boolean-cast
-    if (!!(Date.parse(expiresAt))) {
-      // Expires value can be converted to a Date object.
-      //
-      // If the 'expiresAt' value is not provided, or the value cannot be
-      // parsed as a Date object, the cookie will set as a session cookie.
-      cookieOptions.expires = new Date(expiresAt);
-    }
-
-    Cookies.set(name, value, cookieOptions);
-    return storageUtil.storage.get(name);
-  },
-
-  get: function(name) {
-    return Cookies.get(name);
-  },
-
-  delete: function(name) {
-    return Cookies.remove(name, { path: '/' });
-  }
-};
-
-module.exports = storageUtil;
-
-
-/***/ }),
-/* 91 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, Enums) {
-
-  var _ = Okta._;
-  var KNOWN_ERRORS = ['OAuthError', 'AuthSdkError', 'AuthPollStopError', 'AuthApiError'];
-
-  return Okta.Model.extend({
-    doTransaction: function doTransaction(fn, rethrow) {
-      var self = this;
-      return fn.call(this, this.appState.get('transaction')).then(function (trans) {
-        self.trigger('setTransaction', trans);
-        return trans;
-      }).fail(function (err) {
-        // Q may still consider AuthPollStopError to be unhandled
-        if (err.name === 'AuthPollStopError' || err.name === Enums.AUTH_STOP_POLL_INITIATION_ERROR) {
-          return;
-        }
-        self.trigger('error', self, err.xhr);
-        self.trigger('setTransactionError', err);
-        if (rethrow || _.indexOf(KNOWN_ERRORS, err.name) === -1) {
-          throw err;
-        }
-      });
-    },
-
-    manageTransaction: function manageTransaction(fn) {
-      var self = this,
-          res = fn.call(this, this.appState.get('transaction'), _.bind(this.setTransaction, this));
-
-      // If it's a promise, listen for failures
-      if (Q.isPromiseAlike(res)) {
-        return res.fail(function (err) {
-          if (err.name === 'AuthPollStopError' || err.name === Enums.AUTH_STOP_POLL_INITIATION_ERROR) {
-            return;
-          }
-          self.trigger('error', self, err.xhr);
-          self.trigger('setTransactionError', err);
-        });
-      }
-
-      return Q.resolve(res);
-    },
-
-    startTransaction: function startTransaction(fn) {
-      var self = this,
-          res = fn.call(this, this.settings.getAuthClient());
-
-      // If it's a promise, then chain to it
-      if (Q.isPromiseAlike(res)) {
-        return res.then(function (trans) {
-          self.trigger('setTransaction', trans);
-          return trans;
-        }).fail(function (err) {
-          self.trigger('error', self, err.xhr);
-          self.trigger('setTransactionError', err);
-          throw err;
-        });
-      }
-
-      return Q.resolve(res);
-    },
-
-    setTransaction: function setTransaction(trans) {
-      this.appState.set('transaction', trans);
-    }
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 92 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
-
-  var fn = {};
-
-  // Validate the 'username' field on the model.
-  fn.validateUsername = function (model) {
-    var username = model.get('username');
-    if (username && username.length > 256) {
-      return {
-        username: Okta.loc('model.validation.field.username', 'login')
-      };
-    }
-  };
-
-  // Validate that the field1 and field2 fields on the model are a match.
-  fn.validateFieldsMatch = function (model, field1, field2, message) {
-    if (model.get(field1) !== model.get(field2)) {
-      var ret = {};
-      ret[field2] = message;
-      return ret;
-    }
-  };
-
-  // Validate that the 'newPassword' and 'confirmPassword' fields on the model are a match.
-  fn.validatePasswordMatch = function (model) {
-    return fn.validateFieldsMatch(model, 'newPassword', 'confirmPassword', Okta.loc('password.error.match', 'login'));
-  };
-
-  return fn;
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 93 */
-/***/ (function(module, exports) {
-
-var g;
-
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
-
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || Function("return this")() || (1,eval)("this");
-} catch(e) {
-	// This works if the window reference is available
-	if(typeof window === "object")
-		g = window;
-}
-
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
-
-module.exports = g;
-
-
-/***/ }),
-/* 94 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// false -> Array#indexOf
-// true  -> Array#includes
-var toIObject = __webpack_require__(27);
-var toLength = __webpack_require__(10);
-var toAbsoluteIndex = __webpack_require__(56);
-module.exports = function (IS_INCLUDES) {
-  return function ($this, el, fromIndex) {
-    var O = toIObject($this);
-    var length = toLength(O.length);
-    var index = toAbsoluteIndex(fromIndex, length);
-    var value;
-    // Array#includes uses SameValueZero equality algorithm
-    // eslint-disable-next-line no-self-compare
-    if (IS_INCLUDES && el != el) while (length > index) {
-      value = O[index++];
-      // eslint-disable-next-line no-self-compare
-      if (value != value) return true;
-    // Array#indexOf ignores holes, Array#includes - not
-    } else for (;length > index; index++) if (IS_INCLUDES || index in O) {
-      if (O[index] === el) return IS_INCLUDES || index || 0;
-    } return !IS_INCLUDES && -1;
-  };
-};
-
-
-/***/ }),
-/* 95 */
-/***/ (function(module, exports) {
-
-exports.f = Object.getOwnPropertySymbols;
-
-
-/***/ }),
-/* 96 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// 7.2.2 IsArray(argument)
-var cof = __webpack_require__(32);
-module.exports = Array.isArray || function isArray(arg) {
-  return cof(arg) == 'Array';
-};
-
-
-/***/ }),
-/* 97 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var toInteger = __webpack_require__(33);
-var defined = __webpack_require__(37);
-// true  -> String#at
-// false -> String#codePointAt
-module.exports = function (TO_STRING) {
-  return function (that, pos) {
-    var s = String(defined(that));
-    var i = toInteger(pos);
-    var l = s.length;
-    var a, b;
-    if (i < 0 || i >= l) return TO_STRING ? '' : undefined;
-    a = s.charCodeAt(i);
-    return a < 0xd800 || a > 0xdbff || i + 1 === l || (b = s.charCodeAt(i + 1)) < 0xdc00 || b > 0xdfff
-      ? TO_STRING ? s.charAt(i) : a
-      : TO_STRING ? s.slice(i, i + 2) : (a - 0xd800 << 10) + (b - 0xdc00) + 0x10000;
-  };
-};
-
-
-/***/ }),
-/* 98 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// 7.2.8 IsRegExp(argument)
-var isObject = __webpack_require__(7);
-var cof = __webpack_require__(32);
-var MATCH = __webpack_require__(9)('match');
-module.exports = function (it) {
-  var isRegExp;
-  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : cof(it) == 'RegExp');
-};
-
-
-/***/ }),
-/* 99 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var ITERATOR = __webpack_require__(9)('iterator');
-var SAFE_CLOSING = false;
-
-try {
-  var riter = [7][ITERATOR]();
-  riter['return'] = function () { SAFE_CLOSING = true; };
-  // eslint-disable-next-line no-throw-literal
-  Array.from(riter, function () { throw 2; });
-} catch (e) { /* empty */ }
-
-module.exports = function (exec, skipClosing) {
-  if (!skipClosing && !SAFE_CLOSING) return false;
-  var safe = false;
-  try {
-    var arr = [7];
-    var iter = arr[ITERATOR]();
-    iter.next = function () { return { done: safe = true }; };
-    arr[ITERATOR] = function () { return iter; };
-    exec(arr);
-  } catch (e) { /* empty */ }
-  return safe;
-};
-
-
-/***/ }),
-/* 100 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var classof = __webpack_require__(71);
-var builtinExec = RegExp.prototype.exec;
-
- // `RegExpExec` abstract operation
-// https://tc39.github.io/ecma262/#sec-regexpexec
-module.exports = function (R, S) {
-  var exec = R.exec;
-  if (typeof exec === 'function') {
-    var result = exec.call(R, S);
-    if (typeof result !== 'object') {
-      throw new TypeError('RegExp exec method returned something other than an Object or null');
-    }
-    return result;
-  }
-  if (classof(R) !== 'RegExp') {
-    throw new TypeError('RegExp#exec called on incompatible receiver');
-  }
-  return builtinExec.call(R, S);
-};
-
-
-/***/ }),
-/* 101 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-__webpack_require__(189);
-var redefine = __webpack_require__(24);
-var hide = __webpack_require__(23);
-var fails = __webpack_require__(6);
-var defined = __webpack_require__(37);
-var wks = __webpack_require__(9);
-var regexpExec = __webpack_require__(139);
-
-var SPECIES = wks('species');
-
-var REPLACE_SUPPORTS_NAMED_GROUPS = !fails(function () {
-  // #replace needs built-in support for named groups.
-  // #match works fine because it just return the exec results, even if it has
-  // a "grops" property.
-  var re = /./;
-  re.exec = function () {
-    var result = [];
-    result.groups = { a: '7' };
-    return result;
-  };
-  return ''.replace(re, '$<a>') !== '7';
-});
-
-var SPLIT_WORKS_WITH_OVERWRITTEN_EXEC = (function () {
-  // Chrome 51 has a buggy "split" implementation when RegExp#exec !== nativeExec
-  var re = /(?:)/;
-  var originalExec = re.exec;
-  re.exec = function () { return originalExec.apply(this, arguments); };
-  var result = 'ab'.split(re);
-  return result.length === 2 && result[0] === 'a' && result[1] === 'b';
-})();
-
-module.exports = function (KEY, length, exec) {
-  var SYMBOL = wks(KEY);
-
-  var DELEGATES_TO_SYMBOL = !fails(function () {
-    // String methods call symbol-named RegEp methods
-    var O = {};
-    O[SYMBOL] = function () { return 7; };
-    return ''[KEY](O) != 7;
-  });
-
-  var DELEGATES_TO_EXEC = DELEGATES_TO_SYMBOL ? !fails(function () {
-    // Symbol-named RegExp methods call .exec
-    var execCalled = false;
-    var re = /a/;
-    re.exec = function () { execCalled = true; return null; };
-    if (KEY === 'split') {
-      // RegExp[@@split] doesn't call the regex's exec method, but first creates
-      // a new one. We need to return the patched regex when creating the new one.
-      re.constructor = {};
-      re.constructor[SPECIES] = function () { return re; };
-    }
-    re[SYMBOL]('');
-    return !execCalled;
-  }) : undefined;
-
-  if (
-    !DELEGATES_TO_SYMBOL ||
-    !DELEGATES_TO_EXEC ||
-    (KEY === 'replace' && !REPLACE_SUPPORTS_NAMED_GROUPS) ||
-    (KEY === 'split' && !SPLIT_WORKS_WITH_OVERWRITTEN_EXEC)
-  ) {
-    var nativeRegExpMethod = /./[SYMBOL];
-    var fns = exec(
-      defined,
-      SYMBOL,
-      ''[KEY],
-      function maybeCallNative(nativeMethod, regexp, str, arg2, forceStringMethod) {
-        if (regexp.exec === regexpExec) {
-          if (DELEGATES_TO_SYMBOL && !forceStringMethod) {
-            // The native String method already delegates to @@method (this
-            // polyfilled function), leasing to infinite recursion.
-            // We avoid it by directly calling the native @@method method.
-            return { done: true, value: nativeRegExpMethod.call(regexp, str, arg2) };
-          }
-          return { done: true, value: nativeMethod.call(str, regexp, arg2) };
-        }
-        return { done: false };
-      }
-    );
-    var strfn = fns[0];
-    var rxfn = fns[1];
-
-    redefine(String.prototype, KEY, strfn);
-    hide(RegExp.prototype, SYMBOL, length == 2
-      // 21.2.5.8 RegExp.prototype[@@replace](string, replaceValue)
-      // 21.2.5.11 RegExp.prototype[@@split](string, limit)
-      ? function (string, arg) { return rxfn.call(string, this, arg); }
-      // 21.2.5.6 RegExp.prototype[@@match](string)
-      // 21.2.5.9 RegExp.prototype[@@search](string)
-      : function (string) { return rxfn.call(string, this); }
-    );
-  }
-};
-
-
-/***/ }),
-/* 102 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var global = __webpack_require__(4);
-var navigator = global.navigator;
-
-module.exports = navigator && navigator.userAgent || '';
-
-
-/***/ }),
-/* 103 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var global = __webpack_require__(4);
-var $export = __webpack_require__(0);
-var redefine = __webpack_require__(24);
-var redefineAll = __webpack_require__(62);
-var meta = __webpack_require__(48);
-var forOf = __webpack_require__(61);
-var anInstance = __webpack_require__(60);
-var isObject = __webpack_require__(7);
-var fails = __webpack_require__(6);
-var $iterDetect = __webpack_require__(99);
-var setToStringTag = __webpack_require__(70);
-var inheritIfRequired = __webpack_require__(125);
-
-module.exports = function (NAME, wrapper, methods, common, IS_MAP, IS_WEAK) {
-  var Base = global[NAME];
-  var C = Base;
-  var ADDER = IS_MAP ? 'set' : 'add';
-  var proto = C && C.prototype;
-  var O = {};
-  var fixMethod = function (KEY) {
-    var fn = proto[KEY];
-    redefine(proto, KEY,
-      KEY == 'delete' ? function (a) {
-        return IS_WEAK && !isObject(a) ? false : fn.call(this, a === 0 ? 0 : a);
-      } : KEY == 'has' ? function has(a) {
-        return IS_WEAK && !isObject(a) ? false : fn.call(this, a === 0 ? 0 : a);
-      } : KEY == 'get' ? function get(a) {
-        return IS_WEAK && !isObject(a) ? undefined : fn.call(this, a === 0 ? 0 : a);
-      } : KEY == 'add' ? function add(a) { fn.call(this, a === 0 ? 0 : a); return this; }
-        : function set(a, b) { fn.call(this, a === 0 ? 0 : a, b); return this; }
-    );
-  };
-  if (typeof C != 'function' || !(IS_WEAK || proto.forEach && !fails(function () {
-    new C().entries().next();
-  }))) {
-    // create collection constructor
-    C = common.getConstructor(wrapper, NAME, IS_MAP, ADDER);
-    redefineAll(C.prototype, methods);
-    meta.NEED = true;
-  } else {
-    var instance = new C();
-    // early implementations not supports chaining
-    var HASNT_CHAINING = instance[ADDER](IS_WEAK ? {} : -0, 1) != instance;
-    // V8 ~  Chromium 40- weak-collections throws on primitives, but should return false
-    var THROWS_ON_PRIMITIVES = fails(function () { instance.has(1); });
-    // most early implementations doesn't supports iterables, most modern - not close it correctly
-    var ACCEPT_ITERABLES = $iterDetect(function (iter) { new C(iter); }); // eslint-disable-line no-new
-    // for early implementations -0 and +0 not the same
-    var BUGGY_ZERO = !IS_WEAK && fails(function () {
-      // V8 ~ Chromium 42- fails only with 5+ elements
-      var $instance = new C();
-      var index = 5;
-      while (index--) $instance[ADDER](index, index);
-      return !$instance.has(-0);
-    });
-    if (!ACCEPT_ITERABLES) {
-      C = wrapper(function (target, iterable) {
-        anInstance(target, C, NAME);
-        var that = inheritIfRequired(new Base(), target, C);
-        if (iterable != undefined) forOf(iterable, IS_MAP, that[ADDER], that);
-        return that;
-      });
-      C.prototype = proto;
-      proto.constructor = C;
-    }
-    if (THROWS_ON_PRIMITIVES || BUGGY_ZERO) {
-      fixMethod('delete');
-      fixMethod('has');
-      IS_MAP && fixMethod('get');
-    }
-    if (BUGGY_ZERO || HASNT_CHAINING) fixMethod(ADDER);
-    // weak collections should not contains .clear method
-    if (IS_WEAK && proto.clear) delete proto.clear;
-  }
-
-  setToStringTag(C, NAME);
-
-  O[NAME] = C;
-  $export($export.G + $export.W + $export.F * (C != Base), O);
-
-  if (!IS_WEAK) common.setStrong(C, NAME, IS_MAP);
-
-  return C;
-};
-
-
-/***/ }),
-/* 104 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var global = __webpack_require__(4);
-var hide = __webpack_require__(23);
-var uid = __webpack_require__(54);
-var TYPED = uid('typed_array');
-var VIEW = uid('view');
-var ABV = !!(global.ArrayBuffer && global.DataView);
-var CONSTR = ABV;
-var i = 0;
-var l = 9;
-var Typed;
-
-var TypedArrayConstructors = (
-  'Int8Array,Uint8Array,Uint8ClampedArray,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array,Float64Array'
-).split(',');
-
-while (i < l) {
-  if (Typed = global[TypedArrayConstructors[i++]]) {
-    hide(Typed.prototype, TYPED, true);
-    hide(Typed.prototype, VIEW, true);
-  } else CONSTR = false;
-}
-
-module.exports = {
-  ABV: ABV,
-  CONSTR: CONSTR,
-  TYPED: TYPED,
-  VIEW: VIEW
-};
-
-
-/***/ }),
-/* 105 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-// Forced replacement prototype accessors methods
-module.exports = __webpack_require__(47) || !__webpack_require__(6)(function () {
-  var K = Math.random();
-  // In FF throws only define methods
-  // eslint-disable-next-line no-undef, no-useless-call
-  __defineSetter__.call(null, K, function () { /* empty */ });
-  delete __webpack_require__(4)[K];
-});
-
-
-/***/ }),
-/* 106 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-// https://tc39.github.io/proposal-setmap-offrom/
-var $export = __webpack_require__(0);
-
-module.exports = function (COLLECTION) {
-  $export($export.S, COLLECTION, { of: function of() {
-    var length = arguments.length;
-    var A = new Array(length);
-    while (length--) A[length] = arguments[length];
-    return new this(A);
-  } });
-};
-
-
-/***/ }),
-/* 107 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-// https://tc39.github.io/proposal-setmap-offrom/
-var $export = __webpack_require__(0);
-var aFunction = __webpack_require__(19);
-var ctx = __webpack_require__(31);
-var forOf = __webpack_require__(61);
-
-module.exports = function (COLLECTION) {
-  $export($export.S, COLLECTION, { from: function from(source /* , mapFn, thisArg */) {
-    var mapFn = arguments[1];
-    var mapping, A, n, cb;
-    aFunction(this);
-    mapping = mapFn !== undefined;
-    if (mapping) aFunction(mapFn);
-    if (source == undefined) return new this();
-    A = [];
-    if (mapping) {
-      n = 0;
-      cb = ctx(mapFn, arguments[2], 2);
-      forOf(source, false, function (nextItem) {
-        A.push(cb(nextItem, n++));
-      });
-    } else {
-      forOf(source, false, A.push, A);
-    }
-    return new this(A);
-  } });
-};
-
-
-/***/ }),
-/* 108 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var $at = __webpack_require__(452)(true);
-
-// 21.1.3.27 String.prototype[@@iterator]()
-__webpack_require__(206)(String, 'String', function (iterated) {
-  this._t = String(iterated); // target
-  this._i = 0;                // next index
-// 21.1.5.2.1 %StringIteratorPrototype%.next()
-}, function () {
-  var O = this._t;
-  var index = this._i;
-  var point;
-  if (index >= O.length) return { value: undefined, done: true };
-  point = $at(O, index);
-  this._i += point.length;
-  return { value: point, done: false };
-});
-
-
-/***/ }),
-/* 109 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// optional / simple context binding
-var aFunction = __webpack_require__(110);
-module.exports = function (fn, that, length) {
-  aFunction(fn);
-  if (that === undefined) return fn;
-  switch (length) {
-    case 1: return function (a) {
-      return fn.call(that, a);
-    };
-    case 2: return function (a, b) {
-      return fn.call(that, a, b);
-    };
-    case 3: return function (a, b, c) {
-      return fn.call(that, a, b, c);
-    };
-  }
-  return function (/* ...args */) {
-    return fn.apply(that, arguments);
-  };
-};
-
-
-/***/ }),
-/* 110 */
-/***/ (function(module, exports) {
-
-module.exports = function (it) {
-  if (typeof it != 'function') throw TypeError(it + ' is not a function!');
-  return it;
-};
-
-
-/***/ }),
-/* 111 */
-/***/ (function(module, exports) {
-
-module.exports = function (bitmap, value) {
-  return {
-    enumerable: !(bitmap & 1),
-    configurable: !(bitmap & 2),
-    writable: !(bitmap & 4),
-    value: value
-  };
-};
-
-
-/***/ }),
-/* 112 */
-/***/ (function(module, exports) {
-
-var id = 0;
-var px = Math.random();
-module.exports = function (key) {
-  return 'Symbol('.concat(key === undefined ? '' : key, ')_', (++id + px).toString(36));
-};
-
-
-/***/ }),
-/* 113 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var def = __webpack_require__(50).f;
-var has = __webpack_require__(65);
-var TAG = __webpack_require__(21)('toStringTag');
-
-module.exports = function (it, tag, stat) {
-  if (it && !has(it = stat ? it : it.prototype, TAG)) def(it, TAG, { configurable: true, value: tag });
-};
-
-
-/***/ }),
-/* 114 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// 7.1.13 ToObject(argument)
-var defined = __webpack_require__(150);
-module.exports = function (it) {
-  return Object(defined(it));
-};
-
-
-/***/ }),
-/* 115 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(458);
-var global = __webpack_require__(20);
-var hide = __webpack_require__(64);
-var Iterators = __webpack_require__(75);
-var TO_STRING_TAG = __webpack_require__(21)('toStringTag');
-
-var DOMIterables = ('CSSRuleList,CSSStyleDeclaration,CSSValueList,ClientRectList,DOMRectList,DOMStringList,' +
-  'DOMTokenList,DataTransferItemList,FileList,HTMLAllCollection,HTMLCollection,HTMLFormElement,HTMLSelectElement,' +
-  'MediaList,MimeTypeArray,NamedNodeMap,NodeList,PaintRequestList,Plugin,PluginArray,SVGLengthList,SVGNumberList,' +
-  'SVGPathSegList,SVGPointList,SVGStringList,SVGTransformList,SourceBufferList,StyleSheetList,TextTrackCueList,' +
-  'TextTrackList,TouchList').split(',');
-
-for (var i = 0; i < DOMIterables.length; i++) {
-  var NAME = DOMIterables[i];
-  var Collection = global[NAME];
-  var proto = Collection && Collection.prototype;
-  if (proto && !proto[TO_STRING_TAG]) hide(proto, TO_STRING_TAG, NAME);
-  Iterators[NAME] = Iterators.Array;
-}
 
 
 /***/ }),
@@ -29054,7 +29146,7 @@ var __WEBPACK_AMD_DEFINE_RESULT__;
 "use strict";
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
-var _freeze = __webpack_require__(560);
+var _freeze = __webpack_require__(534);
 
 var _freeze2 = _interopRequireDefault(_freeze);
 
@@ -29073,7 +29165,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  */
 
 /* globals JSON */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(167)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, FidoUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(164)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, FidoUtil) {
 
   function adaptToOkta(promise) {
     return new Q(promise);
@@ -29148,8 +29240,8 @@ module.exports = function (it) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var global = __webpack_require__(4);
-var core = __webpack_require__(30);
-var LIBRARY = __webpack_require__(47);
+var core = __webpack_require__(31);
+var LIBRARY = __webpack_require__(49);
 var wksExt = __webpack_require__(171);
 var defineProperty = __webpack_require__(13).f;
 module.exports = function (name) {
@@ -29163,7 +29255,7 @@ module.exports = function (name) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var shared = __webpack_require__(80)('keys');
-var uid = __webpack_require__(54);
+var uid = __webpack_require__(55);
 module.exports = function (key) {
   return shared[key] || (shared[key] = uid(key));
 };
@@ -29203,7 +29295,7 @@ module.exports = {
   set: Object.setPrototypeOf || ('__proto__' in {} ? // eslint-disable-line
     function (test, buggy, set) {
       try {
-        set = __webpack_require__(31)(Function.call, __webpack_require__(28).f(Object.prototype, '__proto__').set, 2);
+        set = __webpack_require__(32)(Function.call, __webpack_require__(29).f(Object.prototype, '__proto__').set, 2);
         set(test, []);
         buggy = !(test instanceof Array);
       } catch (e) { buggy = true; }
@@ -29247,8 +29339,8 @@ module.exports = function (that, target, C) {
 
 "use strict";
 
-var toInteger = __webpack_require__(33);
-var defined = __webpack_require__(37);
+var toInteger = __webpack_require__(34);
+var defined = __webpack_require__(38);
 
 module.exports = function repeat(count) {
   var str = String(defined(this));
@@ -29293,14 +29385,14 @@ module.exports = (!$expm1
 
 "use strict";
 
-var LIBRARY = __webpack_require__(47);
+var LIBRARY = __webpack_require__(49);
 var $export = __webpack_require__(0);
-var redefine = __webpack_require__(24);
-var hide = __webpack_require__(23);
+var redefine = __webpack_require__(25);
+var hide = __webpack_require__(24);
 var Iterators = __webpack_require__(73);
 var $iterCreate = __webpack_require__(130);
 var setToStringTag = __webpack_require__(70);
-var getPrototypeOf = __webpack_require__(29);
+var getPrototypeOf = __webpack_require__(30);
 var ITERATOR = __webpack_require__(9)('iterator');
 var BUGGY = !([].keys && 'next' in [].keys()); // Safari has buggy iterators w/o `next`
 var FF_ITERATOR = '@@iterator';
@@ -29369,13 +29461,13 @@ module.exports = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCE
 
 "use strict";
 
-var create = __webpack_require__(57);
-var descriptor = __webpack_require__(53);
+var create = __webpack_require__(58);
+var descriptor = __webpack_require__(54);
 var setToStringTag = __webpack_require__(70);
 var IteratorPrototype = {};
 
 // 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-__webpack_require__(23)(IteratorPrototype, __webpack_require__(9)('iterator'), function () { return this; });
+__webpack_require__(24)(IteratorPrototype, __webpack_require__(9)('iterator'), function () { return this; });
 
 module.exports = function (Constructor, NAME, next) {
   Constructor.prototype = create(IteratorPrototype, { next: descriptor(1, next) });
@@ -29388,8 +29480,8 @@ module.exports = function (Constructor, NAME, next) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // helper for String#{startsWith, endsWith, includes}
-var isRegExp = __webpack_require__(98);
-var defined = __webpack_require__(37);
+var isRegExp = __webpack_require__(96);
+var defined = __webpack_require__(38);
 
 module.exports = function (that, searchString, NAME) {
   if (isRegExp(searchString)) throw TypeError('String#' + NAME + " doesn't accept regex!");
@@ -29436,7 +29528,7 @@ module.exports = function (it) {
 "use strict";
 
 var $defineProperty = __webpack_require__(13);
-var createDesc = __webpack_require__(53);
+var createDesc = __webpack_require__(54);
 
 module.exports = function (object, index, value) {
   if (index in object) $defineProperty.f(object, index, createDesc(0, value));
@@ -29451,7 +29543,7 @@ module.exports = function (object, index, value) {
 var classof = __webpack_require__(71);
 var ITERATOR = __webpack_require__(9)('iterator');
 var Iterators = __webpack_require__(73);
-module.exports = __webpack_require__(30).getIteratorMethod = function (it) {
+module.exports = __webpack_require__(31).getIteratorMethod = function (it) {
   if (it != undefined) return it[ITERATOR]
     || it['@@iterator']
     || Iterators[classof(it)];
@@ -29478,7 +29570,7 @@ module.exports = function (original, length) {
 // 22.1.3.6 Array.prototype.fill(value, start = 0, end = this.length)
 
 var toObject = __webpack_require__(15);
-var toAbsoluteIndex = __webpack_require__(56);
+var toAbsoluteIndex = __webpack_require__(57);
 var toLength = __webpack_require__(10);
 module.exports = function fill(value /* , start = 0, end = @length */) {
   var O = toObject(this);
@@ -29498,10 +29590,10 @@ module.exports = function fill(value /* , start = 0, end = @length */) {
 
 "use strict";
 
-var addToUnscopables = __webpack_require__(49);
+var addToUnscopables = __webpack_require__(51);
 var step = __webpack_require__(188);
 var Iterators = __webpack_require__(73);
-var toIObject = __webpack_require__(27);
+var toIObject = __webpack_require__(28);
 
 // 22.1.3.4 Array.prototype.entries()
 // 22.1.3.13 Array.prototype.keys()
@@ -29604,7 +29696,7 @@ module.exports = patchedExec;
 
 "use strict";
 
-var at = __webpack_require__(97)(true);
+var at = __webpack_require__(95)(true);
 
  // `AdvanceStringIndex` abstract operation
 // https://tc39.github.io/ecma262/#sec-advancestringindex
@@ -29617,7 +29709,7 @@ module.exports = function (S, index, unicode) {
 /* 141 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var ctx = __webpack_require__(31);
+var ctx = __webpack_require__(32);
 var invoke = __webpack_require__(178);
 var html = __webpack_require__(122);
 var cel = __webpack_require__(118);
@@ -29660,7 +29752,7 @@ if (!setTask || !clearTask) {
     delete queue[id];
   };
   // Node.js 0.8-
-  if (__webpack_require__(32)(process) == 'process') {
+  if (__webpack_require__(33)(process) == 'process') {
     defer = function (id) {
       process.nextTick(ctx(run, id, 1));
     };
@@ -29712,7 +29804,7 @@ var macrotask = __webpack_require__(141).set;
 var Observer = global.MutationObserver || global.WebKitMutationObserver;
 var process = global.process;
 var Promise = global.Promise;
-var isNode = __webpack_require__(32)(process) == 'process';
+var isNode = __webpack_require__(33)(process) == 'process';
 
 module.exports = function () {
   var head, last, notify;
@@ -29785,7 +29877,7 @@ module.exports = function () {
 "use strict";
 
 // 25.4.1.5 NewPromiseCapability(C)
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 
 function PromiseCapability(C) {
   var resolve, reject;
@@ -29811,16 +29903,16 @@ module.exports.f = function (C) {
 
 var global = __webpack_require__(4);
 var DESCRIPTORS = __webpack_require__(11);
-var LIBRARY = __webpack_require__(47);
-var $typed = __webpack_require__(104);
-var hide = __webpack_require__(23);
-var redefineAll = __webpack_require__(62);
+var LIBRARY = __webpack_require__(49);
+var $typed = __webpack_require__(102);
+var hide = __webpack_require__(24);
+var redefineAll = __webpack_require__(63);
 var fails = __webpack_require__(6);
-var anInstance = __webpack_require__(60);
-var toInteger = __webpack_require__(33);
+var anInstance = __webpack_require__(61);
+var toInteger = __webpack_require__(34);
 var toLength = __webpack_require__(10);
 var toIndex = __webpack_require__(198);
-var gOPN = __webpack_require__(58).f;
+var gOPN = __webpack_require__(59).f;
 var dP = __webpack_require__(13).f;
 var arrayFill = __webpack_require__(137);
 var setToStringTag = __webpack_require__(70);
@@ -31645,7 +31737,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscor
 /* 146 */
 /***/ (function(module, exports) {
 
-module.exports = {"version":"2.21.0","supportedLanguages":["en","cs","da","de","el","es","fi","fr","hu","id","in","it","ja","ko","ms","nb","nl-NL","pl","pt-BR","ro","ru","sv","th","tr","uk","vi","zh-CN","zh-TW"]}
+module.exports = {"version":"3.1.6","supportedLanguages":["en","cs","da","de","el","es","fi","fr","hu","id","in","it","ja","ko","ms","nb","nl-NL","pl","pt-BR","ro","ru","sv","th","tr","uk","vi","zh-CN","zh-TW"]}
 
 /***/ }),
 /* 147 */
@@ -31666,7 +31758,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(8), __webpack_require__(35)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Enums, Errors) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(8), __webpack_require__(36), __webpack_require__(17)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Enums, Errors, Util) {
 
   var util = {};
   var _ = Okta._;
@@ -31697,9 +31789,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       if (error.errorCode === 'access_denied') {
         controller.model.trigger('error', controller.model, { 'responseJSON': error });
         controller.model.appState.trigger('removeLoading');
-      } else {
-        settings.callGlobalError(new Errors.OAuthError(error.message));
       }
+      Util.triggerAfterError(controller, new Errors.OAuthError(error.message), settings);
     }
 
     var authClient = settings.getAuthClient(),
@@ -31707,7 +31798,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         oauthParams = {},
         extraOptions = {};
 
-    _.extend(oauthParams, _.pick(options, 'clientId', 'redirectUri'), _.pick(options.authParams, 'responseType', 'responseMode', 'display', 'scopes', 'state', 'nonce'), params);
+    _.extend(oauthParams, _.pick(options, 'clientId', 'redirectUri'), _.pick(options.authParams, 'grantType', 'responseType', 'responseMode', 'display', 'scopes', 'state', 'nonce'), params);
 
     // Extra Options for Social Idp popup window title and id_token response timeout
     extraOptions.popupTitle = Okta.loc('socialauth.popup.title', 'login');
@@ -31719,7 +31810,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     // converting the Okta sessionToken to an access_token, id_token, and/or
     // authorization code. Note: The authorization code flow will always redirect.
     if (oauthParams.display === 'page' || hasResponseType(oauthParams, 'code')) {
-      authClient.token.getWithRedirect(oauthParams, extraOptions);
+      authClient.token.getWithRedirect(oauthParams, extraOptions).fail(error);
     }
 
     // Default flow if logging in with Okta as the IDP - convert sessionToken to
@@ -31837,8 +31928,8 @@ module.exports = function (it) {
 /* 151 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var isObject = __webpack_require__(51);
-var document = __webpack_require__(20).document;
+var isObject = __webpack_require__(47);
+var document = __webpack_require__(21).document;
 // typeof document.createElement is 'object' in old IE
 var is = isObject(document) && isObject(document.createElement);
 module.exports = function (it) {
@@ -31851,7 +31942,7 @@ module.exports = function (it) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // 7.1.1 ToPrimitive(input [, PreferredType])
-var isObject = __webpack_require__(51);
+var isObject = __webpack_require__(47);
 // instead of the ES6 spec version, we didn't implement @@toPrimitive case
 // and the second argument - flag - preferred type is a string
 module.exports = function (it, S) {
@@ -31869,7 +31960,7 @@ module.exports = function (it, S) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var shared = __webpack_require__(154)('keys');
-var uid = __webpack_require__(112);
+var uid = __webpack_require__(111);
 module.exports = function (key) {
   return shared[key] || (shared[key] = uid(key));
 };
@@ -31880,7 +31971,7 @@ module.exports = function (key) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var core = __webpack_require__(16);
-var global = __webpack_require__(20);
+var global = __webpack_require__(21);
 var SHARED = '__core-js_shared__';
 var store = global[SHARED] || (global[SHARED] = {});
 
@@ -31888,7 +31979,7 @@ var store = global[SHARED] || (global[SHARED] = {});
   return store[key] || (store[key] = value !== undefined ? value : {});
 })('versions', []).push({
   version: core.version,
-  mode: __webpack_require__(86) ? 'pure' : 'global',
+  mode: __webpack_require__(85) ? 'pure' : 'global',
   copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 });
 
@@ -31907,18 +31998,18 @@ module.exports = (
 /* 156 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports.f = __webpack_require__(21);
+exports.f = __webpack_require__(22);
 
 
 /***/ }),
 /* 157 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(20);
+var global = __webpack_require__(21);
 var core = __webpack_require__(16);
-var LIBRARY = __webpack_require__(86);
+var LIBRARY = __webpack_require__(85);
 var wksExt = __webpack_require__(156);
-var defineProperty = __webpack_require__(50).f;
+var defineProperty = __webpack_require__(52).f;
 module.exports = function (name) {
   var $Symbol = core.Symbol || (core.Symbol = LIBRARY ? {} : global.Symbol || {});
   if (name.charAt(0) != '_' && !(name in $Symbol)) defineProperty($Symbol, name, { value: wksExt.f(name) });
@@ -31936,3648 +32027,14 @@ exports.f = Object.getOwnPropertySymbols;
 /* 159 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
-var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/* @okta/qtip2 v3.0.3-5-g | Plugins: tips modal viewport svg imagemap ie6 | Styles: core basic css3 | qtip2.com | Licensed MIT | Wed May 24 2017 01:22:57 */
 
-var _typeof2 = __webpack_require__(85);
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/*
- * qTip2 - Pretty powerful tooltips - v3.0.3-5-g
- * http://qtip2.com
- *
- * Copyright (c) 2017 
- * Released under the MIT licenses
- * http://jquery.org/license
- *
- * Date: Wed May 24 2017 01:22 UTC+0000
- * Plugins: tips modal viewport svg imagemap ie6
- * Styles: core basic css3
- */
-/*global window: false, jQuery: false, console: false, define: false */
-
-/* Cache window, document, undefined */
-(function (window, document, undefined) {
-
-	// Uses AMD or browser globals to create a jQuery plugin.
-	(function (factory) {
-		"use strict";
-
-		if (true) {
-			!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(89)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+!function(a,b,c){!function(a){"use strict"; true?!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(115)], __WEBPACK_AMD_DEFINE_FACTORY__ = (a),
 				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
 				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-		} else if (jQuery && !jQuery.fn.qtip) {
-			factory(jQuery);
-		}
-	})(function ($) {
-		"use strict"; // Enable ECMAScript "strict" operation for this function. See more: http://ejohn.org/blog/ecmascript-5-strict-mode-json-and-more/
-
-		; // Munge the primitives - Paul Irish tip
-		var TRUE = true,
-		    FALSE = false,
-		    NULL = null,
-
-
-		// Common variables
-		X = 'x',
-		    Y = 'y',
-		    WIDTH = 'width',
-		    HEIGHT = 'height',
-
-
-		// Positioning sides
-		TOP = 'top',
-		    LEFT = 'left',
-		    BOTTOM = 'bottom',
-		    RIGHT = 'right',
-		    CENTER = 'center',
-
-
-		// Position adjustment types
-		FLIP = 'flip',
-		    FLIPINVERT = 'flipinvert',
-		    SHIFT = 'shift',
-
-
-		// Shortcut vars
-		QTIP,
-		    PROTOTYPE,
-		    CORNER,
-		    CHECKS,
-		    PLUGINS = {},
-		    NAMESPACE = 'qtip',
-		    ATTR_HAS = 'data-hasqtip',
-		    ATTR_ID = 'data-qtip-id',
-		    WIDGET = ['ui-widget', 'ui-tooltip'],
-		    SELECTOR = '.' + NAMESPACE,
-		    INACTIVE_EVENTS = 'click dblclick mousedown mouseup mousemove mouseleave mouseenter'.split(' '),
-		    CLASS_FIXED = NAMESPACE + '-fixed',
-		    CLASS_DEFAULT = NAMESPACE + '-default',
-		    CLASS_FOCUS = NAMESPACE + '-focus',
-		    CLASS_HOVER = NAMESPACE + '-hover',
-		    CLASS_DISABLED = NAMESPACE + '-disabled',
-		    replaceSuffix = '_replacedByqTip',
-		    oldtitle = 'oldtitle',
-		    trackingBound,
-
-
-		// Browser detection
-		BROWSER = {
-			/*
-    * IE version detection
-    *
-    * Adapted from: http://ajaxian.com/archives/attack-of-the-ie-conditional-comment
-    * Credit to James Padolsey for the original implemntation!
-    */
-			ie: function () {
-				/* eslint-disable no-empty */
-				var v, i;
-				for (v = 4, i = document.createElement('div'); (i.innerHTML = '<!--[if gt IE ' + v + ']><i></i><![endif]-->') && i.getElementsByTagName('i')[0]; v += 1) {}
-				return v > 4 ? v : NaN;
-				/* eslint-enable no-empty */
-			}(),
-
-			/*
-    * iOS version detection
-    */
-			iOS: parseFloat(('' + (/CPU.*OS ([0-9_]{1,5})|(CPU like).*AppleWebKit.*Mobile/i.exec(navigator.userAgent) || [0, ''])[1]).replace('undefined', '3_2').replace('_', '.').replace('_', '')) || FALSE
-		};
-		;function QTip(target, options, id, attr) {
-			// Elements and ID
-			this.id = id;
-			this.target = target;
-			this.tooltip = NULL;
-			this.elements = { target: target };
-
-			// Internal constructs
-			this._id = NAMESPACE + '-' + id;
-			this.timers = { img: {} };
-			this.options = options;
-			this.plugins = {};
-
-			// Cache object
-			this.cache = {
-				event: {},
-				target: $(),
-				disabled: FALSE,
-				attr: attr,
-				onTooltip: FALSE,
-				lastClass: ''
-			};
-
-			// Set the initial flags
-			this.rendered = this.destroyed = this.disabled = this.waiting = this.hiddenDuringWait = this.positioning = this.triggering = FALSE;
-		}
-		PROTOTYPE = QTip.prototype;
-
-		PROTOTYPE._when = function (deferreds) {
-			return $.when.apply($, deferreds);
-		};
-
-		PROTOTYPE.render = function (show) {
-			if (this.rendered || this.destroyed) {
-				return this;
-			} // If tooltip has already been rendered, exit
-
-			var self = this,
-			    options = this.options,
-			    cache = this.cache,
-			    elements = this.elements,
-			    text = options.content.text,
-			    title = options.content.title,
-			    button = options.content.button,
-			    posOptions = options.position,
-			    deferreds = [];
-
-			// Add ARIA attributes to target
-			$.attr(this.target[0], 'aria-describedby', this._id);
-
-			// Create public position object that tracks current position corners
-			cache.posClass = this._createPosClass((this.position = { my: posOptions.my, at: posOptions.at }).my);
-
-			// Create tooltip element
-			this.tooltip = elements.tooltip = $('<div/>', {
-				'id': this._id,
-				'class': [NAMESPACE, CLASS_DEFAULT, options.style.classes, cache.posClass].join(' '),
-				'width': options.style.width || '',
-				'height': options.style.height || '',
-				'tracking': posOptions.target === 'mouse' && posOptions.adjust.mouse,
-
-				/* ARIA specific attributes */
-				'role': 'alert',
-				'aria-live': 'polite',
-				'aria-atomic': FALSE,
-				'aria-describedby': this._id + '-content',
-				'aria-hidden': TRUE
-			}).toggleClass(CLASS_DISABLED, this.disabled).attr(ATTR_ID, this.id).data(NAMESPACE, this).appendTo(posOptions.container).append(
-			// Create content element
-			elements.content = $('<div />', {
-				'class': NAMESPACE + '-content',
-				'id': this._id + '-content',
-				'aria-atomic': TRUE
-			}));
-
-			// Set rendered flag and prevent redundant reposition calls for now
-			this.rendered = -1;
-			this.positioning = TRUE;
-
-			// Create title...
-			if (title) {
-				this._createTitle();
-
-				// Update title only if its not a callback (called in toggle if so)
-				if (!$.isFunction(title)) {
-					deferreds.push(this._updateTitle(title, FALSE));
-				}
-			}
-
-			// Create button
-			if (button) {
-				this._createButton();
-			}
-
-			// Set proper rendered flag and update content if not a callback function (called in toggle)
-			if (!$.isFunction(text)) {
-				deferreds.push(this._updateContent(text, FALSE));
-			}
-			this.rendered = TRUE;
-
-			// Setup widget classes
-			this._setWidget();
-
-			// Initialize 'render' plugins
-			$.each(PLUGINS, function (name) {
-				var instance;
-				if (this.initialize === 'render' && (instance = this(self))) {
-					self.plugins[name] = instance;
-				}
-			});
-
-			// Unassign initial events and assign proper events
-			this._unassignEvents();
-			this._assignEvents();
-
-			// When deferreds have completed
-			this._when(deferreds).then(function () {
-				// tooltiprender event
-				self._trigger('render');
-
-				// Reset flags
-				self.positioning = FALSE;
-
-				// Show tooltip if not hidden during wait period
-				if (!self.hiddenDuringWait && (options.show.ready || show)) {
-					self.toggle(TRUE, cache.event, FALSE);
-				}
-				self.hiddenDuringWait = FALSE;
-			});
-
-			// Expose API
-			QTIP.api[this.id] = this;
-
-			return this;
-		};
-
-		PROTOTYPE.destroy = function (immediate) {
-			// Set flag the signify destroy is taking place to plugins
-			// and ensure it only gets destroyed once!
-			if (this.destroyed) {
-				return this.target;
-			}
-
-			function process() {
-				if (this.destroyed) {
-					return;
-				}
-				this.destroyed = TRUE;
-
-				var target = this.target,
-				    title = target.attr(oldtitle),
-				    timer;
-
-				// Destroy tooltip if rendered
-				if (this.rendered) {
-					this.tooltip.stop(1, 0).find('*').remove().end().remove();
-				}
-
-				// Destroy all plugins
-				$.each(this.plugins, function () {
-					this.destroy && this.destroy();
-				});
-
-				// Clear timers
-				for (timer in this.timers) {
-					if (this.timers.hasOwnProperty(timer)) {
-						clearTimeout(this.timers[timer]);
-					}
-				}
-
-				// Remove api object and ARIA attributes
-				target.removeData(NAMESPACE).removeAttr(ATTR_ID).removeAttr(ATTR_HAS).removeAttr('aria-describedby');
-
-				// Reset old title attribute if removed
-				if (this.options.suppress && title) {
-					target.attr('title', title).removeAttr(oldtitle);
-				}
-
-				// Remove qTip events associated with this API
-				this._unassignEvents();
-
-				// Remove ID from used id objects, and delete object references
-				// for better garbage collection and leak protection
-				this.options = this.elements = this.cache = this.timers = this.plugins = this.mouse = NULL;
-
-				// Delete epoxsed API object
-				delete QTIP.api[this.id];
-			}
-
-			// If an immediate destroy is needed
-			if ((immediate !== TRUE || this.triggering === 'hide') && this.rendered) {
-				this.tooltip.one('tooltiphidden', $.proxy(process, this));
-				!this.triggering && this.hide();
-			}
-
-			// If we're not in the process of hiding... process
-			else {
-					process.call(this);
-				}
-
-			return this.target;
-		};
-		;function invalidOpt(a) {
-			return a === NULL || $.type(a) !== 'object';
-		}
-
-		function invalidContent(c) {
-			return !($.isFunction(c) || c && c.attr || c.length || $.type(c) === 'object' && (c.jquery || c.then));
-		}
-
-		// Option object sanitizer
-		function sanitizeOptions(opts) {
-			var content, text, ajax, once;
-
-			if (invalidOpt(opts)) {
-				return FALSE;
-			}
-
-			if (invalidOpt(opts.metadata)) {
-				opts.metadata = { type: opts.metadata };
-			}
-
-			if ('content' in opts) {
-				content = opts.content;
-
-				if (invalidOpt(content) || content.jquery || content.done) {
-					text = invalidContent(content) ? FALSE : content;
-					content = opts.content = {
-						text: text
-					};
-				} else {
-					text = content.text;
-				}
-
-				// DEPRECATED - Old content.ajax plugin functionality
-				// Converts it into the proper Deferred syntax
-				if ('ajax' in content) {
-					ajax = content.ajax;
-					once = ajax && ajax.once !== FALSE;
-					delete content.ajax;
-
-					content.text = function (event, api) {
-						var loading = text || $(this).attr(api.options.content.attr) || 'Loading...',
-						    deferred = $.ajax($.extend({}, ajax, { context: api })).then(ajax.success, NULL, ajax.error).then(function (newContent) {
-							if (newContent && once) {
-								api.set('content.text', newContent);
-							}
-							return newContent;
-						}, function (xhr, status, error) {
-							if (api.destroyed || xhr.status === 0) {
-								return;
-							}
-							api.set('content.text', status + ': ' + error);
-						});
-
-						return !once ? (api.set('content.text', loading), deferred) : loading;
-					};
-				}
-
-				if ('title' in content) {
-					if ($.isPlainObject(content.title)) {
-						content.button = content.title.button;
-						content.title = content.title.text;
-					}
-
-					if (invalidContent(content.title || FALSE)) {
-						content.title = FALSE;
-					}
-				}
-			}
-
-			if ('position' in opts && invalidOpt(opts.position)) {
-				opts.position = { my: opts.position, at: opts.position };
-			}
-
-			if ('show' in opts && invalidOpt(opts.show)) {
-				opts.show = opts.show.jquery ? { target: opts.show } : opts.show === TRUE ? { ready: TRUE } : { event: opts.show };
-			}
-
-			if ('hide' in opts && invalidOpt(opts.hide)) {
-				opts.hide = opts.hide.jquery ? { target: opts.hide } : { event: opts.hide };
-			}
-
-			if ('style' in opts && invalidOpt(opts.style)) {
-				opts.style = { classes: opts.style };
-			}
-
-			// Sanitize plugin options
-			$.each(PLUGINS, function () {
-				this.sanitize && this.sanitize(opts);
-			});
-
-			return opts;
-		}
-
-		// Setup builtin .set() option checks
-		CHECKS = PROTOTYPE.checks = {
-			builtin: {
-				// Core checks
-				'^id$': function id$(obj, o, v, prev) {
-					var id = v === TRUE ? QTIP.nextid : v,
-					    newId = NAMESPACE + '-' + id;
-
-					if (id !== FALSE && id.length > 0 && !$('#' + newId).length) {
-						this._id = newId;
-
-						if (this.rendered) {
-							this.tooltip[0].id = this._id;
-							this.elements.content[0].id = this._id + '-content';
-							this.elements.title[0].id = this._id + '-title';
-						}
-					} else {
-						obj[o] = prev;
-					}
-				},
-				'^prerender': function prerender(obj, o, v) {
-					v && !this.rendered && this.render(this.options.show.ready);
-				},
-
-				// Content checks
-				'^content.text$': function contentText$(obj, o, v) {
-					this._updateContent(v);
-				},
-				'^content.attr$': function contentAttr$(obj, o, v, prev) {
-					if (this.options.content.text === this.target.attr(prev)) {
-						this._updateContent(this.target.attr(v));
-					}
-				},
-				'^content.title$': function contentTitle$(obj, o, v) {
-					// Remove title if content is null
-					if (!v) {
-						return this._removeTitle();
-					}
-
-					// If title isn't already created, create it now and update
-					v && !this.elements.title && this._createTitle();
-					this._updateTitle(v);
-				},
-				'^content.button$': function contentButton$(obj, o, v) {
-					this._updateButton(v);
-				},
-				'^content.title.(text|button)$': function contentTitleTextButton$(obj, o, v) {
-					this.set('content.' + o, v); // Backwards title.text/button compat
-				},
-
-				// Position checks
-				'^position.(my|at)$': function positionMyAt$(obj, o, v) {
-					if ('string' === typeof v) {
-						this.position[o] = obj[o] = new CORNER(v, o === 'at');
-					}
-				},
-				'^position.container$': function positionContainer$(obj, o, v) {
-					this.rendered && this.tooltip.appendTo(v);
-				},
-
-				// Show checks
-				'^show.ready$': function showReady$(obj, o, v) {
-					v && (!this.rendered && this.render(TRUE) || this.toggle(TRUE));
-				},
-
-				// Style checks
-				'^style.classes$': function styleClasses$(obj, o, v, p) {
-					this.rendered && this.tooltip.removeClass(p).addClass(v);
-				},
-				'^style.(width|height)': function styleWidthHeight(obj, o, v) {
-					this.rendered && this.tooltip.css(o, v);
-				},
-				'^style.widget|content.title': function styleWidgetContentTitle() {
-					this.rendered && this._setWidget();
-				},
-				'^style.def': function styleDef(obj, o, v) {
-					this.rendered && this.tooltip.toggleClass(CLASS_DEFAULT, !!v);
-				},
-
-				// Events check
-				'^events.(render|show|move|hide|focus|blur)$': function eventsRenderShowMoveHideFocusBlur$(obj, o, v) {
-					this.rendered && this.tooltip[($.isFunction(v) ? '' : 'un') + 'bind']('tooltip' + o, v);
-				},
-
-				// Properties which require event reassignment
-				'^(show|hide|position).(event|target|fixed|inactive|leave|distance|viewport|adjust)': function showHidePositionEventTargetFixedInactiveLeaveDistanceViewportAdjust() {
-					if (!this.rendered) {
-						return;
-					}
-
-					// Set tracking flag
-					var posOptions = this.options.position;
-					this.tooltip.attr('tracking', posOptions.target === 'mouse' && posOptions.adjust.mouse);
-
-					// Reassign events
-					this._unassignEvents();
-					this._assignEvents();
-				}
-			}
-		};
-
-		// Dot notation converter
-		function convertNotation(options, notation) {
-			var i = 0,
-			    obj,
-			    option = options,
-
-
-			// Split notation into array
-			levels = notation.split('.');
-
-			// Loop through
-			while (option = option[levels[i++]]) {
-				if (i < levels.length) {
-					obj = option;
-				}
-			}
-
-			return [obj || options, levels.pop()];
-		}
-
-		PROTOTYPE.get = function (notation) {
-			if (this.destroyed) {
-				return this;
-			}
-
-			var o = convertNotation(this.options, notation.toLowerCase()),
-			    result = o[0][o[1]];
-
-			return result.precedance ? result.string() : result;
-		};
-
-		function setCallback(notation, args) {
-			var category, rule, match;
-
-			for (category in this.checks) {
-				if (!this.checks.hasOwnProperty(category)) {
-					continue;
-				}
-
-				for (rule in this.checks[category]) {
-					if (!this.checks[category].hasOwnProperty(rule)) {
-						continue;
-					}
-
-					if (match = new RegExp(rule, 'i').exec(notation)) {
-						args.push(match);
-
-						if (category === 'builtin' || this.plugins[category]) {
-							this.checks[category][rule].apply(this.plugins[category] || this, args);
-						}
-					}
-				}
-			}
-		}
-
-		var rmove = /^position\.(my|at|adjust|target|container|viewport)|style|content|show\.ready/i,
-		    rrender = /^prerender|show\.ready/i;
-
-		PROTOTYPE.set = function (option, value) {
-			if (this.destroyed) {
-				return this;
-			}
-
-			var rendered = this.rendered,
-			    reposition = FALSE,
-			    options = this.options,
-			    name;
-
-			// Convert singular option/value pair into object form
-			if ('string' === typeof option) {
-				name = option;option = {};option[name] = value;
-			} else {
-				option = $.extend({}, option);
-			}
-
-			// Set all of the defined options to their new values
-			$.each(option, function (notation, val) {
-				if (rendered && rrender.test(notation)) {
-					delete option[notation];return;
-				}
-
-				// Set new obj value
-				var obj = convertNotation(options, notation.toLowerCase()),
-				    previous;
-				previous = obj[0][obj[1]];
-				obj[0][obj[1]] = val && val.nodeType ? $(val) : val;
-
-				// Also check if we need to reposition
-				reposition = rmove.test(notation) || reposition;
-
-				// Set the new params for the callback
-				option[notation] = [obj[0], obj[1], val, previous];
-			});
-
-			// Re-sanitize options
-			sanitizeOptions(options);
-
-			/*
-    * Execute any valid callbacks for the set options
-    * Also set positioning flag so we don't get loads of redundant repositioning calls.
-    */
-			this.positioning = TRUE;
-			$.each(option, $.proxy(setCallback, this));
-			this.positioning = FALSE;
-
-			// Update position if needed
-			if (this.rendered && this.tooltip[0].offsetWidth > 0 && reposition) {
-				this.reposition(options.position.target === 'mouse' ? NULL : this.cache.event);
-			}
-
-			return this;
-		};
-		;PROTOTYPE._update = function (content, element) {
-			var self = this,
-			    cache = this.cache;
-
-			// Make sure tooltip is rendered and content is defined. If not return
-			if (!this.rendered || !content) {
-				return FALSE;
-			}
-
-			// Use function to parse content
-			if ($.isFunction(content)) {
-				content = content.call(this.elements.target, cache.event, this) || '';
-			}
-
-			// Handle deferred content
-			if ($.isFunction(content.then)) {
-				cache.waiting = TRUE;
-				return content.then(function (c) {
-					cache.waiting = FALSE;
-					return self._update(c, element);
-				}, NULL, function (e) {
-					return self._update(e, element);
-				});
-			}
-
-			// If content is null... return false
-			if (content === FALSE || !content && content !== '') {
-				return FALSE;
-			}
-
-			// Append new content if its a DOM array and show it if hidden
-			if (content.jquery && content.length > 0) {
-				element.empty().append(content.css({ display: 'block', visibility: 'visible' }));
-			}
-
-			// Content is a regular string, insert the new content
-			else {
-					element.html(content);
-				}
-
-			// Wait for content to be loaded, and reposition
-			return this._waitForContent(element).then(function (images) {
-				if (self.rendered && self.tooltip[0].offsetWidth > 0) {
-					self.reposition(cache.event, !images.length);
-				}
-			});
-		};
-
-		PROTOTYPE._waitForContent = function (element) {
-			var cache = this.cache;
-
-			// Set flag
-			cache.waiting = TRUE;
-
-			// If imagesLoaded is included, ensure images have loaded and return promise
-			return ($.fn.imagesLoaded ? element.imagesLoaded() : new $.Deferred().resolve([])).done(function () {
-				cache.waiting = FALSE;
-			}).promise();
-		};
-
-		PROTOTYPE._updateContent = function (content, reposition) {
-			this._update(content, this.elements.content, reposition);
-		};
-
-		PROTOTYPE._updateTitle = function (content, reposition) {
-			if (this._update(content, this.elements.title, reposition) === FALSE) {
-				this._removeTitle(FALSE);
-			}
-		};
-
-		PROTOTYPE._createTitle = function () {
-			var elements = this.elements,
-			    id = this._id + '-title';
-
-			// Destroy previous title element, if present
-			if (elements.titlebar) {
-				this._removeTitle();
-			}
-
-			// Create title bar and title elements
-			elements.titlebar = $('<div />', {
-				'class': NAMESPACE + '-titlebar ' + (this.options.style.widget ? createWidgetClass('header') : '')
-			}).append(elements.title = $('<div />', {
-				'id': id,
-				'class': NAMESPACE + '-title',
-				'aria-atomic': TRUE
-			})).insertBefore(elements.content)
-
-			// Button-specific events
-			.delegate('.qtip-close', 'mousedown keydown mouseup keyup mouseout', function (event) {
-				$(this).toggleClass('ui-state-active ui-state-focus', event.type.substr(-4) === 'down');
-			}).delegate('.qtip-close', 'mouseover mouseout', function (event) {
-				$(this).toggleClass('ui-state-hover', event.type === 'mouseover');
-			});
-
-			// Create button if enabled
-			if (this.options.content.button) {
-				this._createButton();
-			}
-		};
-
-		PROTOTYPE._removeTitle = function (reposition) {
-			var elements = this.elements;
-
-			if (elements.title) {
-				elements.titlebar.remove();
-				elements.titlebar = elements.title = elements.button = NULL;
-
-				// Reposition if enabled
-				if (reposition !== FALSE) {
-					this.reposition();
-				}
-			}
-		};
-		;PROTOTYPE._createPosClass = function (my) {
-			return NAMESPACE + '-pos-' + (my || this.options.position.my).abbrev();
-		};
-
-		PROTOTYPE.reposition = function (event, effect) {
-			if (!this.rendered || this.positioning || this.destroyed) {
-				return this;
-			}
-
-			// Set positioning flag
-			this.positioning = TRUE;
-
-			var cache = this.cache,
-			    tooltip = this.tooltip,
-			    posOptions = this.options.position,
-			    target = posOptions.target,
-			    my = posOptions.my,
-			    at = posOptions.at,
-			    viewport = posOptions.viewport,
-			    container = posOptions.container,
-			    adjust = posOptions.adjust,
-			    method = adjust.method.split(' '),
-			    tooltipWidth = tooltip.outerWidth(FALSE),
-			    tooltipHeight = tooltip.outerHeight(FALSE),
-			    targetWidth = 0,
-			    targetHeight = 0,
-			    type = tooltip.css('position'),
-			    position = { left: 0, top: 0 },
-			    visible = tooltip[0].offsetWidth > 0,
-			    isScroll = event && event.type === 'scroll',
-			    win = $(window),
-			    doc = container[0].ownerDocument,
-			    mouse = this.mouse,
-			    pluginCalculations,
-			    offset,
-			    adjusted,
-			    newClass;
-
-			// Check if absolute position was passed
-			if ($.isArray(target) && target.length === 2) {
-				// Force left top and set position
-				at = { x: LEFT, y: TOP };
-				position = { left: target[0], top: target[1] };
-			}
-
-			// Check if mouse was the target
-			else if (target === 'mouse') {
-					// Force left top to allow flipping
-					at = { x: LEFT, y: TOP };
-
-					// Use the mouse origin that caused the show event, if distance hiding is enabled
-					if ((!adjust.mouse || this.options.hide.distance) && cache.origin && cache.origin.pageX) {
-						event = cache.origin;
-					}
-
-					// Use cached event for resize/scroll events
-					else if (!event || event && (event.type === 'resize' || event.type === 'scroll')) {
-							event = cache.event;
-						}
-
-						// Otherwise, use the cached mouse coordinates if available
-						else if (mouse && mouse.pageX) {
-								event = mouse;
-							}
-
-					// Calculate body and container offset and take them into account below
-					if (type !== 'static') {
-						position = container.offset();
-					}
-					if (doc.body.offsetWidth !== (window.innerWidth || doc.documentElement.clientWidth)) {
-						offset = $(document.body).offset();
-					}
-
-					// Use event coordinates for position
-					position = {
-						left: event.pageX - position.left + (offset && offset.left || 0),
-						top: event.pageY - position.top + (offset && offset.top || 0)
-					};
-
-					// Scroll events are a pain, some browsers
-					if (adjust.mouse && isScroll && mouse) {
-						position.left -= (mouse.scrollX || 0) - win.scrollLeft();
-						position.top -= (mouse.scrollY || 0) - win.scrollTop();
-					}
-				}
-
-				// Target wasn't mouse or absolute...
-				else {
-						// Check if event targetting is being used
-						if (target === 'event') {
-							if (event && event.target && event.type !== 'scroll' && event.type !== 'resize') {
-								cache.target = $(event.target);
-							} else if (!event.target) {
-								cache.target = this.elements.target;
-							}
-						} else if (target !== 'event') {
-							cache.target = $(target.jquery ? target : this.elements.target);
-						}
-						target = cache.target;
-
-						// Parse the target into a jQuery object and make sure there's an element present
-						target = $(target).eq(0);
-						if (target.length === 0) {
-							return this;
-						}
-
-						// Check if window or document is the target
-						else if (target[0] === document || target[0] === window) {
-								targetWidth = BROWSER.iOS ? window.innerWidth : target.width();
-								targetHeight = BROWSER.iOS ? window.innerHeight : target.height();
-
-								if (target[0] === window) {
-									position = {
-										top: (viewport || target).scrollTop(),
-										left: (viewport || target).scrollLeft()
-									};
-								}
-							}
-
-							// Check if the target is an <AREA> element
-							else if (PLUGINS.imagemap && target.is('area')) {
-									pluginCalculations = PLUGINS.imagemap(this, target, at, PLUGINS.viewport ? method : FALSE);
-								}
-
-								// Check if the target is an SVG element
-								else if (PLUGINS.svg && target && target[0].ownerSVGElement) {
-										pluginCalculations = PLUGINS.svg(this, target, at, PLUGINS.viewport ? method : FALSE);
-									}
-
-									// Otherwise use regular jQuery methods
-									else {
-											targetWidth = target.outerWidth(FALSE);
-											targetHeight = target.outerHeight(FALSE);
-											position = target.offset();
-										}
-
-						// Parse returned plugin values into proper variables
-						if (pluginCalculations) {
-							targetWidth = pluginCalculations.width;
-							targetHeight = pluginCalculations.height;
-							offset = pluginCalculations.offset;
-							position = pluginCalculations.position;
-						}
-
-						// Adjust position to take into account offset parents
-						position = this.reposition.offset(target, position, container);
-
-						// Adjust for position.fixed tooltips (and also iOS scroll bug in v3.2-4.0 & v4.3-4.3.2)
-						if (BROWSER.iOS > 3.1 && BROWSER.iOS < 4.1 || BROWSER.iOS >= 4.3 && BROWSER.iOS < 4.33 || !BROWSER.iOS && type === 'fixed') {
-							position.left -= win.scrollLeft();
-							position.top -= win.scrollTop();
-						}
-
-						// Adjust position relative to target
-						if (!pluginCalculations || pluginCalculations && pluginCalculations.adjustable !== FALSE) {
-							position.left += at.x === RIGHT ? targetWidth : at.x === CENTER ? targetWidth / 2 : 0;
-							position.top += at.y === BOTTOM ? targetHeight : at.y === CENTER ? targetHeight / 2 : 0;
-						}
-					}
-
-			// Adjust position relative to tooltip
-			position.left += adjust.x + (my.x === RIGHT ? -tooltipWidth : my.x === CENTER ? -tooltipWidth / 2 : 0);
-			position.top += adjust.y + (my.y === BOTTOM ? -tooltipHeight : my.y === CENTER ? -tooltipHeight / 2 : 0);
-
-			// Use viewport adjustment plugin if enabled
-			if (PLUGINS.viewport) {
-				adjusted = position.adjusted = PLUGINS.viewport(this, position, posOptions, targetWidth, targetHeight, tooltipWidth, tooltipHeight);
-
-				// Apply offsets supplied by positioning plugin (if used)
-				if (offset && adjusted.left) {
-					position.left += offset.left;
-				}
-				if (offset && adjusted.top) {
-					position.top += offset.top;
-				}
-
-				// Apply any new 'my' position
-				if (adjusted.my) {
-					this.position.my = adjusted.my;
-				}
-			}
-
-			// Viewport adjustment is disabled, set values to zero
-			else {
-					position.adjusted = { left: 0, top: 0 };
-				}
-
-			// Set tooltip position class if it's changed
-			if (cache.posClass !== (newClass = this._createPosClass(this.position.my))) {
-				cache.posClass = newClass;
-				tooltip.removeClass(cache.posClass).addClass(newClass);
-			}
-
-			// tooltipmove event
-			if (!this._trigger('move', [position, viewport.elem || viewport], event)) {
-				return this;
-			}
-			delete position.adjusted;
-
-			// If effect is disabled, target it mouse, no animation is defined or positioning gives NaN out, set CSS directly
-			if (effect === FALSE || !visible || isNaN(position.left) || isNaN(position.top) || target === 'mouse' || !$.isFunction(posOptions.effect)) {
-				tooltip.css(position);
-			}
-
-			// Use custom function if provided
-			else if ($.isFunction(posOptions.effect)) {
-					posOptions.effect.call(tooltip, this, $.extend({}, position));
-					tooltip.queue(function (next) {
-						// Reset attributes to avoid cross-browser rendering bugs
-						$(this).css({ opacity: '', height: '' });
-						if (BROWSER.ie) {
-							this.style.removeAttribute('filter');
-						}
-
-						next();
-					});
-				}
-
-			// Set positioning flag
-			this.positioning = FALSE;
-
-			return this;
-		};
-
-		// Custom (more correct for qTip!) offset calculator
-		PROTOTYPE.reposition.offset = function (elem, pos, container) {
-			if (!container[0]) {
-				return pos;
-			}
-
-			var ownerDocument = $(elem[0].ownerDocument),
-			    quirks = !!BROWSER.ie && document.compatMode !== 'CSS1Compat',
-			    parent = container[0],
-			    scrolled,
-			    position,
-			    parentOffset,
-			    overflow;
-
-			function scroll(e, i) {
-				pos.left += i * e.scrollLeft();
-				pos.top += i * e.scrollTop();
-			}
-
-			// Compensate for non-static containers offset
-			do {
-				if ((position = $.css(parent, 'position')) !== 'static') {
-					if (position === 'fixed') {
-						parentOffset = parent.getBoundingClientRect();
-						scroll(ownerDocument, -1);
-					} else {
-						parentOffset = $(parent).position();
-						parentOffset.left += parseFloat($.css(parent, 'borderLeftWidth')) || 0;
-						parentOffset.top += parseFloat($.css(parent, 'borderTopWidth')) || 0;
-					}
-
-					pos.left -= parentOffset.left + (parseFloat($.css(parent, 'marginLeft')) || 0);
-					pos.top -= parentOffset.top + (parseFloat($.css(parent, 'marginTop')) || 0);
-
-					// If this is the first parent element with an overflow of "scroll" or "auto", store it
-					if (!scrolled && (overflow = $.css(parent, 'overflow')) !== 'hidden' && overflow !== 'visible' && $.prop(parent, 'tagName') !== 'BODY') {
-						scrolled = $(parent);
-					}
-				}
-			} while (parent = parent.offsetParent);
-
-			// Compensate for containers scroll if it also has an offsetParent (or in IE quirks mode)
-			if (scrolled && (scrolled[0] !== ownerDocument[0] || quirks)) {
-				scroll(scrolled, 1);
-			}
-
-			return pos;
-		};
-
-		// Corner class
-		var C = (CORNER = PROTOTYPE.reposition.Corner = function (corner, forceY) {
-			corner = ('' + corner).replace(/([A-Z])/, ' $1').replace(/middle/gi, CENTER).toLowerCase();
-			this.x = (corner.match(/left|right/i) || corner.match(/center/) || ['inherit'])[0].toLowerCase();
-			this.y = (corner.match(/top|bottom|center/i) || ['inherit'])[0].toLowerCase();
-			this.forceY = !!forceY;
-
-			var f = corner.charAt(0);
-			this.precedance = f === 't' || f === 'b' ? Y : X;
-		}).prototype;
-
-		C.invert = function (z, center) {
-			this[z] = this[z] === LEFT ? RIGHT : this[z] === RIGHT ? LEFT : center || this[z];
-		};
-
-		C.string = function (join) {
-			var x = this.x,
-			    y = this.y;
-
-			var result = x !== y ? x === 'center' || y !== 'center' && (this.precedance === Y || this.forceY) ? [y, x] : [x, y] : [x];
-
-			return join !== false ? result.join(' ') : result;
-		};
-
-		C.abbrev = function () {
-			var result = this.string(false);
-			return result[0].charAt(0) + (result[1] && result[1].charAt(0) || '');
-		};
-
-		C.clone = function () {
-			return new CORNER(this.string(), this.forceY);
-		};
-
-		;
-		PROTOTYPE.toggle = function (state, event) {
-			var cache = this.cache,
-			    options = this.options,
-			    tooltip = this.tooltip;
-
-			// Try to prevent flickering when tooltip overlaps show element
-			if (event) {
-				if (/over|enter/.test(event.type) && cache.event && /out|leave/.test(cache.event.type) && options.show.target.add(event.target).length === options.show.target.length && tooltip.has(event.relatedTarget).length) {
-					return this;
-				}
-
-				// Cache event
-				cache.event = $.event.fix(event);
-			}
-
-			// If we're currently waiting and we've just hidden... stop it
-			this.waiting && !state && (this.hiddenDuringWait = TRUE);
-
-			// Render the tooltip if showing and it isn't already
-			if (!this.rendered) {
-				return state ? this.render(1) : this;
-			} else if (this.destroyed || this.disabled) {
-				return this;
-			}
-
-			var type = state ? 'show' : 'hide',
-			    opts = this.options[type],
-			    posOptions = this.options.position,
-			    contentOptions = this.options.content,
-			    width = this.tooltip.css('width'),
-			    visible = this.tooltip.is(':visible'),
-			    animate = state || opts.target.length === 1,
-			    sameTarget = !event || opts.target.length < 2 || cache.target[0] === event.target,
-			    identicalState,
-			    allow,
-			    after;
-
-			// Detect state if valid one isn't provided
-			if ((typeof state === 'undefined' ? 'undefined' : (0, _typeof3.default)(state)).search('boolean|number')) {
-				state = !visible;
-			}
-
-			// Check if the tooltip is in an identical state to the new would-be state
-			identicalState = !tooltip.is(':animated') && visible === state && sameTarget;
-
-			// Fire tooltip(show/hide) event and check if destroyed
-			allow = !identicalState ? !!this._trigger(type, [90]) : NULL;
-
-			// Check to make sure the tooltip wasn't destroyed in the callback
-			if (this.destroyed) {
-				return this;
-			}
-
-			// If the user didn't stop the method prematurely and we're showing the tooltip, focus it
-			if (allow !== FALSE && state) {
-				this.focus(event);
-			}
-
-			// If the state hasn't changed or the user stopped it, return early
-			if (!allow || identicalState) {
-				return this;
-			}
-
-			// Set ARIA hidden attribute
-			$.attr(tooltip[0], 'aria-hidden', !!!state);
-
-			// Execute state specific properties
-			if (state) {
-				// Store show origin coordinates
-				this.mouse && (cache.origin = $.event.fix(this.mouse));
-
-				// Update tooltip content & title if it's a dynamic function
-				if ($.isFunction(contentOptions.text)) {
-					this._updateContent(contentOptions.text, FALSE);
-				}
-				if ($.isFunction(contentOptions.title)) {
-					this._updateTitle(contentOptions.title, FALSE);
-				}
-
-				// Cache mousemove events for positioning purposes (if not already tracking)
-				if (!trackingBound && posOptions.target === 'mouse' && posOptions.adjust.mouse) {
-					$(document).bind('mousemove.' + NAMESPACE, this._storeMouse);
-					trackingBound = TRUE;
-				}
-
-				// Update the tooltip position (set width first to prevent viewport/max-width issues)
-				if (!width) {
-					tooltip.css('width', tooltip.outerWidth(FALSE));
-				}
-				this.reposition(event, arguments[2]);
-				if (!width) {
-					tooltip.css('width', '');
-				}
-
-				// Hide other tooltips if tooltip is solo
-				if (!!opts.solo) {
-					(typeof opts.solo === 'string' ? $(opts.solo) : $(SELECTOR, opts.solo)).not(tooltip).not(opts.target).qtip('hide', new $.Event('tooltipsolo'));
-				}
-			} else {
-				// Clear show timer if we're hiding
-				clearTimeout(this.timers.show);
-
-				// Remove cached origin on hide
-				delete cache.origin;
-
-				// Remove mouse tracking event if not needed (all tracking qTips are hidden)
-				if (trackingBound && !$(SELECTOR + '[tracking="true"]:visible', opts.solo).not(tooltip).length) {
-					$(document).unbind('mousemove.' + NAMESPACE);
-					trackingBound = FALSE;
-				}
-
-				// Blur the tooltip
-				this.blur(event);
-			}
-
-			// Define post-animation, state specific properties
-			after = $.proxy(function () {
-				if (state) {
-					// Prevent antialias from disappearing in IE by removing filter
-					if (BROWSER.ie) {
-						tooltip[0].style.removeAttribute('filter');
-					}
-
-					// Remove overflow setting to prevent tip bugs
-					tooltip.css('overflow', '');
-
-					// Autofocus elements if enabled
-					if ('string' === typeof opts.autofocus) {
-						$(this.options.show.autofocus, tooltip).focus();
-					}
-
-					// If set, hide tooltip when inactive for delay period
-					this.options.show.target.trigger('qtip-' + this.id + '-inactive');
-				} else {
-					// Reset CSS states
-					tooltip.css({
-						display: '',
-						visibility: '',
-						opacity: '',
-						left: '',
-						top: ''
-					});
-				}
-
-				// tooltipvisible/tooltiphidden events
-				this._trigger(state ? 'visible' : 'hidden');
-			}, this);
-
-			// If no effect type is supplied, use a simple toggle
-			if (opts.effect === FALSE || animate === FALSE) {
-				tooltip[type]();
-				after();
-			}
-
-			// Use custom function if provided
-			else if ($.isFunction(opts.effect)) {
-					tooltip.stop(1, 1);
-					opts.effect.call(tooltip, this);
-					tooltip.queue('fx', function (n) {
-						after();n();
-					});
-				}
-
-				// Use basic fade function by default
-				else {
-						tooltip.fadeTo(90, state ? 1 : 0, after);
-					}
-
-			// If inactive hide method is set, active it
-			if (state) {
-				opts.target.trigger('qtip-' + this.id + '-inactive');
-			}
-
-			return this;
-		};
-
-		PROTOTYPE.show = function (event) {
-			return this.toggle(TRUE, event);
-		};
-
-		PROTOTYPE.hide = function (event) {
-			return this.toggle(FALSE, event);
-		};
-		;PROTOTYPE.focus = function (event) {
-			if (!this.rendered || this.destroyed) {
-				return this;
-			}
-
-			var qtips = $(SELECTOR),
-			    tooltip = this.tooltip,
-			    curIndex = parseInt(tooltip[0].style.zIndex, 10),
-			    newIndex = QTIP.zindex + qtips.length;
-
-			// Only update the z-index if it has changed and tooltip is not already focused
-			if (!tooltip.hasClass(CLASS_FOCUS)) {
-				// tooltipfocus event
-				if (this._trigger('focus', [newIndex], event)) {
-					// Only update z-index's if they've changed
-					if (curIndex !== newIndex) {
-						// Reduce our z-index's and keep them properly ordered
-						qtips.each(function () {
-							if (this.style.zIndex > curIndex) {
-								this.style.zIndex = this.style.zIndex - 1;
-							}
-						});
-
-						// Fire blur event for focused tooltip
-						qtips.filter('.' + CLASS_FOCUS).qtip('blur', event);
-					}
-
-					// Set the new z-index
-					tooltip.addClass(CLASS_FOCUS)[0].style.zIndex = newIndex;
-				}
-			}
-
-			return this;
-		};
-
-		PROTOTYPE.blur = function (event) {
-			if (!this.rendered || this.destroyed) {
-				return this;
-			}
-
-			// Set focused status to FALSE
-			this.tooltip.removeClass(CLASS_FOCUS);
-
-			// tooltipblur event
-			this._trigger('blur', [this.tooltip.css('zIndex')], event);
-
-			return this;
-		};
-		;PROTOTYPE.disable = function (state) {
-			if (this.destroyed) {
-				return this;
-			}
-
-			// If 'toggle' is passed, toggle the current state
-			if (state === 'toggle') {
-				state = !(this.rendered ? this.tooltip.hasClass(CLASS_DISABLED) : this.disabled);
-			}
-
-			// Disable if no state passed
-			else if ('boolean' !== typeof state) {
-					state = TRUE;
-				}
-
-			if (this.rendered) {
-				this.tooltip.toggleClass(CLASS_DISABLED, state).attr('aria-disabled', state);
-			}
-
-			this.disabled = !!state;
-
-			return this;
-		};
-
-		PROTOTYPE.enable = function () {
-			return this.disable(FALSE);
-		};
-		;PROTOTYPE._createButton = function () {
-			var self = this,
-			    elements = this.elements,
-			    tooltip = elements.tooltip,
-			    button = this.options.content.button,
-			    isString = typeof button === 'string',
-			    close = isString ? button : 'Close tooltip';
-
-			if (elements.button) {
-				elements.button.remove();
-			}
-
-			// Use custom button if one was supplied by user, else use default
-			if (button.jquery) {
-				elements.button = button;
-			} else {
-				elements.button = $('<a />', {
-					'class': 'qtip-close ' + (this.options.style.widget ? '' : NAMESPACE + '-icon'),
-					'title': close,
-					'aria-label': close
-				}).prepend($('<span />', {
-					'class': 'ui-icon ui-icon-close',
-					'html': '&times;'
-				}));
-			}
-
-			// Create button and setup attributes
-			elements.button.appendTo(elements.titlebar || tooltip).attr('role', 'button').click(function (event) {
-				if (!tooltip.hasClass(CLASS_DISABLED)) {
-					self.hide(event);
-				}
-				return FALSE;
-			});
-		};
-
-		PROTOTYPE._updateButton = function (button) {
-			// Make sure tooltip is rendered and if not, return
-			if (!this.rendered) {
-				return FALSE;
-			}
-
-			var elem = this.elements.button;
-			if (button) {
-				this._createButton();
-			} else {
-				elem.remove();
-			}
-		};
-		; // Widget class creator
-		function createWidgetClass(cls) {
-			return WIDGET.concat('').join(cls ? '-' + cls + ' ' : ' ');
-		}
-
-		// Widget class setter method
-		PROTOTYPE._setWidget = function () {
-			var on = this.options.style.widget,
-			    elements = this.elements,
-			    tooltip = elements.tooltip,
-			    disabled = tooltip.hasClass(CLASS_DISABLED);
-
-			tooltip.removeClass(CLASS_DISABLED);
-			CLASS_DISABLED = on ? 'ui-state-disabled' : 'qtip-disabled';
-			tooltip.toggleClass(CLASS_DISABLED, disabled);
-
-			tooltip.toggleClass('ui-helper-reset ' + createWidgetClass(), on).toggleClass(CLASS_DEFAULT, this.options.style.def && !on);
-
-			if (elements.content) {
-				elements.content.toggleClass(createWidgetClass('content'), on);
-			}
-			if (elements.titlebar) {
-				elements.titlebar.toggleClass(createWidgetClass('header'), on);
-			}
-			if (elements.button) {
-				elements.button.toggleClass(NAMESPACE + '-icon', !on);
-			}
-		};
-		;function delay(callback, duration) {
-			// If tooltip has displayed, start hide timer
-			if (duration > 0) {
-				return setTimeout($.proxy(callback, this), duration);
-			} else {
-				callback.call(this);
-			}
-		}
-
-		function showMethod(event) {
-			if (this.tooltip.hasClass(CLASS_DISABLED)) {
-				return;
-			}
-
-			// Clear hide timers
-			clearTimeout(this.timers.show);
-			clearTimeout(this.timers.hide);
-
-			// Start show timer
-			this.timers.show = delay.call(this, function () {
-				this.toggle(TRUE, event);
-			}, this.options.show.delay);
-		}
-
-		function hideMethod(event) {
-			if (this.tooltip.hasClass(CLASS_DISABLED) || this.destroyed) {
-				return;
-			}
-
-			// Check if new target was actually the tooltip element
-			var relatedTarget = $(event.relatedTarget),
-			    ontoTooltip = relatedTarget.closest(SELECTOR)[0] === this.tooltip[0],
-			    ontoTarget = relatedTarget[0] === this.options.show.target[0];
-
-			// Clear timers and stop animation queue
-			clearTimeout(this.timers.show);
-			clearTimeout(this.timers.hide);
-
-			// Prevent hiding if tooltip is fixed and event target is the tooltip.
-			// Or if mouse positioning is enabled and cursor momentarily overlaps
-			if (this !== relatedTarget[0] && this.options.position.target === 'mouse' && ontoTooltip || this.options.hide.fixed && /mouse(out|leave|move)/.test(event.type) && (ontoTooltip || ontoTarget)) {
-				/* eslint-disable no-empty */
-				try {
-					event.preventDefault();
-					event.stopImmediatePropagation();
-				} catch (e) {}
-				/* eslint-enable no-empty */
-
-				return;
-			}
-
-			// If tooltip has displayed, start hide timer
-			this.timers.hide = delay.call(this, function () {
-				this.toggle(FALSE, event);
-			}, this.options.hide.delay, this);
-		}
-
-		function inactiveMethod(event) {
-			if (this.tooltip.hasClass(CLASS_DISABLED) || !this.options.hide.inactive) {
-				return;
-			}
-
-			// Clear timer
-			clearTimeout(this.timers.inactive);
-
-			this.timers.inactive = delay.call(this, function () {
-				this.hide(event);
-			}, this.options.hide.inactive);
-		}
-
-		function repositionMethod(event) {
-			if (this.rendered && this.tooltip[0].offsetWidth > 0) {
-				this.reposition(event);
-			}
-		}
-
-		// Store mouse coordinates
-		PROTOTYPE._storeMouse = function (event) {
-			(this.mouse = $.event.fix(event)).type = 'mousemove';
-			return this;
-		};
-
-		// Bind events
-		PROTOTYPE._bind = function (targets, events, method, suffix, context) {
-			if (!targets || !method || !events.length) {
-				return;
-			}
-			var ns = '.' + this._id + (suffix ? '-' + suffix : '');
-			$(targets).bind((events.split ? events : events.join(ns + ' ')) + ns, $.proxy(method, context || this));
-			return this;
-		};
-		PROTOTYPE._unbind = function (targets, suffix) {
-			targets && $(targets).unbind('.' + this._id + (suffix ? '-' + suffix : ''));
-			return this;
-		};
-
-		// Global delegation helper
-		function delegate(selector, events, method) {
-			$(document.body).delegate(selector, (events.split ? events : events.join('.' + NAMESPACE + ' ')) + '.' + NAMESPACE, function () {
-				var api = QTIP.api[$.attr(this, ATTR_ID)];
-				api && !api.disabled && method.apply(api, arguments);
-			});
-		}
-		// Event trigger
-		PROTOTYPE._trigger = function (type, args, event) {
-			var callback = new $.Event('tooltip' + type);
-			callback.originalEvent = event && $.extend({}, event) || this.cache.event || NULL;
-
-			this.triggering = type;
-			this.tooltip.trigger(callback, [this].concat(args || []));
-			this.triggering = FALSE;
-
-			return !callback.isDefaultPrevented();
-		};
-
-		PROTOTYPE._bindEvents = function (showEvents, hideEvents, showTargets, hideTargets, showCallback, hideCallback) {
-			// Get tasrgets that lye within both
-			var similarTargets = showTargets.filter(hideTargets).add(hideTargets.filter(showTargets)),
-			    toggleEvents = [];
-
-			// If hide and show targets are the same...
-			if (similarTargets.length) {
-
-				// Filter identical show/hide events
-				$.each(hideEvents, function (i, type) {
-					var showIndex = $.inArray(type, showEvents);
-
-					// Both events are identical, remove from both hide and show events
-					// and append to toggleEvents
-					showIndex > -1 && toggleEvents.push(showEvents.splice(showIndex, 1)[0]);
-				});
-
-				// Toggle events are special case of identical show/hide events, which happen in sequence
-				if (toggleEvents.length) {
-					// Bind toggle events to the similar targets
-					this._bind(similarTargets, toggleEvents, function (event) {
-						var state = this.rendered ? this.tooltip[0].offsetWidth > 0 : false;
-						(state ? hideCallback : showCallback).call(this, event);
-					});
-
-					// Remove the similar targets from the regular show/hide bindings
-					showTargets = showTargets.not(similarTargets);
-					hideTargets = hideTargets.not(similarTargets);
-				}
-			}
-
-			// Apply show/hide/toggle events
-			this._bind(showTargets, showEvents, showCallback);
-			this._bind(hideTargets, hideEvents, hideCallback);
-		};
-
-		PROTOTYPE._assignInitialEvents = function (event) {
-			var options = this.options,
-			    showTarget = options.show.target,
-			    hideTarget = options.hide.target,
-			    showEvents = options.show.event ? $.trim('' + options.show.event).split(' ') : [],
-			    hideEvents = options.hide.event ? $.trim('' + options.hide.event).split(' ') : [];
-
-			// Catch remove/removeqtip events on target element to destroy redundant tooltips
-			this._bind(this.elements.target, ['remove', 'removeqtip'], function () {
-				this.destroy(true);
-			}, 'destroy');
-
-			/*
-    * Make sure hoverIntent functions properly by using mouseleave as a hide event if
-    * mouseenter/mouseout is used for show.event, even if it isn't in the users options.
-    */
-			if (/mouse(over|enter)/i.test(options.show.event) && !/mouse(out|leave)/i.test(options.hide.event)) {
-				hideEvents.push('mouseleave');
-			}
-
-			/*
-    * Also make sure initial mouse targetting works correctly by caching mousemove coords
-    * on show targets before the tooltip has rendered. Also set onTarget when triggered to
-    * keep mouse tracking working.
-    */
-			this._bind(showTarget, 'mousemove', function (moveEvent) {
-				this._storeMouse(moveEvent);
-				this.cache.onTarget = TRUE;
-			});
-
-			// Define hoverIntent function
-			function hoverIntent(hoverEvent) {
-				// Only continue if tooltip isn't disabled
-				if (this.disabled || this.destroyed) {
-					return FALSE;
-				}
-
-				// Cache the event data
-				this.cache.event = hoverEvent && $.event.fix(hoverEvent);
-				this.cache.target = hoverEvent && $(hoverEvent.target);
-
-				// Start the event sequence
-				clearTimeout(this.timers.show);
-				this.timers.show = delay.call(this, function () {
-					this.render((typeof hoverEvent === 'undefined' ? 'undefined' : (0, _typeof3.default)(hoverEvent)) === 'object' || options.show.ready);
-				}, options.prerender ? 0 : options.show.delay);
-			}
-
-			// Filter and bind events
-			this._bindEvents(showEvents, hideEvents, showTarget, hideTarget, hoverIntent, function () {
-				if (!this.timers) {
-					return FALSE;
-				}
-				clearTimeout(this.timers.show);
-			});
-
-			// Prerendering is enabled, create tooltip now
-			if (options.show.ready || options.prerender) {
-				hoverIntent.call(this, event);
-			}
-		};
-
-		// Event assignment method
-		PROTOTYPE._assignEvents = function () {
-			var self = this,
-			    options = this.options,
-			    posOptions = options.position,
-			    tooltip = this.tooltip,
-			    showTarget = options.show.target,
-			    hideTarget = options.hide.target,
-			    containerTarget = posOptions.container,
-			    viewportTarget = posOptions.viewport,
-			    documentTarget = $(document),
-			    windowTarget = $(window),
-			    showEvents = options.show.event ? $.trim('' + options.show.event).split(' ') : [],
-			    hideEvents = options.hide.event ? $.trim('' + options.hide.event).split(' ') : [];
-
-			// Assign passed event callbacks
-			$.each(options.events, function (name, callback) {
-				self._bind(tooltip, name === 'toggle' ? ['tooltipshow', 'tooltiphide'] : ['tooltip' + name], callback, null, tooltip);
-			});
-
-			// Hide tooltips when leaving current window/frame (but not select/option elements)
-			if (/mouse(out|leave)/i.test(options.hide.event) && options.hide.leave === 'window') {
-				this._bind(documentTarget, ['mouseout', 'blur'], function (event) {
-					if (!/select|option/.test(event.target.nodeName) && !event.relatedTarget) {
-						this.hide(event);
-					}
-				});
-			}
-
-			// Enable hide.fixed by adding appropriate class
-			if (options.hide.fixed) {
-				hideTarget = hideTarget.add(tooltip.addClass(CLASS_FIXED));
-			}
-
-			/*
-    * Make sure hoverIntent functions properly by using mouseleave to clear show timer if
-    * mouseenter/mouseout is used for show.event, even if it isn't in the users options.
-    */
-			else if (/mouse(over|enter)/i.test(options.show.event)) {
-					this._bind(hideTarget, 'mouseleave', function () {
-						clearTimeout(this.timers.show);
-					});
-				}
-
-			// Hide tooltip on document mousedown if unfocus events are enabled
-			if (('' + options.hide.event).indexOf('unfocus') > -1) {
-				this._bind(containerTarget.closest('html'), ['mousedown', 'touchstart'], function (event) {
-					var elem = $(event.target),
-					    enabled = this.rendered && !this.tooltip.hasClass(CLASS_DISABLED) && this.tooltip[0].offsetWidth > 0,
-					    isAncestor = elem.parents(SELECTOR).filter(this.tooltip[0]).length > 0;
-
-					if (elem[0] !== this.target[0] && elem[0] !== this.tooltip[0] && !isAncestor && !this.target.has(elem[0]).length && enabled) {
-						this.hide(event);
-					}
-				});
-			}
-
-			// Check if the tooltip hides when inactive
-			if ('number' === typeof options.hide.inactive) {
-				// Bind inactive method to show target(s) as a custom event
-				this._bind(showTarget, 'qtip-' + this.id + '-inactive', inactiveMethod, 'inactive');
-
-				// Define events which reset the 'inactive' event handler
-				this._bind(hideTarget.add(tooltip), QTIP.inactiveEvents, inactiveMethod);
-			}
-
-			// Filter and bind events
-			this._bindEvents(showEvents, hideEvents, showTarget, hideTarget, showMethod, hideMethod);
-
-			// Mouse movement bindings
-			this._bind(showTarget.add(tooltip), 'mousemove', function (event) {
-				// Check if the tooltip hides when mouse is moved a certain distance
-				if ('number' === typeof options.hide.distance) {
-					var origin = this.cache.origin || {},
-					    limit = this.options.hide.distance,
-					    abs = Math.abs;
-
-					// Check if the movement has gone beyond the limit, and hide it if so
-					if (abs(event.pageX - origin.pageX) >= limit || abs(event.pageY - origin.pageY) >= limit) {
-						this.hide(event);
-					}
-				}
-
-				// Cache mousemove coords on show targets
-				this._storeMouse(event);
-			});
-
-			// Mouse positioning events
-			if (posOptions.target === 'mouse') {
-				// If mouse adjustment is on...
-				if (posOptions.adjust.mouse) {
-					// Apply a mouseleave event so we don't get problems with overlapping
-					if (options.hide.event) {
-						// Track if we're on the target or not
-						this._bind(showTarget, ['mouseenter', 'mouseleave'], function (event) {
-							if (!this.cache) {
-								return FALSE;
-							}
-							this.cache.onTarget = event.type === 'mouseenter';
-						});
-					}
-
-					// Update tooltip position on mousemove
-					this._bind(documentTarget, 'mousemove', function (event) {
-						// Update the tooltip position only if the tooltip is visible and adjustment is enabled
-						if (this.rendered && this.cache.onTarget && !this.tooltip.hasClass(CLASS_DISABLED) && this.tooltip[0].offsetWidth > 0) {
-							this.reposition(event);
-						}
-					});
-				}
-			}
-
-			// Adjust positions of the tooltip on window resize if enabled
-			if (posOptions.adjust.resize || viewportTarget.length) {
-				this._bind($.event.special.resize ? viewportTarget : windowTarget, 'resize', repositionMethod);
-			}
-
-			// Adjust tooltip position on scroll of the window or viewport element if present
-			if (posOptions.adjust.scroll) {
-				this._bind(windowTarget.add(posOptions.container), 'scroll', repositionMethod);
-			}
-		};
-
-		// Un-assignment method
-		PROTOTYPE._unassignEvents = function () {
-			var options = this.options,
-			    showTargets = options.show.target,
-			    hideTargets = options.hide.target,
-			    targets = $.grep([this.elements.target[0], this.rendered && this.tooltip[0], options.position.container[0], options.position.viewport[0], options.position.container.closest('html')[0], // unfocus
-			window, document], function (i) {
-				return (typeof i === 'undefined' ? 'undefined' : (0, _typeof3.default)(i)) === 'object';
-			});
-
-			// Add show and hide targets if they're valid
-			if (showTargets && showTargets.toArray) {
-				targets = targets.concat(showTargets.toArray());
-			}
-			if (hideTargets && hideTargets.toArray) {
-				targets = targets.concat(hideTargets.toArray());
-			}
-
-			// Unbind the events
-			this._unbind(targets)._unbind(targets, 'destroy')._unbind(targets, 'inactive');
-		};
-
-		// Apply common event handlers using delegate (avoids excessive .bind calls!)
-		$(function () {
-			delegate(SELECTOR, ['mouseenter', 'mouseleave'], function (event) {
-				var state = event.type === 'mouseenter',
-				    tooltip = $(event.currentTarget),
-				    target = $(event.relatedTarget || event.target),
-				    options = this.options;
-
-				// On mouseenter...
-				if (state) {
-					// Focus the tooltip on mouseenter (z-index stacking)
-					this.focus(event);
-
-					// Clear hide timer on tooltip hover to prevent it from closing
-					tooltip.hasClass(CLASS_FIXED) && !tooltip.hasClass(CLASS_DISABLED) && clearTimeout(this.timers.hide);
-				}
-
-				// On mouseleave...
-				else {
-						// When mouse tracking is enabled, hide when we leave the tooltip and not onto the show target (if a hide event is set)
-						if (options.position.target === 'mouse' && options.position.adjust.mouse && options.hide.event && options.show.target && !target.closest(options.show.target[0]).length) {
-							this.hide(event);
-						}
-					}
-
-				// Add hover class
-				tooltip.toggleClass(CLASS_HOVER, state);
-			});
-
-			// Define events which reset the 'inactive' event handler
-			delegate('[' + ATTR_ID + ']', INACTIVE_EVENTS, inactiveMethod);
-		});
-		; // Initialization method
-		function init(elem, id, opts) {
-			var obj,
-			    posOptions,
-			    attr,
-			    config,
-			    title,
-
-
-			// Setup element references
-			docBody = $(document.body),
-
-
-			// Use document body instead of document element if needed
-			newTarget = elem[0] === document ? docBody : elem,
-
-
-			// Grab metadata from element if plugin is present
-			metadata = elem.metadata ? elem.metadata(opts.metadata) : NULL,
-
-
-			// If metadata type if HTML5, grab 'name' from the object instead, or use the regular data object otherwise
-			metadata5 = opts.metadata.type === 'html5' && metadata ? metadata[opts.metadata.name] : NULL,
-
-
-			// Grab data from metadata.name (or data-qtipopts as fallback) using .data() method,
-			html5 = elem.data(opts.metadata.name || 'qtipopts');
-
-			// If we don't get an object returned attempt to parse it manualyl without parseJSON
-			/* eslint-disable no-empty */
-			try {
-				html5 = typeof html5 === 'string' ? $.parseJSON(html5) : html5;
-			} catch (e) {}
-			/* eslint-enable no-empty */
-
-			// Merge in and sanitize metadata
-			config = $.extend(TRUE, {}, QTIP.defaults, opts, (typeof html5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(html5)) === 'object' ? sanitizeOptions(html5) : NULL, sanitizeOptions(metadata5 || metadata));
-
-			// Re-grab our positioning options now we've merged our metadata and set id to passed value
-			posOptions = config.position;
-			config.id = id;
-
-			// Setup missing content if none is detected
-			if ('boolean' === typeof config.content.text) {
-				attr = elem.attr(config.content.attr);
-
-				// Grab from supplied attribute if available
-				if (config.content.attr !== FALSE && attr) {
-					config.content.text = attr;
-				}
-
-				// No valid content was found, abort render
-				else {
-						return FALSE;
-					}
-			}
-
-			// Setup target options
-			if (!posOptions.container.length) {
-				posOptions.container = docBody;
-			}
-			if (posOptions.target === FALSE) {
-				posOptions.target = newTarget;
-			}
-			if (config.show.target === FALSE) {
-				config.show.target = newTarget;
-			}
-			if (config.show.solo === TRUE) {
-				config.show.solo = posOptions.container.closest('body');
-			}
-			if (config.hide.target === FALSE) {
-				config.hide.target = newTarget;
-			}
-			if (config.position.viewport === TRUE) {
-				config.position.viewport = posOptions.container;
-			}
-
-			// Ensure we only use a single container
-			posOptions.container = posOptions.container.eq(0);
-
-			// Convert position corner values into x and y strings
-			posOptions.at = new CORNER(posOptions.at, TRUE);
-			posOptions.my = new CORNER(posOptions.my);
-
-			// Destroy previous tooltip if overwrite is enabled, or skip element if not
-			if (elem.data(NAMESPACE)) {
-				if (config.overwrite) {
-					elem.qtip('destroy', true);
-				} else if (config.overwrite === FALSE) {
-					return FALSE;
-				}
-			}
-
-			// Add has-qtip attribute
-			elem.attr(ATTR_HAS, id);
-
-			// Remove title attribute and store it if present
-			if (config.suppress && (title = elem.attr('title'))) {
-				// Final attr call fixes event delegation and IE default tooltip showing problem
-				elem.removeAttr('title').attr(oldtitle, title).attr('title', '');
-			}
-
-			// Initialize the tooltip and add API reference
-			obj = new QTip(elem, config, id, !!attr);
-			elem.data(NAMESPACE, obj);
-
-			return obj;
-		}
-
-		// jQuery $.fn extension method
-		QTIP = $.fn.qtip = function (options, notation, newValue) {
-			var command = ('' + options).toLowerCase(),
-			    // Parse command
-			returned = NULL,
-			    args = $.makeArray(arguments).slice(1),
-			    event = args[args.length - 1],
-			    opts = this[0] ? $.data(this[0], NAMESPACE) : NULL;
-
-			// Check for API request
-			if (!arguments.length && opts || command === 'api') {
-				return opts;
-			}
-
-			// Execute API command if present
-			else if ('string' === typeof options) {
-					this.each(function () {
-						var api = $.data(this, NAMESPACE);
-						if (!api) {
-							return TRUE;
-						}
-
-						// Cache the event if possible
-						if (event && event.timeStamp) {
-							api.cache.event = event;
-						}
-
-						// Check for specific API commands
-						if (notation && (command === 'option' || command === 'options')) {
-							if (newValue !== undefined || $.isPlainObject(notation)) {
-								api.set(notation, newValue);
-							} else {
-								returned = api.get(notation);
-								return FALSE;
-							}
-						}
-
-						// Execute API command
-						else if (api[command]) {
-								api[command].apply(api, args);
-							}
-					});
-
-					return returned !== NULL ? returned : this;
-				}
-
-				// No API commands. validate provided options and setup qTips
-				else if ('object' === (typeof options === 'undefined' ? 'undefined' : (0, _typeof3.default)(options)) || !arguments.length) {
-						// Sanitize options first
-						opts = sanitizeOptions($.extend(TRUE, {}, options));
-
-						return this.each(function (i) {
-							var api, id;
-
-							// Find next available ID, or use custom ID if provided
-							id = $.isArray(opts.id) ? opts.id[i] : opts.id;
-							id = !id || id === FALSE || id.length < 1 || QTIP.api[id] ? QTIP.nextid++ : id;
-
-							// Initialize the qTip and re-grab newly sanitized options
-							api = init($(this), id, opts);
-							if (api === FALSE) {
-								return TRUE;
-							} else {
-								QTIP.api[id] = api;
-							}
-
-							// Initialize plugins
-							$.each(PLUGINS, function () {
-								if (this.initialize === 'initialize') {
-									this(api);
-								}
-							});
-
-							// Assign initial pre-render events
-							api._assignInitialEvents(event);
-						});
-					}
-		};
-
-		// Expose class
-		$.qtip = QTip;
-
-		// Populated in render method
-		QTIP.api = {};
-		;$.each({
-			/* Allow other plugins to successfully retrieve the title of an element with a qTip applied */
-			attr: function attr(_attr, val) {
-				if (this.length) {
-					var self = this[0],
-					    title = 'title',
-					    api = $.data(self, 'qtip');
-
-					if (_attr === title && api && api.options && 'object' === (typeof api === 'undefined' ? 'undefined' : (0, _typeof3.default)(api)) && 'object' === (0, _typeof3.default)(api.options) && api.options.suppress) {
-						if (arguments.length < 2) {
-							return $.attr(self, oldtitle);
-						}
-
-						// If qTip is rendered and title was originally used as content, update it
-						if (api && api.options.content.attr === title && api.cache.attr) {
-							api.set('content.text', val);
-						}
-
-						// Use the regular attr method to set, then cache the result
-						return this.attr(oldtitle, val);
-					}
-				}
-
-				return $.fn['attr' + replaceSuffix].apply(this, arguments);
-			},
-
-			/* Allow clone to correctly retrieve cached title attributes */
-			clone: function clone(keepData) {
-				// Clone our element using the real clone method
-				var elems = $.fn['clone' + replaceSuffix].apply(this, arguments);
-
-				// Grab all elements with an oldtitle set, and change it to regular title attribute, if keepData is false
-				if (!keepData) {
-					elems.filter('[' + oldtitle + ']').attr('title', function () {
-						return $.attr(this, oldtitle);
-					}).removeAttr(oldtitle);
-				}
-
-				return elems;
-			}
-		}, function (name, func) {
-			if (!func || $.fn[name + replaceSuffix]) {
-				return TRUE;
-			}
-
-			var old = $.fn[name + replaceSuffix] = $.fn[name];
-			$.fn[name] = function () {
-				return func.apply(this, arguments) || old.apply(this, arguments);
-			};
-		});
-
-		/* Fire off 'removeqtip' handler in $.cleanData if jQuery UI not present (it already does similar).
-   * This snippet is taken directly from jQuery UI source code found here:
-   *     http://code.jquery.com/ui/jquery-ui-git.js
-   */
-		if (!$.ui) {
-			$['cleanData' + replaceSuffix] = $.cleanData;
-			$.cleanData = function (elems) {
-				for (var i = 0, elem; (elem = $(elems[i])).length; i++) {
-					if (elem.attr(ATTR_HAS)) {
-						/* eslint-disable no-empty */
-						try {
-							elem.triggerHandler('removeqtip');
-						} catch (e) {}
-						/* eslint-enable no-empty */
-					}
-				}
-				$['cleanData' + replaceSuffix].apply(this, arguments);
-			};
-		}
-		; // qTip version
-		QTIP.version = '3.0.3-5-g';
-
-		// Base ID for all qTips
-		QTIP.nextid = 0;
-
-		// Inactive events array
-		QTIP.inactiveEvents = INACTIVE_EVENTS;
-
-		// Base z-index for all qTips
-		QTIP.zindex = 15000;
-
-		// Define configuration defaults
-		QTIP.defaults = {
-			prerender: FALSE,
-			id: FALSE,
-			overwrite: TRUE,
-			suppress: TRUE,
-			content: {
-				text: TRUE,
-				attr: 'title',
-				title: FALSE,
-				button: FALSE
-			},
-			position: {
-				my: 'top left',
-				at: 'bottom right',
-				target: FALSE,
-				container: FALSE,
-				viewport: FALSE,
-				adjust: {
-					x: 0, y: 0,
-					mouse: TRUE,
-					scroll: TRUE,
-					resize: TRUE,
-					method: 'flipinvert flipinvert'
-				},
-				effect: function effect(api, pos) {
-					$(this).animate(pos, {
-						duration: 200,
-						queue: FALSE
-					});
-				}
-			},
-			show: {
-				target: FALSE,
-				event: 'mouseenter',
-				effect: TRUE,
-				delay: 90,
-				solo: FALSE,
-				ready: FALSE,
-				autofocus: FALSE
-			},
-			hide: {
-				target: FALSE,
-				event: 'mouseleave',
-				effect: TRUE,
-				delay: 0,
-				fixed: FALSE,
-				inactive: FALSE,
-				leave: 'window',
-				distance: FALSE
-			},
-			style: {
-				classes: '',
-				widget: FALSE,
-				width: FALSE,
-				height: FALSE,
-				def: TRUE
-			},
-			events: {
-				render: NULL,
-				move: NULL,
-				show: NULL,
-				hide: NULL,
-				toggle: NULL,
-				visible: NULL,
-				hidden: NULL,
-				focus: NULL,
-				blur: NULL
-			}
-		};
-		;var TIP,
-		    createVML,
-		    SCALE,
-		    PIXEL_RATIO,
-		    BACKING_STORE_RATIO,
-
-
-		// Common CSS strings
-		MARGIN = 'margin',
-		    BORDER = 'border',
-		    COLOR = 'color',
-		    BG_COLOR = 'background-color',
-		    TRANSPARENT = 'transparent',
-		    IMPORTANT = ' !important',
-
-
-		// Check if the browser supports <canvas/> elements
-		HASCANVAS = !!document.createElement('canvas').getContext,
-
-
-		// Invalid colour values used in parseColours()
-		INVALID = /rgba?\(0, 0, 0(, 0)?\)|transparent|#123456/i;
-
-		// Camel-case method, taken from jQuery source
-		// http://code.jquery.com/jquery-1.8.0.js
-		function camel(s) {
-			return s.charAt(0).toUpperCase() + s.slice(1);
-		}
-
-		/*
-   * Modified from Modernizr's testPropsAll()
-   * http://modernizr.com/downloads/modernizr-latest.js
-   */
-		var cssProps = {},
-		    cssPrefixes = ['Webkit', 'O', 'Moz', 'ms'];
-		function vendorCss(elem, prop) {
-			var ucProp = prop.charAt(0).toUpperCase() + prop.slice(1),
-			    props = (prop + ' ' + cssPrefixes.join(ucProp + ' ') + ucProp).split(' '),
-			    cur,
-			    val,
-			    i = 0;
-
-			// If the property has already been mapped...
-			if (cssProps[prop]) {
-				return elem.css(cssProps[prop]);
-			}
-
-			while (cur = props[i++]) {
-				if ((val = elem.css(cur)) !== undefined) {
-					cssProps[prop] = cur;
-					return val;
-				}
-			}
-		}
-
-		// Parse a given elements CSS property into an int
-		function intCss(elem, prop) {
-			return Math.ceil(parseFloat(vendorCss(elem, prop)));
-		}
-
-		// VML creation (for IE only)
-		if (!HASCANVAS) {
-			createVML = function createVML(tag, props, style) {
-				return '<qtipvml:' + tag + ' xmlns="urn:schemas-microsoft.com:vml" class="qtip-vml" ' + (props || '') + ' style="behavior: url(#default#VML); ' + (style || '') + '" />';
-			};
-		}
-
-		// Canvas only definitions
-		else {
-				PIXEL_RATIO = window.devicePixelRatio || 1;
-				BACKING_STORE_RATIO = function () {
-					var context = document.createElement('canvas').getContext('2d');
-					return context.backingStorePixelRatio || context.webkitBackingStorePixelRatio || context.mozBackingStorePixelRatio || context.msBackingStorePixelRatio || context.oBackingStorePixelRatio || 1;
-				}();
-				SCALE = PIXEL_RATIO / BACKING_STORE_RATIO;
-			}
-
-		function Tip(qtip, options) {
-			this._ns = 'tip';
-			this.options = options;
-			this.offset = options.offset;
-			this.size = [options.width, options.height];
-
-			// Initialize
-			this.qtip = qtip;
-			this.init(qtip);
-		}
-
-		$.extend(Tip.prototype, {
-			init: function init(qtip) {
-				var context, tip;
-
-				// Create tip element and prepend to the tooltip
-				tip = this.element = qtip.elements.tip = $('<div />', { 'class': NAMESPACE + '-tip' }).prependTo(qtip.tooltip);
-
-				// Create tip drawing element(s)
-				if (HASCANVAS) {
-					// save() as soon as we create the canvas element so FF2 doesn't bork on our first restore()!
-					context = $('<canvas />').appendTo(this.element)[0].getContext('2d');
-
-					// Setup constant parameters
-					context.lineJoin = 'miter';
-					context.miterLimit = 100000;
-					context.save();
-				} else {
-					context = createVML('shape', 'coordorigin="0,0"', 'position:absolute;');
-					this.element.html(context + context);
-
-					// Prevent mousing down on the tip since it causes problems with .live() handling in IE due to VML
-					qtip._bind($('*', tip).add(tip), ['click', 'mousedown'], function (event) {
-						event.stopPropagation();
-					}, this._ns);
-				}
-
-				// Bind update events
-				qtip._bind(qtip.tooltip, 'tooltipmove', this.reposition, this._ns, this);
-
-				// Create it
-				this.create();
-			},
-
-			_swapDimensions: function _swapDimensions() {
-				this.size[0] = this.options.height;
-				this.size[1] = this.options.width;
-			},
-			_resetDimensions: function _resetDimensions() {
-				this.size[0] = this.options.width;
-				this.size[1] = this.options.height;
-			},
-
-			_useTitle: function _useTitle(corner) {
-				var titlebar = this.qtip.elements.titlebar;
-				return titlebar && (corner.y === TOP || corner.y === CENTER && this.element.position().top + this.size[1] / 2 + this.options.offset < titlebar.outerHeight(TRUE));
-			},
-
-			_parseCorner: function _parseCorner(corner) {
-				var my = this.qtip.options.position.my;
-
-				// Detect corner and mimic properties
-				if (corner === FALSE || my === FALSE) {
-					corner = FALSE;
-				} else if (corner === TRUE) {
-					corner = new CORNER(my.string());
-				} else if (!corner.string) {
-					corner = new CORNER(corner);
-					corner.fixed = TRUE;
-				}
-
-				return corner;
-			},
-
-			_parseWidth: function _parseWidth(corner, side, use) {
-				var elements = this.qtip.elements,
-				    prop = BORDER + camel(side) + 'Width';
-
-				return (use ? intCss(use, prop) : intCss(elements.content, prop) || intCss(this._useTitle(corner) && elements.titlebar || elements.content, prop) || intCss(elements.tooltip, prop)) || 0;
-			},
-
-			_parseRadius: function _parseRadius(corner) {
-				var elements = this.qtip.elements,
-				    prop = BORDER + camel(corner.y) + camel(corner.x) + 'Radius';
-
-				return BROWSER.ie < 9 ? 0 : intCss(this._useTitle(corner) && elements.titlebar || elements.content, prop) || intCss(elements.tooltip, prop) || 0;
-			},
-
-			_invalidColour: function _invalidColour(elem, prop, compare) {
-				var val = elem.css(prop);
-				return !val || compare && val === elem.css(compare) || INVALID.test(val) ? FALSE : val;
-			},
-
-			_parseColours: function _parseColours(corner) {
-				var elements = this.qtip.elements,
-				    tip = this.element.css('cssText', ''),
-				    borderSide = BORDER + camel(corner[corner.precedance]) + camel(COLOR),
-				    colorElem = this._useTitle(corner) && elements.titlebar || elements.content,
-				    css = this._invalidColour,
-				    color = [];
-
-				// Attempt to detect the background colour from various elements, left-to-right precedance
-				color[0] = css(tip, BG_COLOR) || css(colorElem, BG_COLOR) || css(elements.content, BG_COLOR) || css(elements.tooltip, BG_COLOR) || tip.css(BG_COLOR);
-
-				// Attempt to detect the correct border side colour from various elements, left-to-right precedance
-				color[1] = css(tip, borderSide, COLOR) || css(colorElem, borderSide, COLOR) || css(elements.content, borderSide, COLOR) || css(elements.tooltip, borderSide, COLOR) || elements.tooltip.css(borderSide);
-
-				// Reset background and border colours
-				$('*', tip).add(tip).css('cssText', BG_COLOR + ':' + TRANSPARENT + IMPORTANT + ';' + BORDER + ':0' + IMPORTANT + ';');
-
-				return color;
-			},
-
-			_calculateSize: function _calculateSize(corner) {
-				var y = corner.precedance === Y,
-				    width = this.options.width,
-				    height = this.options.height,
-				    isCenter = corner.abbrev() === 'c',
-				    base = (y ? width : height) * (isCenter ? 0.5 : 1),
-				    pow = Math.pow,
-				    round = Math.round,
-				    bigHyp,
-				    ratio,
-				    result,
-				    smallHyp = Math.sqrt(pow(base, 2) + pow(height, 2)),
-				    hyp = [this.border / base * smallHyp, this.border / height * smallHyp];
-
-				hyp[2] = Math.sqrt(pow(hyp[0], 2) - pow(this.border, 2));
-				hyp[3] = Math.sqrt(pow(hyp[1], 2) - pow(this.border, 2));
-
-				bigHyp = smallHyp + hyp[2] + hyp[3] + (isCenter ? 0 : hyp[0]);
-				ratio = bigHyp / smallHyp;
-
-				result = [round(ratio * width), round(ratio * height)];
-				return y ? result : result.reverse();
-			},
-
-			// Tip coordinates calculator
-			_calculateTip: function _calculateTip(corner, size, scale) {
-				scale = scale || 1;
-				size = size || this.size;
-
-				var width = size[0] * scale,
-				    height = size[1] * scale,
-				    width2 = Math.ceil(width / 2),
-				    height2 = Math.ceil(height / 2),
-
-
-				// Define tip coordinates in terms of height and width values
-				tips = {
-					br: [0, 0, width, height, width, 0],
-					bl: [0, 0, width, 0, 0, height],
-					tr: [0, height, width, 0, width, height],
-					tl: [0, 0, 0, height, width, height],
-					tc: [0, height, width2, 0, width, height],
-					bc: [0, 0, width, 0, width2, height],
-					rc: [0, 0, width, height2, 0, height],
-					lc: [width, 0, width, height, 0, height2]
-				};
-
-				// Set common side shapes
-				tips.lt = tips.br;tips.rt = tips.bl;
-				tips.lb = tips.tr;tips.rb = tips.tl;
-
-				return tips[corner.abbrev()];
-			},
-
-			// Tip coordinates drawer (canvas)
-			_drawCoords: function _drawCoords(context, coords) {
-				context.beginPath();
-				context.moveTo(coords[0], coords[1]);
-				context.lineTo(coords[2], coords[3]);
-				context.lineTo(coords[4], coords[5]);
-				context.closePath();
-			},
-
-			create: function create() {
-				// Determine tip corner
-				var c = this.corner = (HASCANVAS || BROWSER.ie) && this._parseCorner(this.options.corner);
-
-				// If we have a tip corner...
-				this.enabled = !!this.corner && this.corner.abbrev() !== 'c';
-				if (this.enabled) {
-					// Cache it
-					this.qtip.cache.corner = c.clone();
-
-					// Create it
-					this.update();
-				}
-
-				// Toggle tip element
-				this.element.toggle(this.enabled);
-
-				return this.corner;
-			},
-
-			update: function update(corner, position) {
-				if (!this.enabled) {
-					return this;
-				}
-
-				var elements = this.qtip.elements,
-				    tip = this.element,
-				    inner = tip.children(),
-				    options = this.options,
-				    curSize = this.size,
-				    mimic = options.mimic,
-				    round = Math.round,
-				    color,
-				    precedance,
-				    context,
-				    coords,
-				    bigCoords,
-				    translate,
-				    newSize,
-				    border;
-
-				// Re-determine tip if not already set
-				if (!corner) {
-					corner = this.qtip.cache.corner || this.corner;
-				}
-
-				// Use corner property if we detect an invalid mimic value
-				if (mimic === FALSE) {
-					mimic = corner;
-				}
-
-				// Otherwise inherit mimic properties from the corner object as necessary
-				else {
-						mimic = new CORNER(mimic);
-						mimic.precedance = corner.precedance;
-
-						if (mimic.x === 'inherit') {
-							mimic.x = corner.x;
-						} else if (mimic.y === 'inherit') {
-							mimic.y = corner.y;
-						} else if (mimic.x === mimic.y) {
-							mimic[corner.precedance] = corner[corner.precedance];
-						}
-					}
-				precedance = mimic.precedance;
-
-				// Ensure the tip width.height are relative to the tip position
-				if (corner.precedance === X) {
-					this._swapDimensions();
-				} else {
-					this._resetDimensions();
-				}
-
-				// Update our colours
-				color = this.color = this._parseColours(corner);
-
-				// Detect border width, taking into account colours
-				if (color[1] !== TRANSPARENT) {
-					// Grab border width
-					border = this.border = this._parseWidth(corner, corner[corner.precedance]);
-
-					// If border width isn't zero, use border color as fill if it's not invalid (1.0 style tips)
-					if (options.border && border < 1 && !INVALID.test(color[1])) {
-						color[0] = color[1];
-					}
-
-					// Set border width (use detected border width if options.border is true)
-					this.border = border = options.border !== TRUE ? options.border : border;
-				}
-
-				// Border colour was invalid, set border to zero
-				else {
-						this.border = border = 0;
-					}
-
-				// Determine tip size
-				newSize = this.size = this._calculateSize(corner);
-				tip.css({
-					width: newSize[0],
-					height: newSize[1],
-					lineHeight: newSize[1] + 'px'
-				});
-
-				// Calculate tip translation
-				if (corner.precedance === Y) {
-					translate = [round(mimic.x === LEFT ? border : mimic.x === RIGHT ? newSize[0] - curSize[0] - border : (newSize[0] - curSize[0]) / 2), round(mimic.y === TOP ? newSize[1] - curSize[1] : 0)];
-				} else {
-					translate = [round(mimic.x === LEFT ? newSize[0] - curSize[0] : 0), round(mimic.y === TOP ? border : mimic.y === BOTTOM ? newSize[1] - curSize[1] - border : (newSize[1] - curSize[1]) / 2)];
-				}
-
-				// Canvas drawing implementation
-				if (HASCANVAS) {
-					// Grab canvas context and clear/save it
-					context = inner[0].getContext('2d');
-					context.restore();context.save();
-					context.clearRect(0, 0, 6000, 6000);
-
-					// Calculate coordinates
-					coords = this._calculateTip(mimic, curSize, SCALE);
-					bigCoords = this._calculateTip(mimic, this.size, SCALE);
-
-					// Set the canvas size using calculated size
-					inner.attr(WIDTH, newSize[0] * SCALE).attr(HEIGHT, newSize[1] * SCALE);
-					inner.css(WIDTH, newSize[0]).css(HEIGHT, newSize[1]);
-
-					// Draw the outer-stroke tip
-					this._drawCoords(context, bigCoords);
-					context.fillStyle = color[1];
-					context.fill();
-
-					// Draw the actual tip
-					context.translate(translate[0] * SCALE, translate[1] * SCALE);
-					this._drawCoords(context, coords);
-					context.fillStyle = color[0];
-					context.fill();
-				}
-
-				// VML (IE Proprietary implementation)
-				else {
-						// Calculate coordinates
-						coords = this._calculateTip(mimic);
-
-						// Setup coordinates string
-						coords = 'm' + coords[0] + ',' + coords[1] + ' l' + coords[2] + ',' + coords[3] + ' ' + coords[4] + ',' + coords[5] + ' xe';
-
-						// Setup VML-specific offset for pixel-perfection
-						translate[2] = border && /^(r|b)/i.test(corner.string()) ? BROWSER.ie === 8 ? 2 : 1 : 0;
-
-						// Set initial CSS
-						inner.css({
-							coordsize: newSize[0] + border + ' ' + newSize[1] + border,
-							antialias: '' + (mimic.string().indexOf(CENTER) > -1),
-							left: translate[0] - translate[2] * Number(precedance === X),
-							top: translate[1] - translate[2] * Number(precedance === Y),
-							width: newSize[0] + border,
-							height: newSize[1] + border
-						}).each(function (i) {
-							var $this = $(this);
-
-							// Set shape specific attributes
-							$this[$this.prop ? 'prop' : 'attr']({
-								coordsize: newSize[0] + border + ' ' + newSize[1] + border,
-								path: coords,
-								fillcolor: color[0],
-								filled: !!i,
-								stroked: !i
-							}).toggle(!!(border || i));
-
-							// Check if border is enabled and add stroke element
-							!i && $this.html(createVML('stroke', 'weight="' + border * 2 + 'px" color="' + color[1] + '" miterlimit="1000" joinstyle="miter"'));
-						});
-					}
-
-				// Opera bug #357 - Incorrect tip position
-				// https://github.com/Craga89/qTip2/issues/367
-				window.opera && setTimeout(function () {
-					elements.tip.css({
-						display: 'inline-block',
-						visibility: 'visible'
-					});
-				}, 1);
-
-				// Position if needed
-				if (position !== FALSE) {
-					this.calculate(corner, newSize);
-				}
-			},
-
-			calculate: function calculate(corner, size) {
-				if (!this.enabled) {
-					return FALSE;
-				}
-
-				var self = this,
-				    elements = this.qtip.elements,
-				    tip = this.element,
-				    userOffset = this.options.offset,
-				    position = {},
-				    precedance,
-				    corners;
-
-				// Inherit corner if not provided
-				corner = corner || this.corner;
-				precedance = corner.precedance;
-
-				// Determine which tip dimension to use for adjustment
-				size = size || this._calculateSize(corner);
-
-				// Setup corners and offset array
-				corners = [corner.x, corner.y];
-				if (precedance === X) {
-					corners.reverse();
-				}
-
-				// Calculate tip position
-				$.each(corners, function (i, side) {
-					var b, bc, br;
-
-					if (side === CENTER) {
-						b = precedance === Y ? LEFT : TOP;
-						position[b] = '50%';
-						position[MARGIN + '-' + b] = -Math.round(size[precedance === Y ? 0 : 1] / 2) + userOffset;
-					} else {
-						b = self._parseWidth(corner, side, elements.tooltip);
-						bc = self._parseWidth(corner, side, elements.content);
-						br = self._parseRadius(corner);
-
-						position[side] = Math.max(-self.border, i ? bc : userOffset + (br > b ? br : -b));
-					}
-				});
-
-				// Adjust for tip size
-				position[corner[precedance]] -= size[precedance === X ? 0 : 1];
-
-				// Set and return new position
-				tip.css({ margin: '', top: '', bottom: '', left: '', right: '' }).css(position);
-				return position;
-			},
-
-			reposition: function reposition(event, api, pos) {
-				if (!this.enabled) {
-					return;
-				}
-
-				var cache = api.cache,
-				    newCorner = this.corner.clone(),
-				    adjust = pos.adjusted,
-				    method = api.options.position.adjust.method.split(' '),
-				    horizontal = method[0],
-				    vertical = method[1] || method[0],
-				    shift = { left: FALSE, top: FALSE, x: 0, y: 0 },
-				    offset,
-				    css = {},
-				    props;
-
-				function shiftflip(direction, precedance, popposite, side, opposite) {
-					// Horizontal - Shift or flip method
-					if (direction === SHIFT && newCorner.precedance === precedance && adjust[side] && newCorner[popposite] !== CENTER) {
-						newCorner.precedance = newCorner.precedance === X ? Y : X;
-					} else if (direction !== SHIFT && adjust[side]) {
-						newCorner[precedance] = newCorner[precedance] === CENTER ? adjust[side] > 0 ? side : opposite : newCorner[precedance] === side ? opposite : side;
-					}
-				}
-
-				function shiftonly(xy, side, opposite) {
-					if (newCorner[xy] === CENTER) {
-						css[MARGIN + '-' + side] = shift[xy] = offset[MARGIN + '-' + side] - adjust[side];
-					} else {
-						props = offset[opposite] !== undefined ? [adjust[side], -offset[side]] : [-adjust[side], offset[side]];
-
-						if ((shift[xy] = Math.max(props[0], props[1])) > props[0]) {
-							pos[side] -= adjust[side];
-							shift[side] = FALSE;
-						}
-
-						css[offset[opposite] !== undefined ? opposite : side] = shift[xy];
-					}
-				}
-
-				// If our tip position isn't fixed e.g. doesn't adjust with viewport...
-				if (this.corner.fixed !== TRUE) {
-					// Perform shift/flip adjustments
-					shiftflip(horizontal, X, Y, LEFT, RIGHT);
-					shiftflip(vertical, Y, X, TOP, BOTTOM);
-
-					// Update and redraw the tip if needed (check cached details of last drawn tip)
-					if (newCorner.string() !== cache.corner.string() || cache.cornerTop !== adjust.top || cache.cornerLeft !== adjust.left) {
-						this.update(newCorner, FALSE);
-					}
-				}
-
-				// Setup tip offset properties
-				offset = this.calculate(newCorner);
-
-				// Readjust offset object to make it left/top
-				if (offset.right !== undefined) {
-					offset.left = -offset.right;
-				}
-				if (offset.bottom !== undefined) {
-					offset.top = -offset.bottom;
-				}
-				offset.user = this.offset;
-
-				// Perform shift adjustments
-				shift.left = horizontal === SHIFT && !!adjust.left;
-				if (shift.left) {
-					shiftonly(X, LEFT, RIGHT);
-				}
-				shift.top = vertical === SHIFT && !!adjust.top;
-				if (shift.top) {
-					shiftonly(Y, TOP, BOTTOM);
-				}
-
-				/*
-    * If the tip is adjusted in both dimensions, or in a
-    * direction that would cause it to be anywhere but the
-    * outer border, hide it!
-    */
-				this.element.css(css).toggle(!(shift.x && shift.y || newCorner.x === CENTER && shift.y || newCorner.y === CENTER && shift.x));
-
-				// Adjust position to accomodate tip dimensions
-				pos.left -= offset.left.charAt ? offset.user : horizontal !== SHIFT || shift.top || !shift.left && !shift.top ? offset.left + this.border : 0;
-				pos.top -= offset.top.charAt ? offset.user : vertical !== SHIFT || shift.left || !shift.left && !shift.top ? offset.top + this.border : 0;
-
-				// Cache details
-				cache.cornerLeft = adjust.left;cache.cornerTop = adjust.top;
-				cache.corner = newCorner.clone();
-			},
-
-			destroy: function destroy() {
-				// Unbind events
-				this.qtip._unbind(this.qtip.tooltip, this._ns);
-
-				// Remove the tip element(s)
-				if (this.qtip.elements.tip) {
-					this.qtip.elements.tip.find('*').remove().end().remove();
-				}
-			}
-		});
-
-		TIP = PLUGINS.tip = function (api) {
-			return new Tip(api, api.options.style.tip);
-		};
-
-		// Initialize tip on render
-		TIP.initialize = 'render';
-
-		// Setup plugin sanitization options
-		TIP.sanitize = function (options) {
-			if (options.style && 'tip' in options.style) {
-				var opts = options.style.tip;
-				if ((typeof opts === 'undefined' ? 'undefined' : (0, _typeof3.default)(opts)) !== 'object') {
-					opts = options.style.tip = { corner: opts };
-				}
-				if (!/string|boolean/i.test((0, _typeof3.default)(opts.corner))) {
-					opts.corner = TRUE;
-				}
-			}
-		};
-
-		// Add new option checks for the plugin
-		CHECKS.tip = {
-			'^position.my|style.tip.(corner|mimic|border)$': function positionMyStyleTipCornerMimicBorder$() {
-				// Make sure a tip can be drawn
-				this.create();
-
-				// Reposition the tooltip
-				this.qtip.reposition();
-			},
-			'^style.tip.(height|width)$': function styleTipHeightWidth$(obj) {
-				// Re-set dimensions and redraw the tip
-				this.size = [obj.width, obj.height];
-				this.update();
-
-				// Reposition the tooltip
-				this.qtip.reposition();
-			},
-			'^content.title|style.(classes|widget)$': function contentTitleStyleClassesWidget$() {
-				this.update();
-			}
-		};
-
-		// Extend original qTip defaults
-		$.extend(TRUE, QTIP.defaults, {
-			style: {
-				tip: {
-					corner: TRUE,
-					mimic: FALSE,
-					width: 6,
-					height: 6,
-					border: TRUE,
-					offset: 0
-				}
-			}
-		});
-		;var MODAL,
-		    OVERLAY,
-		    MODALCLASS = 'qtip-modal',
-		    MODALSELECTOR = '.' + MODALCLASS;
-
-		OVERLAY = function OVERLAY() {
-			var self = this,
-			    focusableElems = {},
-			    current,
-			    prevState,
-			    elem;
-
-			// Modified code from jQuery UI 1.10.0 source
-			// http://code.jquery.com/ui/1.10.0/jquery-ui.js
-			function focusable(element) {
-				// Use the defined focusable checker when possible
-				if ($.expr[':'].focusable) {
-					return $.expr[':'].focusable;
-				}
-
-				var isTabIndexNotNaN = !isNaN($.attr(element, 'tabindex')),
-				    nodeName = element.nodeName && element.nodeName.toLowerCase(),
-				    map,
-				    mapName,
-				    img;
-
-				if ('area' === nodeName) {
-					map = element.parentNode;
-					mapName = map.name;
-					if (!element.href || !mapName || map.nodeName.toLowerCase() !== 'map') {
-						return false;
-					}
-					img = $('img[usemap=#' + mapName + ']')[0];
-					return !!img && img.is(':visible');
-				}
-
-				return (/input|select|textarea|button|object/.test(nodeName) ? !element.disabled : 'a' === nodeName ? element.href || isTabIndexNotNaN : isTabIndexNotNaN
-				);
-			}
-
-			// Focus inputs using cached focusable elements (see update())
-			function focusInputs(blurElems) {
-				// Blurring body element in IE causes window.open windows to unfocus!
-				if (focusableElems.length < 1 && blurElems.length) {
-					blurElems.not('body').blur();
-				}
-
-				// Focus the inputs
-				else {
-						focusableElems.first().focus();
-					}
-			}
-
-			// Steal focus from elements outside tooltip
-			function stealFocus(event) {
-				if (!elem.is(':visible')) {
-					return;
-				}
-
-				var target = $(event.target),
-				    tooltip = current.tooltip,
-				    container = target.closest(SELECTOR),
-				    targetOnTop;
-
-				// Determine if input container target is above this
-				targetOnTop = container.length < 1 ? FALSE : parseInt(container[0].style.zIndex, 10) > parseInt(tooltip[0].style.zIndex, 10);
-
-				// If we're showing a modal, but focus has landed on an input below
-				// this modal, divert focus to the first visible input in this modal
-				// or if we can't find one... the tooltip itself
-				if (!targetOnTop && target.closest(SELECTOR)[0] !== tooltip[0]) {
-					focusInputs(target);
-				}
-			}
-
-			$.extend(self, {
-				init: function init() {
-					// Create document overlay
-					elem = self.elem = $('<div />', {
-						id: 'qtip-overlay',
-						html: '<div></div>',
-						mousedown: function mousedown() {
-							return FALSE;
-						}
-					}).hide();
-
-					// Make sure we can't focus anything outside the tooltip
-					$(document.body).bind('focusin' + MODALSELECTOR, stealFocus);
-
-					// Apply keyboard "Escape key" close handler
-					$(document).bind('keydown' + MODALSELECTOR, function (event) {
-						if (current && current.options.show.modal.escape && event.keyCode === 27) {
-							current.hide(event);
-						}
-					});
-
-					// Apply click handler for blur option
-					elem.bind('click' + MODALSELECTOR, function (event) {
-						if (current && current.options.show.modal.blur) {
-							current.hide(event);
-						}
-					});
-
-					return self;
-				},
-
-				update: function update(api) {
-					// Update current API reference
-					current = api;
-
-					// Update focusable elements if enabled
-					if (api.options.show.modal.stealfocus !== FALSE) {
-						focusableElems = api.tooltip.find('*').filter(function () {
-							return focusable(this);
-						});
-					} else {
-						focusableElems = [];
-					}
-				},
-
-				toggle: function toggle(api, state, duration) {
-					var tooltip = api.tooltip,
-					    options = api.options.show.modal,
-					    effect = options.effect,
-					    type = state ? 'show' : 'hide',
-					    visible = elem.is(':visible'),
-					    visibleModals = $(MODALSELECTOR).filter(':visible:not(:animated)').not(tooltip);
-
-					// Set active tooltip API reference
-					self.update(api);
-
-					// If the modal can steal the focus...
-					// Blur the current item and focus anything in the modal we an
-					if (state && options.stealfocus !== FALSE) {
-						focusInputs($(':focus'));
-					}
-
-					// Toggle backdrop cursor style on show
-					elem.toggleClass('blurs', options.blur);
-
-					// Append to body on show
-					if (state) {
-						elem.appendTo(document.body);
-					}
-
-					// Prevent modal from conflicting with show.solo, and don't hide backdrop is other modals are visible
-					if (elem.is(':animated') && visible === state && prevState !== FALSE || !state && visibleModals.length) {
-						return self;
-					}
-
-					// Stop all animations
-					elem.stop(TRUE, FALSE);
-
-					// Use custom function if provided
-					if ($.isFunction(effect)) {
-						effect.call(elem, state);
-					}
-
-					// If no effect type is supplied, use a simple toggle
-					else if (effect === FALSE) {
-							elem[type]();
-						}
-
-						// Use basic fade function
-						else {
-								elem.fadeTo(parseInt(duration, 10) || 90, state ? 1 : 0, function () {
-									if (!state) {
-										elem.hide();
-									}
-								});
-							}
-
-					// Reset position and detach from body on hide
-					if (!state) {
-						elem.queue(function (next) {
-							elem.css({ left: '', top: '' });
-							if (!$(MODALSELECTOR).length) {
-								elem.detach();
-							}
-							next();
-						});
-					}
-
-					// Cache the state
-					prevState = state;
-
-					// If the tooltip is destroyed, set reference to null
-					if (current.destroyed) {
-						current = NULL;
-					}
-
-					return self;
-				}
-			});
-
-			self.init();
-		};
-		OVERLAY = new OVERLAY();
-
-		function Modal(api, options) {
-			this.options = options;
-			this._ns = '-modal';
-
-			this.qtip = api;
-			this.init(api);
-		}
-
-		$.extend(Modal.prototype, {
-			init: function init(qtip) {
-				var tooltip = qtip.tooltip;
-
-				// If modal is disabled... return
-				if (!this.options.on) {
-					return this;
-				}
-
-				// Set overlay reference
-				qtip.elements.overlay = OVERLAY.elem;
-
-				// Add unique attribute so we can grab modal tooltips easily via a SELECTOR, and set z-index
-				tooltip.addClass(MODALCLASS).css('z-index', QTIP.modal_zindex + $(MODALSELECTOR).length);
-
-				// Apply our show/hide/focus modal events
-				qtip._bind(tooltip, ['tooltipshow', 'tooltiphide'], function (event, api, duration) {
-					var oEvent = event.originalEvent;
-
-					// Make sure mouseout doesn't trigger a hide when showing the modal and mousing onto backdrop
-					if (event.target === tooltip[0]) {
-						if (oEvent && event.type === 'tooltiphide' && /mouse(leave|enter)/.test(oEvent.type) && $(oEvent.relatedTarget).closest(OVERLAY.elem[0]).length) {
-							/* eslint-disable no-empty */
-							try {
-								event.preventDefault();
-							} catch (e) {}
-							/* eslint-enable no-empty */
-						} else if (!oEvent || oEvent && oEvent.type !== 'tooltipsolo') {
-							this.toggle(event, event.type === 'tooltipshow', duration);
-						}
-					}
-				}, this._ns, this);
-
-				// Adjust modal z-index on tooltip focus
-				qtip._bind(tooltip, 'tooltipfocus', function (event, api) {
-					// If focus was cancelled before it reached us, don't do anything
-					if (event.isDefaultPrevented() || event.target !== tooltip[0]) {
-						return;
-					}
-
-					var qtips = $(MODALSELECTOR),
-
-
-					// Keep the modal's lower than other, regular qtips
-					newIndex = QTIP.modal_zindex + qtips.length,
-					    curIndex = parseInt(tooltip[0].style.zIndex, 10);
-
-					// Set overlay z-index
-					OVERLAY.elem[0].style.zIndex = newIndex - 1;
-
-					// Reduce modal z-index's and keep them properly ordered
-					qtips.each(function () {
-						if (this.style.zIndex > curIndex) {
-							this.style.zIndex -= 1;
-						}
-					});
-
-					// Fire blur event for focused tooltip
-					qtips.filter('.' + CLASS_FOCUS).qtip('blur', event.originalEvent);
-
-					// Set the new z-index
-					tooltip.addClass(CLASS_FOCUS)[0].style.zIndex = newIndex;
-
-					// Set current
-					OVERLAY.update(api);
-
-					// Prevent default handling
-					/* eslint-disable no-empty */
-					try {
-						event.preventDefault();
-					} catch (e) {}
-					/* eslint-enable no-empty */
-				}, this._ns, this);
-
-				// Focus any other visible modals when this one hides
-				qtip._bind(tooltip, 'tooltiphide', function (event) {
-					if (event.target === tooltip[0]) {
-						$(MODALSELECTOR).filter(':visible').not(tooltip).last().qtip('focus', event);
-					}
-				}, this._ns, this);
-			},
-
-			toggle: function toggle(event, state, duration) {
-				// Make sure default event hasn't been prevented
-				if (event && event.isDefaultPrevented()) {
-					return this;
-				}
-
-				// Toggle it
-				OVERLAY.toggle(this.qtip, !!state, duration);
-			},
-
-			destroy: function destroy() {
-				// Remove modal class
-				this.qtip.tooltip.removeClass(MODALCLASS);
-
-				// Remove bound events
-				this.qtip._unbind(this.qtip.tooltip, this._ns);
-
-				// Delete element reference
-				OVERLAY.toggle(this.qtip, FALSE);
-				delete this.qtip.elements.overlay;
-			}
-		});
-
-		MODAL = PLUGINS.modal = function (api) {
-			return new Modal(api, api.options.show.modal);
-		};
-
-		// Setup sanitiztion rules
-		MODAL.sanitize = function (opts) {
-			if (opts.show) {
-				if ((0, _typeof3.default)(opts.show.modal) !== 'object') {
-					opts.show.modal = { on: !!opts.show.modal };
-				} else if (typeof opts.show.modal.on === 'undefined') {
-					opts.show.modal.on = TRUE;
-				}
-			}
-		};
-
-		// Base z-index for all modal tooltips (use qTip core z-index as a base)
-		/* eslint-disable camelcase */
-		QTIP.modal_zindex = QTIP.zindex - 200;
-		/* eslint-enable camelcase */
-
-		// Plugin needs to be initialized on render
-		MODAL.initialize = 'render';
-
-		// Setup option set checks
-		CHECKS.modal = {
-			'^show.modal.(on|blur)$': function showModalOnBlur$() {
-				// Initialise
-				this.destroy();
-				this.init();
-
-				// Show the modal if not visible already and tooltip is visible
-				this.qtip.elems.overlay.toggle(this.qtip.tooltip[0].offsetWidth > 0);
-			}
-		};
-
-		// Extend original api defaults
-		$.extend(TRUE, QTIP.defaults, {
-			show: {
-				modal: {
-					on: FALSE,
-					effect: TRUE,
-					blur: TRUE,
-					stealfocus: TRUE,
-					escape: TRUE
-				}
-			}
-		});
-		;PLUGINS.viewport = function (api, position, posOptions, targetWidth, targetHeight, elemWidth, elemHeight) {
-			var target = posOptions.target,
-			    tooltip = api.elements.tooltip,
-			    my = posOptions.my,
-			    at = posOptions.at,
-			    adjust = posOptions.adjust,
-			    method = adjust.method.split(' '),
-			    methodX = method[0],
-			    methodY = method[1] || method[0],
-			    viewport = posOptions.viewport,
-			    container = posOptions.container,
-			    adjusted = { left: 0, top: 0 },
-			    fixed,
-			    newMy,
-			    containerOffset,
-			    containerStatic,
-			    viewportWidth,
-			    viewportHeight,
-			    viewportScroll,
-			    viewportOffset;
-
-			// If viewport is not a jQuery element, or it's the window/document, or no adjustment method is used... return
-			if (!viewport.jquery || target[0] === window || target[0] === document.body || adjust.method === 'none') {
-				return adjusted;
-			}
-
-			// Cach container details
-			containerOffset = container.offset() || adjusted;
-			containerStatic = container.css('position') === 'static';
-
-			// Cache our viewport details
-			fixed = tooltip.css('position') === 'fixed';
-			viewportWidth = viewport[0] === window ? viewport.width() : viewport.outerWidth(FALSE);
-			viewportHeight = viewport[0] === window ? viewport.height() : viewport.outerHeight(FALSE);
-			viewportScroll = { left: fixed ? 0 : viewport.scrollLeft(), top: fixed ? 0 : viewport.scrollTop() };
-			viewportOffset = viewport.offset() || adjusted;
-
-			// Generic calculation method
-			function calculate(side, otherSide, type, adjustment, side1, side2, lengthName, targetLength, elemLength) {
-				var initialPos = position[side1],
-				    mySide = my[side],
-				    atSide = at[side],
-				    isShift = type === SHIFT,
-				    myLength = mySide === side1 ? elemLength : mySide === side2 ? -elemLength : -elemLength / 2,
-				    atLength = atSide === side1 ? targetLength : atSide === side2 ? -targetLength : -targetLength / 2,
-				    sideOffset = viewportScroll[side1] + viewportOffset[side1] - (containerStatic ? 0 : containerOffset[side1]),
-				    overflow1 = sideOffset - initialPos,
-				    overflow2 = initialPos + elemLength - (lengthName === WIDTH ? viewportWidth : viewportHeight) - sideOffset,
-				    offset = myLength - (my.precedance === side || mySide === my[otherSide] ? atLength : 0) - (atSide === CENTER ? targetLength / 2 : 0);
-
-				// shift
-				if (isShift) {
-					offset = (mySide === side1 ? 1 : -1) * myLength;
-
-					// Adjust position but keep it within viewport dimensions
-					position[side1] += overflow1 > 0 ? overflow1 : overflow2 > 0 ? -overflow2 : 0;
-					position[side1] = Math.max(-containerOffset[side1] + viewportOffset[side1], initialPos - offset, Math.min(Math.max(-containerOffset[side1] + viewportOffset[side1] + (lengthName === WIDTH ? viewportWidth : viewportHeight), initialPos + offset), position[side1],
-
-					// Make sure we don't adjust complete off the element when using 'center'
-					mySide === 'center' ? initialPos - myLength : 1E9));
-				}
-
-				// flip/flipinvert
-				else {
-						// Update adjustment amount depending on if using flipinvert or flip
-						adjustment *= type === FLIPINVERT ? 2 : 0;
-
-						// Check for overflow on the left/top
-						if (overflow1 > 0 && (mySide !== side1 || overflow2 > 0)) {
-							position[side1] -= offset + adjustment;
-							newMy.invert(side, side1);
-						}
-
-						// Check for overflow on the bottom/right
-						else if (overflow2 > 0 && (mySide !== side2 || overflow1 > 0)) {
-								position[side1] -= (mySide === CENTER ? -offset : offset) + adjustment;
-								newMy.invert(side, side2);
-							}
-
-						// Make sure we haven't made things worse with the adjustment and reset if so
-						if (position[side1] < viewportScroll[side1] && -position[side1] > overflow2) {
-							position[side1] = initialPos;newMy = my.clone();
-						}
-					}
-
-				return position[side1] - initialPos;
-			}
-
-			// Set newMy if using flip or flipinvert methods
-			if (methodX !== 'shift' || methodY !== 'shift') {
-				newMy = my.clone();
-			}
-
-			// Adjust position based onviewport and adjustment options
-			adjusted = {
-				left: methodX !== 'none' ? calculate(X, Y, methodX, adjust.x, LEFT, RIGHT, WIDTH, targetWidth, elemWidth) : 0,
-				top: methodY !== 'none' ? calculate(Y, X, methodY, adjust.y, TOP, BOTTOM, HEIGHT, targetHeight, elemHeight) : 0,
-				my: newMy
-			};
-
-			return adjusted;
-		};
-		;PLUGINS.polys = {
-			// POLY area coordinate calculator
-			//	Special thanks to Ed Cradock for helping out with this.
-			//	Uses a binary search algorithm to find suitable coordinates.
-			polygon: function polygon(baseCoords, corner) {
-				var result = {
-					width: 0, height: 0,
-					position: {
-						top: 1e10, right: 0,
-						bottom: 0, left: 1e10
-					},
-					adjustable: FALSE
-				},
-				    i = 0,
-				    next,
-				    coords = [],
-				    compareX = 1,
-				    compareY = 1,
-				    realX = 0,
-				    realY = 0,
-				    newWidth,
-				    newHeight;
-
-				// First pass, sanitize coords and determine outer edges
-				i = baseCoords.length;
-				while (i--) {
-					next = [parseInt(baseCoords[--i], 10), parseInt(baseCoords[i + 1], 10)];
-
-					if (next[0] > result.position.right) {
-						result.position.right = next[0];
-					}
-					if (next[0] < result.position.left) {
-						result.position.left = next[0];
-					}
-					if (next[1] > result.position.bottom) {
-						result.position.bottom = next[1];
-					}
-					if (next[1] < result.position.top) {
-						result.position.top = next[1];
-					}
-
-					coords.push(next);
-				}
-
-				// Calculate height and width from outer edges
-				newWidth = result.width = Math.abs(result.position.right - result.position.left);
-				newHeight = result.height = Math.abs(result.position.bottom - result.position.top);
-
-				// If it's the center corner...
-				if (corner.abbrev() === 'c') {
-					result.position = {
-						left: result.position.left + result.width / 2,
-						top: result.position.top + result.height / 2
-					};
-				} else {
-					// Second pass, use a binary search algorithm to locate most suitable coordinate
-					while (newWidth > 0 && newHeight > 0 && compareX > 0 && compareY > 0) {
-						newWidth = Math.floor(newWidth / 2);
-						newHeight = Math.floor(newHeight / 2);
-
-						if (corner.x === LEFT) {
-							compareX = newWidth;
-						} else if (corner.x === RIGHT) {
-							compareX = result.width - newWidth;
-						} else {
-							compareX += Math.floor(newWidth / 2);
-						}
-
-						if (corner.y === TOP) {
-							compareY = newHeight;
-						} else if (corner.y === BOTTOM) {
-							compareY = result.height - newHeight;
-						} else {
-							compareY += Math.floor(newHeight / 2);
-						}
-
-						i = coords.length;
-						while (i--) {
-							if (coords.length < 2) {
-								break;
-							}
-
-							realX = coords[i][0] - result.position.left;
-							realY = coords[i][1] - result.position.top;
-
-							if (corner.x === LEFT && realX >= compareX || corner.x === RIGHT && realX <= compareX || corner.x === CENTER && (realX < compareX || realX > result.width - compareX) || corner.y === TOP && realY >= compareY || corner.y === BOTTOM && realY <= compareY || corner.y === CENTER && (realY < compareY || realY > result.height - compareY)) {
-								coords.splice(i, 1);
-							}
-						}
-					}
-					result.position = { left: coords[0][0], top: coords[0][1] };
-				}
-
-				return result;
-			},
-
-			rect: function rect(ax, ay, bx, by) {
-				return {
-					width: Math.abs(bx - ax),
-					height: Math.abs(by - ay),
-					position: {
-						left: Math.min(ax, bx),
-						top: Math.min(ay, by)
-					}
-				};
-			},
-
-			_angles: {
-				tc: 3 / 2, tr: 7 / 4, tl: 5 / 4,
-				bc: 1 / 2, br: 1 / 4, bl: 3 / 4,
-				rc: 2, lc: 1, c: 0
-			},
-			ellipse: function ellipse(cx, cy, rx, ry, corner) {
-				var c = PLUGINS.polys._angles[corner.abbrev()],
-				    rxc = c === 0 ? 0 : rx * Math.cos(c * Math.PI),
-				    rys = ry * Math.sin(c * Math.PI);
-
-				return {
-					width: rx * 2 - Math.abs(rxc),
-					height: ry * 2 - Math.abs(rys),
-					position: {
-						left: cx + rxc,
-						top: cy + rys
-					},
-					adjustable: FALSE
-				};
-			},
-			circle: function circle(cx, cy, r, corner) {
-				return PLUGINS.polys.ellipse(cx, cy, r, r, corner);
-			}
-		};
-		;PLUGINS.svg = function (api, svg, corner) {
-			var elem = svg[0],
-			    root = $(elem.ownerSVGElement),
-			    ownerDocument = elem.ownerDocument,
-			    strokeWidth2 = (parseInt(svg.css('stroke-width'), 10) || 0) / 2,
-			    frameOffset,
-			    mtx,
-			    transformed,
-			    len,
-			    next,
-			    i,
-			    points,
-			    result,
-			    position;
-
-			// Ascend the parentNode chain until we find an element with getBBox()
-			while (!elem.getBBox) {
-				elem = elem.parentNode;
-			}
-			if (!elem.getBBox || !elem.parentNode) {
-				return FALSE;
-			}
-
-			// Determine which shape calculation to use
-			switch (elem.nodeName) {
-				case 'ellipse':
-				case 'circle':
-					result = PLUGINS.polys.ellipse(elem.cx.baseVal.value, elem.cy.baseVal.value, (elem.rx || elem.r).baseVal.value + strokeWidth2, (elem.ry || elem.r).baseVal.value + strokeWidth2, corner);
-					break;
-
-				case 'line':
-				case 'polygon':
-				case 'polyline':
-					// Determine points object (line has none, so mimic using array)
-					points = elem.points || [{ x: elem.x1.baseVal.value, y: elem.y1.baseVal.value }, { x: elem.x2.baseVal.value, y: elem.y2.baseVal.value }];
-
-					for (result = [], i = -1, len = points.numberOfItems || points.length; ++i < len;) {
-						next = points.getItem ? points.getItem(i) : points[i];
-						result.push.apply(result, [next.x, next.y]);
-					}
-
-					result = PLUGINS.polys.polygon(result, corner);
-					break;
-
-				// Unknown shape or rectangle? Use bounding box
-				default:
-					result = elem.getBBox();
-					result = {
-						width: result.width,
-						height: result.height,
-						position: {
-							left: result.x,
-							top: result.y
-						}
-					};
-					break;
-			}
-
-			// Shortcut assignments
-			position = result.position;
-			root = root[0];
-
-			// Convert position into a pixel value
-			if (root.createSVGPoint) {
-				mtx = elem.getScreenCTM();
-				points = root.createSVGPoint();
-
-				points.x = position.left;
-				points.y = position.top;
-				transformed = points.matrixTransform(mtx);
-				position.left = transformed.x;
-				position.top = transformed.y;
-			}
-
-			// Check the element is not in a child document, and if so, adjust for frame elements offset
-			if (ownerDocument !== document && api.position.target !== 'mouse') {
-				frameOffset = $((ownerDocument.defaultView || ownerDocument.parentWindow).frameElement).offset();
-				if (frameOffset) {
-					position.left += frameOffset.left;
-					position.top += frameOffset.top;
-				}
-			}
-
-			// Adjust by scroll offset of owner document
-			ownerDocument = $(ownerDocument);
-			position.left += ownerDocument.scrollLeft();
-			position.top += ownerDocument.scrollTop();
-
-			return result;
-		};
-		;PLUGINS.imagemap = function (api, area, corner) {
-			if (!area.jquery) {
-				area = $(area);
-			}
-
-			var shape = (area.attr('shape') || 'rect').toLowerCase().replace('poly', 'polygon'),
-			    image = $('img[usemap="#' + area.parent('map').attr('name') + '"]'),
-			    coordsString = $.trim(area.attr('coords')),
-			    coordsArray = coordsString.replace(/,$/, '').split(','),
-			    imageOffset,
-			    coords,
-			    i,
-			    result,
-			    len;
-
-			// If we can't find the image using the map...
-			if (!image.length) {
-				return FALSE;
-			}
-
-			// Pass coordinates string if polygon
-			if (shape === 'polygon') {
-				result = PLUGINS.polys.polygon(coordsArray, corner);
-			}
-
-			// Otherwise parse the coordinates and pass them as arguments
-			else if (PLUGINS.polys[shape]) {
-					for (i = -1, len = coordsArray.length, coords = []; ++i < len;) {
-						coords.push(parseInt(coordsArray[i], 10));
-					}
-
-					result = PLUGINS.polys[shape].apply(this, coords.concat(corner));
-				}
-
-				// If no shapre calculation method was found, return false
-				else {
-						return FALSE;
-					}
-
-			// Make sure we account for padding and borders on the image
-			imageOffset = image.offset();
-			imageOffset.left += Math.ceil((image.outerWidth(FALSE) - image.width()) / 2);
-			imageOffset.top += Math.ceil((image.outerHeight(FALSE) - image.height()) / 2);
-
-			// Add image position to offset coordinates
-			result.position.left += imageOffset.left;
-			result.position.top += imageOffset.top;
-
-			return result;
-		};
-		;var IE6,
-
-
-		/*
-   * BGIFrame adaption (http://plugins.jquery.com/project/bgiframe)
-   * Special thanks to Brandon Aaron
-   */
-		BGIFRAME = '<iframe class="qtip-bgiframe" frameborder="0" tabindex="-1" src="javascript:\'\';" ' + ' style="display:block; position:absolute; z-index:-1; filter:alpha(opacity=0); ' + '-ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";"></iframe>';
-
-		function Ie6(api) {
-			this._ns = 'ie6';
-
-			this.qtip = api;
-			this.init(api);
-		}
-
-		$.extend(Ie6.prototype, {
-			_scroll: function _scroll() {
-				var overlay = this.qtip.elements.overlay;
-				overlay && (overlay[0].style.top = $(window).scrollTop() + 'px');
-			},
-
-			init: function init(qtip) {
-				var tooltip = qtip.tooltip;
-
-				// Create the BGIFrame element if needed
-				if ($('select, object').length < 1) {
-					this.bgiframe = qtip.elements.bgiframe = $(BGIFRAME).appendTo(tooltip);
-
-					// Update BGIFrame on tooltip move
-					qtip._bind(tooltip, 'tooltipmove', this.adjustBGIFrame, this._ns, this);
-				}
-
-				// redraw() container for width/height calculations
-				this.redrawContainer = $('<div/>', { id: NAMESPACE + '-rcontainer' }).appendTo(document.body);
-
-				// Fixup modal plugin if present too
-				if (qtip.elements.overlay && qtip.elements.overlay.addClass('qtipmodal-ie6fix')) {
-					qtip._bind(window, ['scroll', 'resize'], this._scroll, this._ns, this);
-					qtip._bind(tooltip, ['tooltipshow'], this._scroll, this._ns, this);
-				}
-
-				// Set dimensions
-				this.redraw();
-			},
-
-			adjustBGIFrame: function adjustBGIFrame() {
-				var tooltip = this.qtip.tooltip,
-				    dimensions = {
-					height: tooltip.outerHeight(FALSE),
-					width: tooltip.outerWidth(FALSE)
-				},
-				    plugin = this.qtip.plugins.tip,
-				    tip = this.qtip.elements.tip,
-				    tipAdjust,
-				    offset;
-
-				// Adjust border offset
-				offset = parseInt(tooltip.css('borderLeftWidth'), 10) || 0;
-				offset = { left: -offset, top: -offset };
-
-				// Adjust for tips plugin
-				if (plugin && tip) {
-					tipAdjust = plugin.corner.precedance === 'x' ? [WIDTH, LEFT] : [HEIGHT, TOP];
-					offset[tipAdjust[1]] -= tip[tipAdjust[0]]();
-				}
-
-				// Update bgiframe
-				this.bgiframe.css(offset).css(dimensions);
-			},
-
-			// Max/min width simulator function
-			redraw: function redraw() {
-				if (this.qtip.rendered < 1 || this.drawing) {
-					return this;
-				}
-
-				var tooltip = this.qtip.tooltip,
-				    style = this.qtip.options.style,
-				    container = this.qtip.options.position.container,
-				    perc,
-				    width,
-				    max,
-				    min;
-
-				// Set drawing flag
-				this.qtip.drawing = 1;
-
-				// If tooltip has a set height/width, just set it... like a boss!
-				if (style.height) {
-					tooltip.css(HEIGHT, style.height);
-				}
-				if (style.width) {
-					tooltip.css(WIDTH, style.width);
-				}
-
-				// Simulate max/min width if not set width present...
-				else {
-						// Reset width and add fluid class
-						tooltip.css(WIDTH, '').appendTo(this.redrawContainer);
-
-						// Grab our tooltip width (add 1 if odd so we don't get wrapping problems.. huzzah!)
-						width = tooltip.width();
-						if (width % 2 < 1) {
-							width += 1;
-						}
-
-						// Grab our max/min properties
-						max = tooltip.css('maxWidth') || '';
-						min = tooltip.css('minWidth') || '';
-
-						// Parse into proper pixel values
-						perc = (max + min).indexOf('%') > -1 ? container.width() / 100 : 0;
-						max = (max.indexOf('%') > -1 ? perc : 1 * parseInt(max, 10)) || width;
-						min = (min.indexOf('%') > -1 ? perc : 1 * parseInt(min, 10)) || 0;
-
-						// Determine new dimension size based on max/min/current values
-						width = max + min ? Math.min(Math.max(width, min), max) : width;
-
-						// Set the newly calculated width and remvoe fluid class
-						tooltip.css(WIDTH, Math.round(width)).appendTo(container);
-					}
-
-				// Set drawing flag
-				this.drawing = 0;
-
-				return this;
-			},
-
-			destroy: function destroy() {
-				// Remove iframe
-				this.bgiframe && this.bgiframe.remove();
-
-				// Remove bound events
-				this.qtip._unbind([window, this.qtip.tooltip], this._ns);
-			}
-		});
-
-		IE6 = PLUGINS.ie6 = function (api) {
-			// Proceed only if the browser is IE6
-			return BROWSER.ie === 6 ? new Ie6(api) : FALSE;
-		};
-
-		IE6.initialize = 'render';
-
-		CHECKS.ie6 = {
-			'^content|style$': function contentStyle$() {
-				this.redraw();
-			}
-		};
-		;
-	});
-})(window, document);
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__)):jQuery&&!jQuery.fn.qtip&&a(jQuery)}(function(d){"use strict";function e(a,b,c,e){this.id=c,this.target=a,this.tooltip=F,this.elements={target:a},this._id=S+"-"+c,this.timers={img:{}},this.options=b,this.plugins={},this.cache={event:{},target:d(),disabled:E,attr:e,onTooltip:E,lastClass:""},this.rendered=this.destroyed=this.disabled=this.waiting=this.hiddenDuringWait=this.positioning=this.triggering=E}function f(a){return a===F||"object"!==d.type(a)}function g(a){return!(d.isFunction(a)||a&&a.attr||a.length||"object"===d.type(a)&&(a.jquery||a.then))}function h(a){var b,c,e,h;return f(a)?E:(f(a.metadata)&&(a.metadata={type:a.metadata}),"content"in a&&(b=a.content,f(b)||b.jquery||b.done?(c=g(b)?E:b,b=a.content={text:c}):c=b.text,"ajax"in b&&(e=b.ajax,h=e&&e.once!==E,delete b.ajax,b.text=function(a,b){var f=c||d(this).attr(b.options.content.attr)||"Loading...",g=d.ajax(d.extend({},e,{context:b})).then(e.success,F,e.error).then(function(a){return a&&h&&b.set("content.text",a),a},function(a,c,d){b.destroyed||0===a.status||b.set("content.text",c+": "+d)});return h?f:(b.set("content.text",f),g)}),"title"in b&&(d.isPlainObject(b.title)&&(b.button=b.title.button,b.title=b.title.text),g(b.title||E)&&(b.title=E))),"position"in a&&f(a.position)&&(a.position={my:a.position,at:a.position}),"show"in a&&f(a.show)&&(a.show=a.show.jquery?{target:a.show}:a.show===D?{ready:D}:{event:a.show}),"hide"in a&&f(a.hide)&&(a.hide=a.hide.jquery?{target:a.hide}:{event:a.hide}),"style"in a&&f(a.style)&&(a.style={classes:a.style}),d.each(R,function(){this.sanitize&&this.sanitize(a)}),a)}function i(a,b){for(var c,d=0,e=a,f=b.split(".");e=e[f[d++]];)d<f.length&&(c=e);return[c||a,f.pop()]}function j(a,b){var c,d,e;for(c in this.checks)if(this.checks.hasOwnProperty(c))for(d in this.checks[c])this.checks[c].hasOwnProperty(d)&&(e=new RegExp(d,"i").exec(a))&&(b.push(e),("builtin"===c||this.plugins[c])&&this.checks[c][d].apply(this.plugins[c]||this,b))}function k(a){return V.concat("").join(a?"-"+a+" ":" ")}function l(a,b){return b>0?setTimeout(d.proxy(a,this),b):void a.call(this)}function m(a){this.tooltip.hasClass(aa)||(clearTimeout(this.timers.show),clearTimeout(this.timers.hide),this.timers.show=l.call(this,function(){this.toggle(D,a)},this.options.show.delay))}function n(a){if(!this.tooltip.hasClass(aa)&&!this.destroyed){var b=d(a.relatedTarget),c=b.closest(W)[0]===this.tooltip[0],e=b[0]===this.options.show.target[0];if(clearTimeout(this.timers.show),clearTimeout(this.timers.hide),this!==b[0]&&"mouse"===this.options.position.target&&c||this.options.hide.fixed&&/mouse(out|leave|move)/.test(a.type)&&(c||e))try{a.preventDefault(),a.stopImmediatePropagation()}catch(f){}else this.timers.hide=l.call(this,function(){this.toggle(E,a)},this.options.hide.delay,this)}}function o(a){!this.tooltip.hasClass(aa)&&this.options.hide.inactive&&(clearTimeout(this.timers.inactive),this.timers.inactive=l.call(this,function(){this.hide(a)},this.options.hide.inactive))}function p(a){this.rendered&&this.tooltip[0].offsetWidth>0&&this.reposition(a)}function q(a,c,e){d(b.body).delegate(a,(c.split?c:c.join("."+S+" "))+"."+S,function(){var a=y.api[d.attr(this,U)];a&&!a.disabled&&e.apply(a,arguments)})}function r(a,c,f){var g,i,j,k,l,m=d(b.body),n=a[0]===b?m:a,o=a.metadata?a.metadata(f.metadata):F,p="html5"===f.metadata.type&&o?o[f.metadata.name]:F,q=a.data(f.metadata.name||"qtipopts");try{q="string"==typeof q?d.parseJSON(q):q}catch(r){}if(k=d.extend(D,{},y.defaults,f,"object"==typeof q?h(q):F,h(p||o)),i=k.position,k.id=c,"boolean"==typeof k.content.text){if(j=a.attr(k.content.attr),k.content.attr===E||!j)return E;k.content.text=j}if(i.container.length||(i.container=m),i.target===E&&(i.target=n),k.show.target===E&&(k.show.target=n),k.show.solo===D&&(k.show.solo=i.container.closest("body")),k.hide.target===E&&(k.hide.target=n),k.position.viewport===D&&(k.position.viewport=i.container),i.container=i.container.eq(0),i.at=new A(i.at,D),i.my=new A(i.my),a.data(S))if(k.overwrite)a.qtip("destroy",!0);else if(k.overwrite===E)return E;return a.attr(T,c),k.suppress&&(l=a.attr("title"))&&a.removeAttr("title").attr(ca,l).attr("title",""),g=new e(a,k,c,(!!j)),a.data(S,g),g}function s(a){return a.charAt(0).toUpperCase()+a.slice(1)}function t(a,b){var d,e,f=b.charAt(0).toUpperCase()+b.slice(1),g=(b+" "+va.join(f+" ")+f).split(" "),h=0;if(ua[b])return a.css(ua[b]);for(;d=g[h++];)if((e=a.css(d))!==c)return ua[b]=d,e}function u(a,b){return Math.ceil(parseFloat(t(a,b)))}function v(a,b){this._ns="tip",this.options=b,this.offset=b.offset,this.size=[b.width,b.height],this.qtip=a,this.init(a)}function w(a,b){this.options=b,this._ns="-modal",this.qtip=a,this.init(a)}function x(a){this._ns="ie6",this.qtip=a,this.init(a)}var y,z,A,B,C,D=!0,E=!1,F=null,G="x",H="y",I="width",J="height",K="top",L="left",M="bottom",N="right",O="center",P="flipinvert",Q="shift",R={},S="qtip",T="data-hasqtip",U="data-qtip-id",V=["ui-widget","ui-tooltip"],W="."+S,X="click dblclick mousedown mouseup mousemove mouseleave mouseenter".split(" "),Y=S+"-fixed",Z=S+"-default",$=S+"-focus",_=S+"-hover",aa=S+"-disabled",ba="_replacedByqTip",ca="oldtitle",da={ie:function(){var a,c;for(a=4,c=b.createElement("div");(c.innerHTML="<!--[if gt IE "+a+"]><i></i><![endif]-->")&&c.getElementsByTagName("i")[0];a+=1);return a>4?a:NaN}(),iOS:parseFloat((""+(/CPU.*OS ([0-9_]{1,5})|(CPU like).*AppleWebKit.*Mobile/i.exec(navigator.userAgent)||[0,""])[1]).replace("undefined","3_2").replace("_",".").replace("_",""))||E};z=e.prototype,z._when=function(a){return d.when.apply(d,a)},z.render=function(a){if(this.rendered||this.destroyed)return this;var b=this,c=this.options,e=this.cache,f=this.elements,g=c.content.text,h=c.content.title,i=c.content.button,j=c.position,k=[];return d.attr(this.target[0],"aria-describedby",this._id),e.posClass=this._createPosClass((this.position={my:j.my,at:j.at}).my),this.tooltip=f.tooltip=d("<div/>",{id:this._id,"class":[S,Z,c.style.classes,e.posClass].join(" "),width:c.style.width||"",height:c.style.height||"",tracking:"mouse"===j.target&&j.adjust.mouse,role:"alert","aria-live":"polite","aria-atomic":E,"aria-describedby":this._id+"-content","aria-hidden":D}).toggleClass(aa,this.disabled).attr(U,this.id).data(S,this).appendTo(j.container).append(f.content=d("<div />",{"class":S+"-content",id:this._id+"-content","aria-atomic":D})),this.rendered=-1,this.positioning=D,h&&(this._createTitle(),d.isFunction(h)||k.push(this._updateTitle(h,E))),i&&this._createButton(),d.isFunction(g)||k.push(this._updateContent(g,E)),this.rendered=D,this._setWidget(),d.each(R,function(a){var c;"render"===this.initialize&&(c=this(b))&&(b.plugins[a]=c)}),this._unassignEvents(),this._assignEvents(),this._when(k).then(function(){b._trigger("render"),b.positioning=E,b.hiddenDuringWait||!c.show.ready&&!a||b.toggle(D,e.event,E),b.hiddenDuringWait=E}),y.api[this.id]=this,this},z.destroy=function(a){function b(){if(!this.destroyed){this.destroyed=D;var a,b=this.target,c=b.attr(ca);this.rendered&&this.tooltip.stop(1,0).find("*").remove().end().remove(),d.each(this.plugins,function(){this.destroy&&this.destroy()});for(a in this.timers)this.timers.hasOwnProperty(a)&&clearTimeout(this.timers[a]);b.removeData(S).removeAttr(U).removeAttr(T).removeAttr("aria-describedby"),this.options.suppress&&c&&b.attr("title",c).removeAttr(ca),this._unassignEvents(),this.options=this.elements=this.cache=this.timers=this.plugins=this.mouse=F,delete y.api[this.id]}}return this.destroyed?this.target:(a===D&&"hide"!==this.triggering||!this.rendered?b.call(this):(this.tooltip.one("tooltiphidden",d.proxy(b,this)),!this.triggering&&this.hide()),this.target)},B=z.checks={builtin:{"^id$":function(a,b,c,e){var f=c===D?y.nextid:c,g=S+"-"+f;f!==E&&f.length>0&&!d("#"+g).length?(this._id=g,this.rendered&&(this.tooltip[0].id=this._id,this.elements.content[0].id=this._id+"-content",this.elements.title[0].id=this._id+"-title")):a[b]=e},"^prerender":function(a,b,c){c&&!this.rendered&&this.render(this.options.show.ready)},"^content.text$":function(a,b,c){this._updateContent(c)},"^content.attr$":function(a,b,c,d){this.options.content.text===this.target.attr(d)&&this._updateContent(this.target.attr(c))},"^content.title$":function(a,b,c){return c?(c&&!this.elements.title&&this._createTitle(),void this._updateTitle(c)):this._removeTitle()},"^content.button$":function(a,b,c){this._updateButton(c)},"^content.title.(text|button)$":function(a,b,c){this.set("content."+b,c)},"^position.(my|at)$":function(a,b,c){"string"==typeof c&&(this.position[b]=a[b]=new A(c,"at"===b))},"^position.container$":function(a,b,c){this.rendered&&this.tooltip.appendTo(c)},"^show.ready$":function(a,b,c){c&&(!this.rendered&&this.render(D)||this.toggle(D))},"^style.classes$":function(a,b,c,d){this.rendered&&this.tooltip.removeClass(d).addClass(c)},"^style.(width|height)":function(a,b,c){this.rendered&&this.tooltip.css(b,c)},"^style.widget|content.title":function(){this.rendered&&this._setWidget()},"^style.def":function(a,b,c){this.rendered&&this.tooltip.toggleClass(Z,!!c)},"^events.(render|show|move|hide|focus|blur)$":function(a,b,c){this.rendered&&this.tooltip[(d.isFunction(c)?"":"un")+"bind"]("tooltip"+b,c)},"^(show|hide|position).(event|target|fixed|inactive|leave|distance|viewport|adjust)":function(){if(this.rendered){var a=this.options.position;this.tooltip.attr("tracking","mouse"===a.target&&a.adjust.mouse),this._unassignEvents(),this._assignEvents()}}}},z.get=function(a){if(this.destroyed)return this;var b=i(this.options,a.toLowerCase()),c=b[0][b[1]];return c.precedance?c.string():c};var ea=/^position\.(my|at|adjust|target|container|viewport)|style|content|show\.ready/i,fa=/^prerender|show\.ready/i;z.set=function(a,b){if(this.destroyed)return this;var c,e=this.rendered,f=E,g=this.options;return"string"==typeof a?(c=a,a={},a[c]=b):a=d.extend({},a),d.each(a,function(b,c){if(e&&fa.test(b))return void delete a[b];var h,j=i(g,b.toLowerCase());h=j[0][j[1]],j[0][j[1]]=c&&c.nodeType?d(c):c,f=ea.test(b)||f,a[b]=[j[0],j[1],c,h]}),h(g),this.positioning=D,d.each(a,d.proxy(j,this)),this.positioning=E,this.rendered&&this.tooltip[0].offsetWidth>0&&f&&this.reposition("mouse"===g.position.target?F:this.cache.event),this},z._update=function(a,b){var c=this,e=this.cache;return this.rendered&&a?(d.isFunction(a)&&(a=a.call(this.elements.target,e.event,this)||""),d.isFunction(a.then)?(e.waiting=D,a.then(function(a){return e.waiting=E,c._update(a,b)},F,function(a){return c._update(a,b)})):a===E||!a&&""!==a?E:(a.jquery&&a.length>0?b.empty().append(a.css({display:"block",visibility:"visible"})):b.html(a),this._waitForContent(b).then(function(a){c.rendered&&c.tooltip[0].offsetWidth>0&&c.reposition(e.event,!a.length)}))):E},z._waitForContent=function(a){var b=this.cache;return b.waiting=D,(d.fn.imagesLoaded?a.imagesLoaded():(new d.Deferred).resolve([])).done(function(){b.waiting=E}).promise()},z._updateContent=function(a,b){this._update(a,this.elements.content,b)},z._updateTitle=function(a,b){this._update(a,this.elements.title,b)===E&&this._removeTitle(E)},z._createTitle=function(){var a=this.elements,b=this._id+"-title";a.titlebar&&this._removeTitle(),a.titlebar=d("<div />",{"class":S+"-titlebar "+(this.options.style.widget?k("header"):"")}).append(a.title=d("<div />",{id:b,"class":S+"-title","aria-atomic":D})).insertBefore(a.content).delegate(".qtip-close","mousedown keydown mouseup keyup mouseout",function(a){d(this).toggleClass("ui-state-active ui-state-focus","down"===a.type.substr(-4))}).delegate(".qtip-close","mouseover mouseout",function(a){d(this).toggleClass("ui-state-hover","mouseover"===a.type)}),this.options.content.button&&this._createButton()},z._removeTitle=function(a){var b=this.elements;b.title&&(b.titlebar.remove(),b.titlebar=b.title=b.button=F,a!==E&&this.reposition())},z._createPosClass=function(a){return S+"-pos-"+(a||this.options.position.my).abbrev()},z.reposition=function(c,e){if(!this.rendered||this.positioning||this.destroyed)return this;this.positioning=D;var f,g,h,i,j=this.cache,k=this.tooltip,l=this.options.position,m=l.target,n=l.my,o=l.at,p=l.viewport,q=l.container,r=l.adjust,s=r.method.split(" "),t=k.outerWidth(E),u=k.outerHeight(E),v=0,w=0,x=k.css("position"),y={left:0,top:0},z=k[0].offsetWidth>0,A=c&&"scroll"===c.type,B=d(a),C=q[0].ownerDocument,F=this.mouse;if(d.isArray(m)&&2===m.length)o={x:L,y:K},y={left:m[0],top:m[1]};else if("mouse"===m)o={x:L,y:K},(!r.mouse||this.options.hide.distance)&&j.origin&&j.origin.pageX?c=j.origin:!c||c&&("resize"===c.type||"scroll"===c.type)?c=j.event:F&&F.pageX&&(c=F),"static"!==x&&(y=q.offset()),C.body.offsetWidth!==(a.innerWidth||C.documentElement.clientWidth)&&(g=d(b.body).offset()),y={left:c.pageX-y.left+(g&&g.left||0),top:c.pageY-y.top+(g&&g.top||0)},r.mouse&&A&&F&&(y.left-=(F.scrollX||0)-B.scrollLeft(),y.top-=(F.scrollY||0)-B.scrollTop());else{if("event"===m?c&&c.target&&"scroll"!==c.type&&"resize"!==c.type?j.target=d(c.target):c.target||(j.target=this.elements.target):"event"!==m&&(j.target=d(m.jquery?m:this.elements.target)),m=j.target,m=d(m).eq(0),0===m.length)return this;m[0]===b||m[0]===a?(v=da.iOS?a.innerWidth:m.width(),w=da.iOS?a.innerHeight:m.height(),m[0]===a&&(y={top:(p||m).scrollTop(),left:(p||m).scrollLeft()})):R.imagemap&&m.is("area")?f=R.imagemap(this,m,o,R.viewport?s:E):R.svg&&m&&m[0].ownerSVGElement?f=R.svg(this,m,o,R.viewport?s:E):(v=m.outerWidth(E),w=m.outerHeight(E),y=m.offset()),f&&(v=f.width,w=f.height,g=f.offset,y=f.position),y=this.reposition.offset(m,y,q),(da.iOS>3.1&&da.iOS<4.1||da.iOS>=4.3&&da.iOS<4.33||!da.iOS&&"fixed"===x)&&(y.left-=B.scrollLeft(),y.top-=B.scrollTop()),(!f||f&&f.adjustable!==E)&&(y.left+=o.x===N?v:o.x===O?v/2:0,y.top+=o.y===M?w:o.y===O?w/2:0)}return y.left+=r.x+(n.x===N?-t:n.x===O?-t/2:0),y.top+=r.y+(n.y===M?-u:n.y===O?-u/2:0),R.viewport?(h=y.adjusted=R.viewport(this,y,l,v,w,t,u),g&&h.left&&(y.left+=g.left),g&&h.top&&(y.top+=g.top),h.my&&(this.position.my=h.my)):y.adjusted={left:0,top:0},j.posClass!==(i=this._createPosClass(this.position.my))&&(j.posClass=i,k.removeClass(j.posClass).addClass(i)),this._trigger("move",[y,p.elem||p],c)?(delete y.adjusted,e===E||!z||isNaN(y.left)||isNaN(y.top)||"mouse"===m||!d.isFunction(l.effect)?k.css(y):d.isFunction(l.effect)&&(l.effect.call(k,this,d.extend({},y)),k.queue(function(a){d(this).css({opacity:"",height:""}),da.ie&&this.style.removeAttribute("filter"),a()})),this.positioning=E,this):this},z.reposition.offset=function(a,c,e){function f(a,b){c.left+=b*a.scrollLeft(),c.top+=b*a.scrollTop()}if(!e[0])return c;var g,h,i,j,k=d(a[0].ownerDocument),l=!!da.ie&&"CSS1Compat"!==b.compatMode,m=e[0];do"static"!==(h=d.css(m,"position"))&&("fixed"===h?(i=m.getBoundingClientRect(),f(k,-1)):(i=d(m).position(),i.left+=parseFloat(d.css(m,"borderLeftWidth"))||0,i.top+=parseFloat(d.css(m,"borderTopWidth"))||0),c.left-=i.left+(parseFloat(d.css(m,"marginLeft"))||0),c.top-=i.top+(parseFloat(d.css(m,"marginTop"))||0),g||"hidden"===(j=d.css(m,"overflow"))||"visible"===j||"BODY"===d.prop(m,"tagName")||(g=d(m)));while(m=m.offsetParent);return g&&(g[0]!==k[0]||l)&&f(g,1),c};var ga=(A=z.reposition.Corner=function(a,b){a=(""+a).replace(/([A-Z])/," $1").replace(/middle/gi,O).toLowerCase(),this.x=(a.match(/left|right/i)||a.match(/center/)||["inherit"])[0].toLowerCase(),this.y=(a.match(/top|bottom|center/i)||["inherit"])[0].toLowerCase(),this.forceY=!!b;var c=a.charAt(0);this.precedance="t"===c||"b"===c?H:G}).prototype;ga.invert=function(a,b){this[a]=this[a]===L?N:this[a]===N?L:b||this[a]},ga.string=function(a){var b=this.x,c=this.y,d=b!==c?"center"===b||"center"!==c&&(this.precedance===H||this.forceY)?[c,b]:[b,c]:[b];return a!==!1?d.join(" "):d},ga.abbrev=function(){var a=this.string(!1);return a[0].charAt(0)+(a[1]&&a[1].charAt(0)||"")},ga.clone=function(){return new A(this.string(),this.forceY)},z.toggle=function(a,c){var e=this.cache,f=this.options,g=this.tooltip;if(c){if(/over|enter/.test(c.type)&&e.event&&/out|leave/.test(e.event.type)&&f.show.target.add(c.target).length===f.show.target.length&&g.has(c.relatedTarget).length)return this;e.event=d.event.fix(c)}if(this.waiting&&!a&&(this.hiddenDuringWait=D),!this.rendered)return a?this.render(1):this;if(this.destroyed||this.disabled)return this;var h,i,j,k=a?"show":"hide",l=this.options[k],m=this.options.position,n=this.options.content,o=this.tooltip.css("width"),p=this.tooltip.is(":visible"),q=a||1===l.target.length,r=!c||l.target.length<2||e.target[0]===c.target;return(typeof a).search("boolean|number")&&(a=!p),h=!g.is(":animated")&&p===a&&r,i=h?F:!!this._trigger(k,[90]),this.destroyed?this:(i!==E&&a&&this.focus(c),!i||h?this:(d.attr(g[0],"aria-hidden",!a),a?(this.mouse&&(e.origin=d.event.fix(this.mouse)),d.isFunction(n.text)&&this._updateContent(n.text,E),d.isFunction(n.title)&&this._updateTitle(n.title,E),!C&&"mouse"===m.target&&m.adjust.mouse&&(d(b).bind("mousemove."+S,this._storeMouse),C=D),o||g.css("width",g.outerWidth(E)),this.reposition(c,arguments[2]),o||g.css("width",""),l.solo&&("string"==typeof l.solo?d(l.solo):d(W,l.solo)).not(g).not(l.target).qtip("hide",new d.Event("tooltipsolo"))):(clearTimeout(this.timers.show),delete e.origin,C&&!d(W+'[tracking="true"]:visible',l.solo).not(g).length&&(d(b).unbind("mousemove."+S),C=E),this.blur(c)),j=d.proxy(function(){a?(da.ie&&g[0].style.removeAttribute("filter"),g.css("overflow",""),"string"==typeof l.autofocus&&d(this.options.show.autofocus,g).focus(),this.options.show.target.trigger("qtip-"+this.id+"-inactive")):g.css({display:"",visibility:"",opacity:"",left:"",top:""}),this._trigger(a?"visible":"hidden")},this),l.effect===E||q===E?(g[k](),j()):d.isFunction(l.effect)?(g.stop(1,1),l.effect.call(g,this),g.queue("fx",function(a){j(),a()})):g.fadeTo(90,a?1:0,j),a&&l.target.trigger("qtip-"+this.id+"-inactive"),this))},z.show=function(a){return this.toggle(D,a)},z.hide=function(a){return this.toggle(E,a)},z.focus=function(a){if(!this.rendered||this.destroyed)return this;var b=d(W),c=this.tooltip,e=parseInt(c[0].style.zIndex,10),f=y.zindex+b.length;return c.hasClass($)||this._trigger("focus",[f],a)&&(e!==f&&(b.each(function(){this.style.zIndex>e&&(this.style.zIndex=this.style.zIndex-1)}),b.filter("."+$).qtip("blur",a)),c.addClass($)[0].style.zIndex=f),this},z.blur=function(a){return!this.rendered||this.destroyed?this:(this.tooltip.removeClass($),this._trigger("blur",[this.tooltip.css("zIndex")],a),this)},z.disable=function(a){return this.destroyed?this:("toggle"===a?a=!(this.rendered?this.tooltip.hasClass(aa):this.disabled):"boolean"!=typeof a&&(a=D),this.rendered&&this.tooltip.toggleClass(aa,a).attr("aria-disabled",a),this.disabled=!!a,this)},z.enable=function(){return this.disable(E)},z._createButton=function(){var a=this,b=this.elements,c=b.tooltip,e=this.options.content.button,f="string"==typeof e,g=f?e:"Close tooltip";b.button&&b.button.remove(),e.jquery?b.button=e:b.button=d("<a />",{"class":"qtip-close "+(this.options.style.widget?"":S+"-icon"),title:g,"aria-label":g}).prepend(d("<span />",{"class":"ui-icon ui-icon-close",html:"&times;"})),b.button.appendTo(b.titlebar||c).attr("role","button").click(function(b){return c.hasClass(aa)||a.hide(b),E})},z._updateButton=function(a){if(!this.rendered)return E;var b=this.elements.button;a?this._createButton():b.remove()},z._setWidget=function(){var a=this.options.style.widget,b=this.elements,c=b.tooltip,d=c.hasClass(aa);c.removeClass(aa),aa=a?"ui-state-disabled":"qtip-disabled",c.toggleClass(aa,d),c.toggleClass("ui-helper-reset "+k(),a).toggleClass(Z,this.options.style.def&&!a),b.content&&b.content.toggleClass(k("content"),a),b.titlebar&&b.titlebar.toggleClass(k("header"),a),b.button&&b.button.toggleClass(S+"-icon",!a)},z._storeMouse=function(a){return(this.mouse=d.event.fix(a)).type="mousemove",this},z._bind=function(a,b,c,e,f){if(a&&c&&b.length){var g="."+this._id+(e?"-"+e:"");return d(a).bind((b.split?b:b.join(g+" "))+g,d.proxy(c,f||this)),this}},z._unbind=function(a,b){return a&&d(a).unbind("."+this._id+(b?"-"+b:"")),this},z._trigger=function(a,b,c){var e=new d.Event("tooltip"+a);return e.originalEvent=c&&d.extend({},c)||this.cache.event||F,this.triggering=a,this.tooltip.trigger(e,[this].concat(b||[])),this.triggering=E,!e.isDefaultPrevented()},z._bindEvents=function(a,b,c,e,f,g){var h=c.filter(e).add(e.filter(c)),i=[];h.length&&(d.each(b,function(b,c){var e=d.inArray(c,a);e>-1&&i.push(a.splice(e,1)[0])}),i.length&&(this._bind(h,i,function(a){var b=!!this.rendered&&this.tooltip[0].offsetWidth>0;(b?g:f).call(this,a)}),c=c.not(h),e=e.not(h))),this._bind(c,a,f),this._bind(e,b,g)},z._assignInitialEvents=function(a){function b(a){return this.disabled||this.destroyed?E:(this.cache.event=a&&d.event.fix(a),this.cache.target=a&&d(a.target),clearTimeout(this.timers.show),void(this.timers.show=l.call(this,function(){this.render("object"==typeof a||c.show.ready)},c.prerender?0:c.show.delay)))}var c=this.options,e=c.show.target,f=c.hide.target,g=c.show.event?d.trim(""+c.show.event).split(" "):[],h=c.hide.event?d.trim(""+c.hide.event).split(" "):[];this._bind(this.elements.target,["remove","removeqtip"],function(){this.destroy(!0)},"destroy"),/mouse(over|enter)/i.test(c.show.event)&&!/mouse(out|leave)/i.test(c.hide.event)&&h.push("mouseleave"),this._bind(e,"mousemove",function(a){this._storeMouse(a),this.cache.onTarget=D}),this._bindEvents(g,h,e,f,b,function(){return this.timers?void clearTimeout(this.timers.show):E}),(c.show.ready||c.prerender)&&b.call(this,a)},z._assignEvents=function(){var c=this,e=this.options,f=e.position,g=this.tooltip,h=e.show.target,i=e.hide.target,j=f.container,k=f.viewport,l=d(b),q=d(a),r=e.show.event?d.trim(""+e.show.event).split(" "):[],s=e.hide.event?d.trim(""+e.hide.event).split(" "):[];d.each(e.events,function(a,b){c._bind(g,"toggle"===a?["tooltipshow","tooltiphide"]:["tooltip"+a],b,null,g)}),/mouse(out|leave)/i.test(e.hide.event)&&"window"===e.hide.leave&&this._bind(l,["mouseout","blur"],function(a){/select|option/.test(a.target.nodeName)||a.relatedTarget||this.hide(a)}),e.hide.fixed?i=i.add(g.addClass(Y)):/mouse(over|enter)/i.test(e.show.event)&&this._bind(i,"mouseleave",function(){clearTimeout(this.timers.show)}),(""+e.hide.event).indexOf("unfocus")>-1&&this._bind(j.closest("html"),["mousedown","touchstart"],function(a){var b=d(a.target),c=this.rendered&&!this.tooltip.hasClass(aa)&&this.tooltip[0].offsetWidth>0,e=b.parents(W).filter(this.tooltip[0]).length>0;b[0]===this.target[0]||b[0]===this.tooltip[0]||e||this.target.has(b[0]).length||!c||this.hide(a)}),"number"==typeof e.hide.inactive&&(this._bind(h,"qtip-"+this.id+"-inactive",o,"inactive"),this._bind(i.add(g),y.inactiveEvents,o)),this._bindEvents(r,s,h,i,m,n),this._bind(h.add(g),"mousemove",function(a){if("number"==typeof e.hide.distance){var b=this.cache.origin||{},c=this.options.hide.distance,d=Math.abs;(d(a.pageX-b.pageX)>=c||d(a.pageY-b.pageY)>=c)&&this.hide(a)}this._storeMouse(a)}),"mouse"===f.target&&f.adjust.mouse&&(e.hide.event&&this._bind(h,["mouseenter","mouseleave"],function(a){return this.cache?void(this.cache.onTarget="mouseenter"===a.type):E}),this._bind(l,"mousemove",function(a){this.rendered&&this.cache.onTarget&&!this.tooltip.hasClass(aa)&&this.tooltip[0].offsetWidth>0&&this.reposition(a)})),(f.adjust.resize||k.length)&&this._bind(d.event.special.resize?k:q,"resize",p),f.adjust.scroll&&this._bind(q.add(f.container),"scroll",p)},z._unassignEvents=function(){var c=this.options,e=c.show.target,f=c.hide.target,g=d.grep([this.elements.target[0],this.rendered&&this.tooltip[0],c.position.container[0],c.position.viewport[0],c.position.container.closest("html")[0],a,b],function(a){return"object"==typeof a});e&&e.toArray&&(g=g.concat(e.toArray())),f&&f.toArray&&(g=g.concat(f.toArray())),this._unbind(g)._unbind(g,"destroy")._unbind(g,"inactive")},d(function(){q(W,["mouseenter","mouseleave"],function(a){var b="mouseenter"===a.type,c=d(a.currentTarget),e=d(a.relatedTarget||a.target),f=this.options;b?(this.focus(a),c.hasClass(Y)&&!c.hasClass(aa)&&clearTimeout(this.timers.hide)):"mouse"===f.position.target&&f.position.adjust.mouse&&f.hide.event&&f.show.target&&!e.closest(f.show.target[0]).length&&this.hide(a),c.toggleClass(_,b)}),q("["+U+"]",X,o)}),y=d.fn.qtip=function(a,b,e){var f=(""+a).toLowerCase(),g=F,i=d.makeArray(arguments).slice(1),j=i[i.length-1],k=this[0]?d.data(this[0],S):F;return!arguments.length&&k||"api"===f?k:"string"==typeof a?(this.each(function(){var a=d.data(this,S);if(!a)return D;if(j&&j.timeStamp&&(a.cache.event=j),!b||"option"!==f&&"options"!==f)a[f]&&a[f].apply(a,i);else{if(e===c&&!d.isPlainObject(b))return g=a.get(b),E;a.set(b,e)}}),g!==F?g:this):"object"!=typeof a&&arguments.length?void 0:(k=h(d.extend(D,{},a)),this.each(function(a){var b,c;return c=d.isArray(k.id)?k.id[a]:k.id,c=!c||c===E||c.length<1||y.api[c]?y.nextid++:c,b=r(d(this),c,k),b===E?D:(y.api[c]=b,d.each(R,function(){"initialize"===this.initialize&&this(b)}),void b._assignInitialEvents(j))}))},d.qtip=e,y.api={},d.each({attr:function(a,b){if(this.length){var c=this[0],e="title",f=d.data(c,"qtip");if(a===e&&f&&f.options&&"object"==typeof f&&"object"==typeof f.options&&f.options.suppress)return arguments.length<2?d.attr(c,ca):(f&&f.options.content.attr===e&&f.cache.attr&&f.set("content.text",b),this.attr(ca,b))}return d.fn["attr"+ba].apply(this,arguments)},clone:function(a){var b=d.fn["clone"+ba].apply(this,arguments);return a||b.filter("["+ca+"]").attr("title",function(){return d.attr(this,ca)}).removeAttr(ca),b}},function(a,b){if(!b||d.fn[a+ba])return D;var c=d.fn[a+ba]=d.fn[a];d.fn[a]=function(){return b.apply(this,arguments)||c.apply(this,arguments)}}),d.ui||(d["cleanData"+ba]=d.cleanData,d.cleanData=function(a){for(var b,c=0;(b=d(a[c])).length;c++)if(b.attr(T))try{b.triggerHandler("removeqtip")}catch(e){}d["cleanData"+ba].apply(this,arguments)}),y.version="3.0.3-5-g",y.nextid=0,y.inactiveEvents=X,y.zindex=15e3,y.defaults={prerender:E,id:E,overwrite:D,suppress:D,content:{text:D,attr:"title",title:E,button:E},position:{my:"top left",at:"bottom right",target:E,container:E,viewport:E,adjust:{x:0,y:0,mouse:D,scroll:D,resize:D,method:"flipinvert flipinvert"},effect:function(a,b){d(this).animate(b,{duration:200,queue:E})}},show:{target:E,event:"mouseenter",effect:D,delay:90,solo:E,ready:E,autofocus:E},hide:{target:E,event:"mouseleave",effect:D,delay:0,fixed:E,inactive:E,leave:"window",distance:E},style:{classes:"",widget:E,width:E,height:E,def:D},events:{render:F,move:F,show:F,hide:F,toggle:F,visible:F,hidden:F,focus:F,blur:F}};var ha,ia,ja,ka,la,ma="margin",na="border",oa="color",pa="background-color",qa="transparent",ra=" !important",sa=!!b.createElement("canvas").getContext,ta=/rgba?\(0, 0, 0(, 0)?\)|transparent|#123456/i,ua={},va=["Webkit","O","Moz","ms"];sa?(ka=a.devicePixelRatio||1,la=function(){var a=b.createElement("canvas").getContext("2d");return a.backingStorePixelRatio||a.webkitBackingStorePixelRatio||a.mozBackingStorePixelRatio||a.msBackingStorePixelRatio||a.oBackingStorePixelRatio||1}(),ja=ka/la):ia=function(a,b,c){return"<qtipvml:"+a+' xmlns="urn:schemas-microsoft.com:vml" class="qtip-vml" '+(b||"")+' style="behavior: url(#default#VML); '+(c||"")+'" />'},d.extend(v.prototype,{init:function(a){var b,c;c=this.element=a.elements.tip=d("<div />",{"class":S+"-tip"}).prependTo(a.tooltip),sa?(b=d("<canvas />").appendTo(this.element)[0].getContext("2d"),b.lineJoin="miter",b.miterLimit=1e5,b.save()):(b=ia("shape",'coordorigin="0,0"',"position:absolute;"),this.element.html(b+b),a._bind(d("*",c).add(c),["click","mousedown"],function(a){a.stopPropagation()},this._ns)),a._bind(a.tooltip,"tooltipmove",this.reposition,this._ns,this),this.create()},_swapDimensions:function(){this.size[0]=this.options.height,this.size[1]=this.options.width},_resetDimensions:function(){this.size[0]=this.options.width,this.size[1]=this.options.height},_useTitle:function(a){var b=this.qtip.elements.titlebar;return b&&(a.y===K||a.y===O&&this.element.position().top+this.size[1]/2+this.options.offset<b.outerHeight(D))},_parseCorner:function(a){var b=this.qtip.options.position.my;return a===E||b===E?a=E:a===D?a=new A(b.string()):a.string||(a=new A(a),a.fixed=D),a},_parseWidth:function(a,b,c){var d=this.qtip.elements,e=na+s(b)+"Width";return(c?u(c,e):u(d.content,e)||u(this._useTitle(a)&&d.titlebar||d.content,e)||u(d.tooltip,e))||0},_parseRadius:function(a){var b=this.qtip.elements,c=na+s(a.y)+s(a.x)+"Radius";return da.ie<9?0:u(this._useTitle(a)&&b.titlebar||b.content,c)||u(b.tooltip,c)||0},_invalidColour:function(a,b,c){var d=a.css(b);return!d||c&&d===a.css(c)||ta.test(d)?E:d},_parseColours:function(a){var b=this.qtip.elements,c=this.element.css("cssText",""),e=na+s(a[a.precedance])+s(oa),f=this._useTitle(a)&&b.titlebar||b.content,g=this._invalidColour,h=[];return h[0]=g(c,pa)||g(f,pa)||g(b.content,pa)||g(b.tooltip,pa)||c.css(pa),h[1]=g(c,e,oa)||g(f,e,oa)||g(b.content,e,oa)||g(b.tooltip,e,oa)||b.tooltip.css(e),d("*",c).add(c).css("cssText",pa+":"+qa+ra+";"+na+":0"+ra+";"),h},_calculateSize:function(a){var b,c,d,e=a.precedance===H,f=this.options.width,g=this.options.height,h="c"===a.abbrev(),i=(e?f:g)*(h?.5:1),j=Math.pow,k=Math.round,l=Math.sqrt(j(i,2)+j(g,2)),m=[this.border/i*l,this.border/g*l];return m[2]=Math.sqrt(j(m[0],2)-j(this.border,2)),m[3]=Math.sqrt(j(m[1],2)-j(this.border,2)),b=l+m[2]+m[3]+(h?0:m[0]),c=b/l,d=[k(c*f),k(c*g)],e?d:d.reverse()},_calculateTip:function(a,b,c){c=c||1,b=b||this.size;var d=b[0]*c,e=b[1]*c,f=Math.ceil(d/2),g=Math.ceil(e/2),h={br:[0,0,d,e,d,0],bl:[0,0,d,0,0,e],tr:[0,e,d,0,d,e],tl:[0,0,0,e,d,e],tc:[0,e,f,0,d,e],bc:[0,0,d,0,f,e],rc:[0,0,d,g,0,e],lc:[d,0,d,e,0,g]};return h.lt=h.br,h.rt=h.bl,h.lb=h.tr,h.rb=h.tl,h[a.abbrev()]},_drawCoords:function(a,b){a.beginPath(),a.moveTo(b[0],b[1]),a.lineTo(b[2],b[3]),a.lineTo(b[4],b[5]),a.closePath()},create:function(){var a=this.corner=(sa||da.ie)&&this._parseCorner(this.options.corner);return this.enabled=!!this.corner&&"c"!==this.corner.abbrev(),this.enabled&&(this.qtip.cache.corner=a.clone(),this.update()),this.element.toggle(this.enabled),this.corner},update:function(b,c){if(!this.enabled)return this;var e,f,g,h,i,j,k,l,m=this.qtip.elements,n=this.element,o=n.children(),p=this.options,q=this.size,r=p.mimic,s=Math.round;b||(b=this.qtip.cache.corner||this.corner),r===E?r=b:(r=new A(r),r.precedance=b.precedance,"inherit"===r.x?r.x=b.x:"inherit"===r.y?r.y=b.y:r.x===r.y&&(r[b.precedance]=b[b.precedance])),f=r.precedance,b.precedance===G?this._swapDimensions():this._resetDimensions(),e=this.color=this._parseColours(b),e[1]!==qa?(l=this.border=this._parseWidth(b,b[b.precedance]),p.border&&l<1&&!ta.test(e[1])&&(e[0]=e[1]),this.border=l=p.border!==D?p.border:l):this.border=l=0,k=this.size=this._calculateSize(b),n.css({width:k[0],height:k[1],lineHeight:k[1]+"px"}),j=b.precedance===H?[s(r.x===L?l:r.x===N?k[0]-q[0]-l:(k[0]-q[0])/2),s(r.y===K?k[1]-q[1]:0)]:[s(r.x===L?k[0]-q[0]:0),s(r.y===K?l:r.y===M?k[1]-q[1]-l:(k[1]-q[1])/2)],sa?(g=o[0].getContext("2d"),g.restore(),g.save(),g.clearRect(0,0,6e3,6e3),h=this._calculateTip(r,q,ja),i=this._calculateTip(r,this.size,ja),o.attr(I,k[0]*ja).attr(J,k[1]*ja),o.css(I,k[0]).css(J,k[1]),this._drawCoords(g,i),g.fillStyle=e[1],g.fill(),g.translate(j[0]*ja,j[1]*ja),this._drawCoords(g,h),g.fillStyle=e[0],g.fill()):(h=this._calculateTip(r),h="m"+h[0]+","+h[1]+" l"+h[2]+","+h[3]+" "+h[4]+","+h[5]+" xe",j[2]=l&&/^(r|b)/i.test(b.string())?8===da.ie?2:1:0,o.css({coordsize:k[0]+l+" "+k[1]+l,antialias:""+(r.string().indexOf(O)>-1),left:j[0]-j[2]*Number(f===G),top:j[1]-j[2]*Number(f===H),width:k[0]+l,height:k[1]+l}).each(function(a){var b=d(this);b[b.prop?"prop":"attr"]({coordsize:k[0]+l+" "+k[1]+l,path:h,fillcolor:e[0],filled:!!a,stroked:!a}).toggle(!(!l&&!a)),!a&&b.html(ia("stroke",'weight="'+2*l+'px" color="'+e[1]+'" miterlimit="1000" joinstyle="miter"'))})),a.opera&&setTimeout(function(){m.tip.css({display:"inline-block",visibility:"visible"})},1),c!==E&&this.calculate(b,k)},calculate:function(a,b){if(!this.enabled)return E;
+var c,e,f=this,g=this.qtip.elements,h=this.element,i=this.options.offset,j={};return a=a||this.corner,c=a.precedance,b=b||this._calculateSize(a),e=[a.x,a.y],c===G&&e.reverse(),d.each(e,function(d,e){var h,k,l;e===O?(h=c===H?L:K,j[h]="50%",j[ma+"-"+h]=-Math.round(b[c===H?0:1]/2)+i):(h=f._parseWidth(a,e,g.tooltip),k=f._parseWidth(a,e,g.content),l=f._parseRadius(a),j[e]=Math.max(-f.border,d?k:i+(l>h?l:-h)))}),j[a[c]]-=b[c===G?0:1],h.css({margin:"",top:"",bottom:"",left:"",right:""}).css(j),j},reposition:function(a,b,d){function e(a,b,c,d,e){a===Q&&j.precedance===b&&k[d]&&j[c]!==O?j.precedance=j.precedance===G?H:G:a!==Q&&k[d]&&(j[b]=j[b]===O?k[d]>0?d:e:j[b]===d?e:d)}function f(a,b,e){j[a]===O?p[ma+"-"+b]=o[a]=g[ma+"-"+b]-k[b]:(h=g[e]!==c?[k[b],-g[b]]:[-k[b],g[b]],(o[a]=Math.max(h[0],h[1]))>h[0]&&(d[b]-=k[b],o[b]=E),p[g[e]!==c?e:b]=o[a])}if(this.enabled){var g,h,i=b.cache,j=this.corner.clone(),k=d.adjusted,l=b.options.position.adjust.method.split(" "),m=l[0],n=l[1]||l[0],o={left:E,top:E,x:0,y:0},p={};this.corner.fixed!==D&&(e(m,G,H,L,N),e(n,H,G,K,M),j.string()===i.corner.string()&&i.cornerTop===k.top&&i.cornerLeft===k.left||this.update(j,E)),g=this.calculate(j),g.right!==c&&(g.left=-g.right),g.bottom!==c&&(g.top=-g.bottom),g.user=this.offset,o.left=m===Q&&!!k.left,o.left&&f(G,L,N),o.top=n===Q&&!!k.top,o.top&&f(H,K,M),this.element.css(p).toggle(!(o.x&&o.y||j.x===O&&o.y||j.y===O&&o.x)),d.left-=g.left.charAt?g.user:m!==Q||o.top||!o.left&&!o.top?g.left+this.border:0,d.top-=g.top.charAt?g.user:n!==Q||o.left||!o.left&&!o.top?g.top+this.border:0,i.cornerLeft=k.left,i.cornerTop=k.top,i.corner=j.clone()}},destroy:function(){this.qtip._unbind(this.qtip.tooltip,this._ns),this.qtip.elements.tip&&this.qtip.elements.tip.find("*").remove().end().remove()}}),ha=R.tip=function(a){return new v(a,a.options.style.tip)},ha.initialize="render",ha.sanitize=function(a){if(a.style&&"tip"in a.style){var b=a.style.tip;"object"!=typeof b&&(b=a.style.tip={corner:b}),/string|boolean/i.test(typeof b.corner)||(b.corner=D)}},B.tip={"^position.my|style.tip.(corner|mimic|border)$":function(){this.create(),this.qtip.reposition()},"^style.tip.(height|width)$":function(a){this.size=[a.width,a.height],this.update(),this.qtip.reposition()},"^content.title|style.(classes|widget)$":function(){this.update()}},d.extend(D,y.defaults,{style:{tip:{corner:D,mimic:E,width:6,height:6,border:D,offset:0}}});var wa,xa,ya="qtip-modal",za="."+ya;xa=function(){function a(a){if(d.expr[":"].focusable)return d.expr[":"].focusable;var b,c,e,f=!isNaN(d.attr(a,"tabindex")),g=a.nodeName&&a.nodeName.toLowerCase();return"area"===g?(b=a.parentNode,c=b.name,!(!a.href||!c||"map"!==b.nodeName.toLowerCase())&&(e=d("img[usemap=#"+c+"]")[0],!!e&&e.is(":visible"))):/input|select|textarea|button|object/.test(g)?!a.disabled:"a"===g?a.href||f:f}function c(a){j.length<1&&a.length?a.not("body").blur():j.first().focus()}function e(a){if(h.is(":visible")){var b,e=d(a.target),g=f.tooltip,i=e.closest(W);b=i.length<1?E:parseInt(i[0].style.zIndex,10)>parseInt(g[0].style.zIndex,10),b||e.closest(W)[0]===g[0]||c(e)}}var f,g,h,i=this,j={};d.extend(i,{init:function(){return h=i.elem=d("<div />",{id:"qtip-overlay",html:"<div></div>",mousedown:function(){return E}}).hide(),d(b.body).bind("focusin"+za,e),d(b).bind("keydown"+za,function(a){f&&f.options.show.modal.escape&&27===a.keyCode&&f.hide(a)}),h.bind("click"+za,function(a){f&&f.options.show.modal.blur&&f.hide(a)}),i},update:function(b){f=b,j=b.options.show.modal.stealfocus!==E?b.tooltip.find("*").filter(function(){return a(this)}):[]},toggle:function(a,e,j){var k=a.tooltip,l=a.options.show.modal,m=l.effect,n=e?"show":"hide",o=h.is(":visible"),p=d(za).filter(":visible:not(:animated)").not(k);return i.update(a),e&&l.stealfocus!==E&&c(d(":focus")),h.toggleClass("blurs",l.blur),e&&h.appendTo(b.body),h.is(":animated")&&o===e&&g!==E||!e&&p.length?i:(h.stop(D,E),d.isFunction(m)?m.call(h,e):m===E?h[n]():h.fadeTo(parseInt(j,10)||90,e?1:0,function(){e||h.hide()}),e||h.queue(function(a){h.css({left:"",top:""}),d(za).length||h.detach(),a()}),g=e,f.destroyed&&(f=F),i)}}),i.init()},xa=new xa,d.extend(w.prototype,{init:function(a){var b=a.tooltip;return this.options.on?(a.elements.overlay=xa.elem,b.addClass(ya).css("z-index",y.modal_zindex+d(za).length),a._bind(b,["tooltipshow","tooltiphide"],function(a,c,e){var f=a.originalEvent;if(a.target===b[0])if(f&&"tooltiphide"===a.type&&/mouse(leave|enter)/.test(f.type)&&d(f.relatedTarget).closest(xa.elem[0]).length)try{a.preventDefault()}catch(g){}else(!f||f&&"tooltipsolo"!==f.type)&&this.toggle(a,"tooltipshow"===a.type,e)},this._ns,this),a._bind(b,"tooltipfocus",function(a,c){if(!a.isDefaultPrevented()&&a.target===b[0]){var e=d(za),f=y.modal_zindex+e.length,g=parseInt(b[0].style.zIndex,10);xa.elem[0].style.zIndex=f-1,e.each(function(){this.style.zIndex>g&&(this.style.zIndex-=1)}),e.filter("."+$).qtip("blur",a.originalEvent),b.addClass($)[0].style.zIndex=f,xa.update(c);try{a.preventDefault()}catch(h){}}},this._ns,this),void a._bind(b,"tooltiphide",function(a){a.target===b[0]&&d(za).filter(":visible").not(b).last().qtip("focus",a)},this._ns,this)):this},toggle:function(a,b,c){return a&&a.isDefaultPrevented()?this:void xa.toggle(this.qtip,!!b,c)},destroy:function(){this.qtip.tooltip.removeClass(ya),this.qtip._unbind(this.qtip.tooltip,this._ns),xa.toggle(this.qtip,E),delete this.qtip.elements.overlay}}),wa=R.modal=function(a){return new w(a,a.options.show.modal)},wa.sanitize=function(a){a.show&&("object"!=typeof a.show.modal?a.show.modal={on:!!a.show.modal}:"undefined"==typeof a.show.modal.on&&(a.show.modal.on=D))},y.modal_zindex=y.zindex-200,wa.initialize="render",B.modal={"^show.modal.(on|blur)$":function(){this.destroy(),this.init(),this.qtip.elems.overlay.toggle(this.qtip.tooltip[0].offsetWidth>0)}},d.extend(D,y.defaults,{show:{modal:{on:E,effect:D,blur:D,stealfocus:D,escape:D}}}),R.viewport=function(c,d,e,f,g,h,i){function j(a,b,c,e,f,g,h,i,j){var k=d[f],s=u[a],t=v[a],w=c===Q,x=s===f?j:s===g?-j:-j/2,y=t===f?i:t===g?-i:-i/2,z=q[f]+r[f]-(n?0:m[f]),A=z-k,B=k+j-(h===I?o:p)-z,C=x-(u.precedance===a||s===u[b]?y:0)-(t===O?i/2:0);return w?(C=(s===f?1:-1)*x,d[f]+=A>0?A:B>0?-B:0,d[f]=Math.max(-m[f]+r[f],k-C,Math.min(Math.max(-m[f]+r[f]+(h===I?o:p),k+C),d[f],"center"===s?k-x:1e9))):(e*=c===P?2:0,A>0&&(s!==f||B>0)?(d[f]-=C+e,l.invert(a,f)):B>0&&(s!==g||A>0)&&(d[f]-=(s===O?-C:C)+e,l.invert(a,g)),d[f]<q[f]&&-d[f]>B&&(d[f]=k,l=u.clone())),d[f]-k}var k,l,m,n,o,p,q,r,s=e.target,t=c.elements.tooltip,u=e.my,v=e.at,w=e.adjust,x=w.method.split(" "),y=x[0],z=x[1]||x[0],A=e.viewport,B=e.container,C={left:0,top:0};return A.jquery&&s[0]!==a&&s[0]!==b.body&&"none"!==w.method?(m=B.offset()||C,n="static"===B.css("position"),k="fixed"===t.css("position"),o=A[0]===a?A.width():A.outerWidth(E),p=A[0]===a?A.height():A.outerHeight(E),q={left:k?0:A.scrollLeft(),top:k?0:A.scrollTop()},r=A.offset()||C,"shift"===y&&"shift"===z||(l=u.clone()),C={left:"none"!==y?j(G,H,y,w.x,L,N,I,f,h):0,top:"none"!==z?j(H,G,z,w.y,K,M,J,g,i):0,my:l}):C},R.polys={polygon:function(a,b){var c,d,e,f={width:0,height:0,position:{top:1e10,right:0,bottom:0,left:1e10},adjustable:E},g=0,h=[],i=1,j=1,k=0,l=0;for(g=a.length;g--;)c=[parseInt(a[--g],10),parseInt(a[g+1],10)],c[0]>f.position.right&&(f.position.right=c[0]),c[0]<f.position.left&&(f.position.left=c[0]),c[1]>f.position.bottom&&(f.position.bottom=c[1]),c[1]<f.position.top&&(f.position.top=c[1]),h.push(c);if(d=f.width=Math.abs(f.position.right-f.position.left),e=f.height=Math.abs(f.position.bottom-f.position.top),"c"===b.abbrev())f.position={left:f.position.left+f.width/2,top:f.position.top+f.height/2};else{for(;d>0&&e>0&&i>0&&j>0;)for(d=Math.floor(d/2),e=Math.floor(e/2),b.x===L?i=d:b.x===N?i=f.width-d:i+=Math.floor(d/2),b.y===K?j=e:b.y===M?j=f.height-e:j+=Math.floor(e/2),g=h.length;g--&&!(h.length<2);)k=h[g][0]-f.position.left,l=h[g][1]-f.position.top,(b.x===L&&k>=i||b.x===N&&k<=i||b.x===O&&(k<i||k>f.width-i)||b.y===K&&l>=j||b.y===M&&l<=j||b.y===O&&(l<j||l>f.height-j))&&h.splice(g,1);f.position={left:h[0][0],top:h[0][1]}}return f},rect:function(a,b,c,d){return{width:Math.abs(c-a),height:Math.abs(d-b),position:{left:Math.min(a,c),top:Math.min(b,d)}}},_angles:{tc:1.5,tr:7/4,tl:5/4,bc:.5,br:.25,bl:.75,rc:2,lc:1,c:0},ellipse:function(a,b,c,d,e){var f=R.polys._angles[e.abbrev()],g=0===f?0:c*Math.cos(f*Math.PI),h=d*Math.sin(f*Math.PI);return{width:2*c-Math.abs(g),height:2*d-Math.abs(h),position:{left:a+g,top:b+h},adjustable:E}},circle:function(a,b,c,d){return R.polys.ellipse(a,b,c,c,d)}},R.svg=function(a,c,e){for(var f,g,h,i,j,k,l,m,n,o=c[0],p=d(o.ownerSVGElement),q=o.ownerDocument,r=(parseInt(c.css("stroke-width"),10)||0)/2;!o.getBBox;)o=o.parentNode;if(!o.getBBox||!o.parentNode)return E;switch(o.nodeName){case"ellipse":case"circle":m=R.polys.ellipse(o.cx.baseVal.value,o.cy.baseVal.value,(o.rx||o.r).baseVal.value+r,(o.ry||o.r).baseVal.value+r,e);break;case"line":case"polygon":case"polyline":for(l=o.points||[{x:o.x1.baseVal.value,y:o.y1.baseVal.value},{x:o.x2.baseVal.value,y:o.y2.baseVal.value}],m=[],k=-1,i=l.numberOfItems||l.length;++k<i;)j=l.getItem?l.getItem(k):l[k],m.push.apply(m,[j.x,j.y]);m=R.polys.polygon(m,e);break;default:m=o.getBBox(),m={width:m.width,height:m.height,position:{left:m.x,top:m.y}}}return n=m.position,p=p[0],p.createSVGPoint&&(g=o.getScreenCTM(),l=p.createSVGPoint(),l.x=n.left,l.y=n.top,h=l.matrixTransform(g),n.left=h.x,n.top=h.y),q!==b&&"mouse"!==a.position.target&&(f=d((q.defaultView||q.parentWindow).frameElement).offset(),f&&(n.left+=f.left,n.top+=f.top)),q=d(q),n.left+=q.scrollLeft(),n.top+=q.scrollTop(),m},R.imagemap=function(a,b,c){b.jquery||(b=d(b));var e,f,g,h,i,j=(b.attr("shape")||"rect").toLowerCase().replace("poly","polygon"),k=d('img[usemap="#'+b.parent("map").attr("name")+'"]'),l=d.trim(b.attr("coords")),m=l.replace(/,$/,"").split(",");if(!k.length)return E;if("polygon"===j)h=R.polys.polygon(m,c);else{if(!R.polys[j])return E;for(g=-1,i=m.length,f=[];++g<i;)f.push(parseInt(m[g],10));h=R.polys[j].apply(this,f.concat(c))}return e=k.offset(),e.left+=Math.ceil((k.outerWidth(E)-k.width())/2),e.top+=Math.ceil((k.outerHeight(E)-k.height())/2),h.position.left+=e.left,h.position.top+=e.top,h};var Aa,Ba='<iframe class="qtip-bgiframe" frameborder="0" tabindex="-1" src="javascript:\'\';"  style="display:block; position:absolute; z-index:-1; filter:alpha(opacity=0); -ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";"></iframe>';d.extend(x.prototype,{_scroll:function(){var b=this.qtip.elements.overlay;b&&(b[0].style.top=d(a).scrollTop()+"px")},init:function(c){var e=c.tooltip;d("select, object").length<1&&(this.bgiframe=c.elements.bgiframe=d(Ba).appendTo(e),c._bind(e,"tooltipmove",this.adjustBGIFrame,this._ns,this)),this.redrawContainer=d("<div/>",{id:S+"-rcontainer"}).appendTo(b.body),c.elements.overlay&&c.elements.overlay.addClass("qtipmodal-ie6fix")&&(c._bind(a,["scroll","resize"],this._scroll,this._ns,this),c._bind(e,["tooltipshow"],this._scroll,this._ns,this)),this.redraw()},adjustBGIFrame:function(){var a,b,c=this.qtip.tooltip,d={height:c.outerHeight(E),width:c.outerWidth(E)},e=this.qtip.plugins.tip,f=this.qtip.elements.tip;b=parseInt(c.css("borderLeftWidth"),10)||0,b={left:-b,top:-b},e&&f&&(a="x"===e.corner.precedance?[I,L]:[J,K],b[a[1]]-=f[a[0]]()),this.bgiframe.css(b).css(d)},redraw:function(){if(this.qtip.rendered<1||this.drawing)return this;var a,b,c,d,e=this.qtip.tooltip,f=this.qtip.options.style,g=this.qtip.options.position.container;return this.qtip.drawing=1,f.height&&e.css(J,f.height),f.width?e.css(I,f.width):(e.css(I,"").appendTo(this.redrawContainer),b=e.width(),b%2<1&&(b+=1),c=e.css("maxWidth")||"",d=e.css("minWidth")||"",a=(c+d).indexOf("%")>-1?g.width()/100:0,c=(c.indexOf("%")>-1?a:1*parseInt(c,10))||b,d=(d.indexOf("%")>-1?a:1*parseInt(d,10))||0,b=c+d?Math.min(Math.max(b,d),c):b,e.css(I,Math.round(b)).appendTo(g)),this.drawing=0,this},destroy:function(){this.bgiframe&&this.bgiframe.remove(),this.qtip._unbind([a,this.qtip.tooltip],this._ns)}}),Aa=R.ie6=function(a){return 6===da.ie?new x(a):E},Aa.initialize="render",B.ie6={"^content|style$":function(){this.redraw()}}})}(window,document);
+//# sourceMappingURL=jquery.qtip.min.map
 
 /***/ }),
 /* 160 */
@@ -35604,7 +32061,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(89), __webpack_require__(145), __webpack_require__(218), __webpack_require__(12), __webpack_require__(475), __webpack_require__(476), __webpack_require__(116), __webpack_require__(146), __webpack_require__(67)], __WEBPACK_AMD_DEFINE_RESULT__ = (function ($, _, Handlebars, Q, login, country, Logger, config, BrowserFeatures) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(115), __webpack_require__(145), __webpack_require__(218), __webpack_require__(12), __webpack_require__(475), __webpack_require__(476), __webpack_require__(116), __webpack_require__(146), __webpack_require__(68)], __WEBPACK_AMD_DEFINE_RESULT__ = (function ($, _, Handlebars, Q, login, country, Logger, config, BrowserFeatures) {
 
   var STORAGE_KEY = 'osw.languages';
 
@@ -35816,6 +32273,516 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 /* 161 */
 /***/ (function(module, exports, __webpack_require__) {
 
+// getting tag from 19.1.3.6 Object.prototype.toString()
+var cof = __webpack_require__(86);
+var TAG = __webpack_require__(22)('toStringTag');
+// ES3 wrong here
+var ARG = cof(function () { return arguments; }()) == 'Arguments';
+
+// fallback for IE11 Script Access Denied error
+var tryGet = function (it, key) {
+  try {
+    return it[key];
+  } catch (e) { /* empty */ }
+};
+
+module.exports = function (it) {
+  var O, T, B;
+  return it === undefined ? 'Undefined' : it === null ? 'Null'
+    // @@toStringTag case
+    : typeof (T = tryGet(O = Object(it), TAG)) == 'string' ? T
+    // builtinTag case
+    : ARG ? cof(O)
+    // ES3 arguments fallback
+    : (B = cof(O)) == 'Object' && typeof O.callee == 'function' ? 'Arguments' : B;
+};
+
+
+/***/ }),
+/* 162 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(89), __webpack_require__(163), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginModel, CookieUtil, Enums) {
+
+  var _ = Okta._;
+
+  return BaseLoginModel.extend({
+
+    props: function props() {
+      var cookieUsername = CookieUtil.getCookieUsername(),
+          properties = this.getUsernameAndRemember(cookieUsername);
+
+      var props = {
+        username: {
+          type: 'string',
+          validate: function validate(value) {
+            if (_.isEmpty(value)) {
+              return Okta.loc('error.username.required', 'login');
+            }
+          },
+          value: properties.username
+        },
+        lastUsername: ['string', false, cookieUsername],
+        context: ['object', false],
+        remember: ['boolean', true, properties.remember],
+        multiOptionalFactorEnroll: ['boolean', true]
+      };
+      if (!(this.settings && this.settings.get('features.passwordlessAuth'))) {
+        props.password = {
+          type: 'string',
+          validate: function validate(value) {
+            if (_.isEmpty(value)) {
+              return Okta.loc('error.password.required', 'login');
+            }
+          }
+        };
+      }
+      return props;
+    },
+
+    getUsernameAndRemember: function getUsernameAndRemember(cookieUsername) {
+      var settingsUsername = this.settings && this.settings.get('username'),
+          rememberMeEnabled = this.settings && this.settings.get('features.rememberMe'),
+          remember = false,
+          username;
+
+      if (settingsUsername) {
+        username = settingsUsername;
+        remember = rememberMeEnabled && username === cookieUsername;
+      } else if (rememberMeEnabled && cookieUsername) {
+        // Only respect the cookie if the feature is enabled.
+        // Allows us to force prompting when necessary, e.g. SAML ForceAuthn
+        username = cookieUsername;
+        remember = true;
+      }
+
+      return {
+        username: username,
+        remember: remember
+      };
+    },
+
+    constructor: function constructor(options) {
+      this.settings = options && options.settings;
+      this.appState = options && options.appState;
+      Okta.Model.apply(this, arguments);
+      this.listenTo(this, 'change:username', function (model, username) {
+        this.set({ remember: username === this.get('lastUsername') });
+      });
+    },
+    parse: function parse(options) {
+      return _.omit(options, ['settings', 'appState']);
+    },
+
+    save: function save() {
+      var username = this.settings.transformUsername(this.get('username'), Enums.PRIMARY_AUTH),
+          remember = this.get('remember'),
+          lastUsername = this.get('lastUsername');
+
+      this.setUsernameCookie(username, remember, lastUsername);
+
+      //the 'save' event here is triggered and used in the BaseLoginController
+      //to disable the primary button on the primary auth form
+      this.trigger('save');
+
+      this.appState.trigger('loading', true);
+
+      var signInArgs = this.getSignInArgs(username);
+
+      var primaryAuthPromise;
+
+      if (this.appState.get('isUnauthenticated')) {
+        var authClient = this.appState.settings.authClient;
+        // bootstrapped with stateToken
+        if (this.appState.get('isIdxStateToken')) {
+          // if its an idx stateToken, we send the parameter as identifier to login API
+          primaryAuthPromise = this.doTransaction(function (transaction) {
+            return this.doPrimaryAuth(authClient, signInArgs, transaction.login);
+          });
+        } else {
+          primaryAuthPromise = this.doTransaction(function (transaction) {
+            return this.doPrimaryAuth(authClient, signInArgs, transaction.authenticate);
+          });
+        }
+      } else {
+        //normal username/password flow without stateToken
+        primaryAuthPromise = this.startTransaction(function (authClient) {
+          return this.doPrimaryAuth(authClient, signInArgs, _.bind(authClient.signIn, authClient));
+        });
+      }
+
+      return primaryAuthPromise.fail(_.bind(function () {
+        // Specific event handled by the Header for the case where the security image is not
+        // enabled and we want to show a spinner. (Triggered only here and handled only by Header).
+        this.appState.trigger('removeLoading');
+        CookieUtil.removeUsernameCookie();
+      }, this)).fin(_.bind(function () {
+        this.appState.trigger('loading', false);
+      }, this));
+    },
+
+    getSignInArgs: function getSignInArgs(username) {
+      var multiOptionalFactorEnroll = this.get('multiOptionalFactorEnroll');
+      var signInArgs = {};
+
+      if (!this.settings.get('features.passwordlessAuth')) {
+        signInArgs.password = this.get('password');
+      }
+
+      // if its an idx stateToken, we send the parameter as identifier to login API
+      if (this.appState.get('isIdxStateToken')) {
+        signInArgs.identifier = username;
+      } else {
+        //only post options param for non-idx flows
+        signInArgs.username = username;
+        signInArgs.options = {
+          warnBeforePasswordExpired: true,
+          multiOptionalFactorEnroll: multiOptionalFactorEnroll
+        };
+      }
+      return signInArgs;
+    },
+
+    setUsernameCookie: function setUsernameCookie(username, remember, lastUsername) {
+      // Do not modify the cookie when feature is disabled, relevant for SAML ForceAuthn prompts
+      if (this.settings.get('features.rememberMe')) {
+        // Only delete the cookie if its owner says so. This allows other
+        // users to log in on a one-off basis.
+        if (!remember && lastUsername === username) {
+          CookieUtil.removeUsernameCookie();
+        } else if (remember) {
+          CookieUtil.setUsernameCookie(username);
+        }
+      }
+    },
+
+    doPrimaryAuth: function doPrimaryAuth(authClient, signInArgs, func) {
+      var deviceFingerprintEnabled = this.settings.get('features.deviceFingerprinting'),
+          typingPatternEnabled = this.settings.get('features.trackTypingPattern');
+
+      // Add the custom header for fingerprint, typing pattern if needed, and then remove it afterwards
+      // Since we only need to send it for primary auth
+      if (deviceFingerprintEnabled) {
+        authClient.options.headers['X-Device-Fingerprint'] = this.appState.get('deviceFingerprint');
+      }
+      if (typingPatternEnabled) {
+        authClient.options.headers['X-Typing-Pattern'] = this.appState.get('typingPattern');
+      }
+      var self = this;
+      return func(signInArgs).fin(function () {
+        if (deviceFingerprintEnabled) {
+          delete authClient.options.headers['X-Device-Fingerprint'];
+          self.appState.unset('deviceFingerprint'); //Fingerprint can only be used once
+        }
+        if (typingPatternEnabled) {
+          delete authClient.options.headers['X-Typing-Pattern'];
+          self.appState.unset('typingPattern');
+        }
+      });
+    }
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 163 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
+  var Cookie = Okta.internal.util.Cookie;
+  var LAST_USERNAME_COOKIE_NAME = 'ln';
+  var DAYS_SAVE_REMEMBER = 365;
+
+  var fn = {};
+
+  fn.getCookieUsername = function () {
+    return Cookie.getCookie(LAST_USERNAME_COOKIE_NAME);
+  };
+
+  fn.setUsernameCookie = function (username) {
+    Cookie.setCookie(LAST_USERNAME_COOKIE_NAME, username, {
+      expires: DAYS_SAVE_REMEMBER,
+      path: '/'
+    });
+  };
+
+  fn.removeUsernameCookie = function () {
+    Cookie.removeCookie(LAST_USERNAME_COOKIE_NAME, { path: '/' });
+  };
+
+  return fn;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 164 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+/* eslint complexity:[2, 9] */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
+  var fn = {};
+
+  fn.getU2fEnrollErrorMessageKeyByCode = function (errorCode) {
+    switch (errorCode) {
+      default:
+      case 1:
+        return 'u2f.error.other';
+      case 2:
+      case 3:
+        return 'u2f.error.badRequest';
+      case 4:
+        return 'u2f.error.unsupported';
+      case 5:
+        return 'u2f.error.timeout';
+    }
+  };
+
+  fn.getU2fVerifyErrorMessageKeyByCode = function (errorCode, isOneFactor) {
+    switch (errorCode) {
+      case 1:
+        // OTHER_ERROR
+        return isOneFactor ? 'u2f.error.other.oneFactor' : 'u2f.error.other';
+      case 2: // BAD_REQUEST
+      case 3:
+        // CONFIGURATION_UNSUPPORTED
+        return isOneFactor ? 'u2f.error.badRequest.oneFactor' : 'u2f.error.badRequest';
+      case 4:
+        // DEVICE_INELIGIBLE
+        return isOneFactor ? 'u2f.error.unsupported.oneFactor' : 'u2f.error.unsupported';
+      case 5:
+        // TIMEOUT
+        return 'u2f.error.timeout';
+    }
+  };
+
+  fn.getU2fEnrollErrorMessageByCode = function (errorCode) {
+    return Okta.loc(fn.getU2fEnrollErrorMessageKeyByCode(errorCode), 'login');
+  };
+
+  fn.getU2fVerifyErrorMessageByCode = function (errorCode, isOneFactor) {
+    return Okta.loc(fn.getU2fVerifyErrorMessageKeyByCode(errorCode, isOneFactor), 'login');
+  };
+
+  fn.getU2fVersion = function () {
+    return 'U2F_V2';
+  };
+
+  fn.isU2fAvailable = function () {
+    return window.hasOwnProperty('u2f');
+  };
+
+  return fn;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 165 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(160), __webpack_require__(553)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, bundles, countryCallingCodes) {
+  var _ = Okta._;
+  var fn = {};
+
+  // () => [{ countryCode: countryName }], sorted by countryName
+  fn.getCountries = function () {
+    // HM, BV, and TF do not have phone prefixes, so don't give the
+    // user the option to choose these countries. FYI it appears that these
+    // countries do not have calling codes because they are ~~uninhabited~~
+    var countries = _.omit(bundles.country, 'HM', 'BV', 'TF');
+
+    // Sort it; figure out if there is a better way to do this (best would
+    // be to sort it in the properties file!!)
+    var collection = _.map(countries, function (name, code) {
+      return { name: name, code: code };
+    });
+    collection = _.sortBy(collection, 'name');
+    var sorted = {};
+    _.each(collection, function (country) {
+      sorted[country.code] = country.name;
+    });
+
+    return sorted;
+  };
+
+  fn.getCallingCodeForCountry = function (countryCode) {
+    return countryCallingCodes[countryCode];
+  };
+
+  return fn;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 166 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(18), __webpack_require__(23)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, RouterUtil) {
+
+  var _ = Okta._;
+
+  return Okta.View.extend({
+    className: 'scan-instructions clearfix',
+    template: '\
+      <div class="scan-instructions-details-wrapper">\
+          <div class="scan-instructions-details">\
+              <p>{{instructions}}</p>\
+          </div>\
+      </div>\
+      <div class="scan-instructions-qrcode-wrapper">\
+          <div class="qrcode-wrap">\
+              <img data-se="qrcode" class="qrcode-image" src="{{qrcode}}">\
+              <div data-se="qrcode-success" class="qrcode-success"></div>\
+              <div data-se="qrcode-error" class="qrcode-error"></div>\
+          </div>\
+          <a href="#" data-type="manual-setup" data-se="manual-setup" class="link manual-setup">\
+            {{i18n code="enroll.totp.cannotScan" bundle="login"}}\
+          </a>\
+          <a href="#" data-type="refresh-qrcode" data-se="refresh-qrcode" class="link refresh-qrcode">\
+            {{i18n code="enroll.totp.refreshBarcode" bundle="login"}}\
+          </a>\
+      </div>\
+    ',
+
+    events: {
+      'click [data-type="manual-setup"]': function clickDataTypeManualSetup(e) {
+        e.preventDefault();
+        var url = RouterUtil.createActivateFactorUrl(this.model.get('__provider__'), this.model.get('__factorType__'), 'manual');
+        this.options.appState.trigger('navigate', url);
+      },
+      'click [data-type="refresh-qrcode"]': function clickDataTypeRefreshQrcode(e) {
+        e.preventDefault();
+        this.model.trigger('errors:clear');
+
+        var self = this;
+        this.model.doTransaction(function (transaction) {
+          if (this.appState.get('isWaitingForActivation')) {
+            return transaction.poll();
+          } else {
+            return transaction.activate();
+          }
+        }).then(function (trans) {
+          var res = trans.data;
+          if ((res.status === 'MFA_ENROLL_ACTIVATE' || res.status === 'FACTOR_ENROLL_ACTIVATE') && res.factorResult === 'WAITING') {
+            // defer the render here to have a lastResponse set in AppState
+            // so that we get new QRcode rendered
+            _.defer(_.bind(self.render, self));
+          }
+        });
+      }
+    },
+
+    initialize: function initialize() {
+      this.listenTo(this.options.appState, 'change:lastAuthResponse', function () {
+        if (this.options.appState.get('isMfaEnrollActivate')) {
+          this.$el.toggleClass('qrcode-expired', !this.options.appState.get('isWaitingForActivation'));
+        } else if (this.options.appState.get('isSuccessResponse')) {
+          this.$el.addClass('qrcode-success');
+        }
+      });
+      this.listenTo(this.model, 'error', function () {
+        if (this.options.appState.get('isMfaEnrollActivate')) {
+          this.$el.toggleClass('qrcode-expired', true);
+        }
+      });
+    },
+
+    getTemplateData: function getTemplateData() {
+      var factorName = FactorUtil.getFactorLabel(this.model.get('__provider__'), this.model.get('__factorType__'));
+      var instructions;
+      if (this.model.get('__provider__') === 'GOOGLE') {
+        instructions = Okta.loc('enroll.totp.setupGoogleAuthApp', 'login', [factorName]);
+      } else {
+        instructions = Okta.loc('enroll.totp.setupApp', 'login', [factorName]);
+      }
+      return {
+        instructions: instructions,
+        qrcode: this.options.appState.get('qrcode')
+      };
+    }
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 167 */
+/***/ (function(module, exports, __webpack_require__) {
+
 "use strict";
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
@@ -35955,42 +32922,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 162 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// getting tag from 19.1.3.6 Object.prototype.toString()
-var cof = __webpack_require__(87);
-var TAG = __webpack_require__(21)('toStringTag');
-// ES3 wrong here
-var ARG = cof(function () { return arguments; }()) == 'Arguments';
-
-// fallback for IE11 Script Access Denied error
-var tryGet = function (it, key) {
-  try {
-    return it[key];
-  } catch (e) { /* empty */ }
-};
-
-module.exports = function (it) {
-  var O, T, B;
-  return it === undefined ? 'Undefined' : it === null ? 'Null'
-    // @@toStringTag case
-    : typeof (T = tryGet(O = Object(it), TAG)) == 'string' ? T
-    // builtinTag case
-    : ARG ? cof(O)
-    // ES3 arguments fallback
-    : (B = cof(O)) == 'Object' && typeof O.callee == 'function' ? 'Arguments' : B;
-};
-
-
-/***/ }),
-/* 163 */
+/* 168 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 // 25.4.1.5 NewPromiseCapability(C)
-var aFunction = __webpack_require__(110);
+var aFunction = __webpack_require__(109);
 
 function PromiseCapability(C) {
   var resolve, reject;
@@ -36009,7 +32947,7 @@ module.exports.f = function (C) {
 
 
 /***/ }),
-/* 164 */
+/* 169 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36027,7 +32965,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 /* eslint complexity: [2, 13] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(17), __webpack_require__(68), __webpack_require__(35), __webpack_require__(91)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, factorUtil, Util, Errors, BaseLoginModel) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(18), __webpack_require__(17), __webpack_require__(36), __webpack_require__(89)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, factorUtil, Util, Errors, BaseLoginModel) {
   var _ = Okta._;
 
   // Avoid setting interval to same value as keep-alive time (5 seconds) because it
@@ -36042,7 +32980,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       id: 'string',
       factorType: {
         type: 'string',
-        values: ['sms', 'call', 'email', 'token', 'token:software:totp', 'token:hotp', 'token:hardware', 'question', 'push', 'u2f', 'password', 'assertion:saml2', 'assertion:oidc', 'webauthn']
+        values: ['sms', 'call', 'email', 'token', 'token:software:totp', 'token:hotp', 'token:hardware', 'question', 'push', 'u2f', 'password', 'assertion:saml2', 'assertion:oidc', 'claims_provider', 'webauthn']
       },
       provider: {
         type: 'string',
@@ -36058,7 +32996,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       },
       profile: ['object'],
       vendorName: 'string',
-      policy: ['object']
+      policy: ['object'],
+      profiles: ['object']
     },
 
     local: {
@@ -36144,13 +33083,36 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
           return status === 'ACTIVE';
         }
       },
-      additionalEnrollment: {
-        deps: ['policy'],
-        fn: function fn(policy) {
-          if (!policy || !policy.enrollment) {
+      cardinality: {
+        deps: ['policy', 'profiles'],
+        fn: function fn(policy, profiles) {
+          if (profiles && profiles.length > 0) {
+            //assume for now we only get one profile (multiple profiles are not supported yet)
+            var profile = profiles[0];
+            var enrolled = profile._embedded.enrolledFactors.length;
+            var adoption = _.findWhere(profile._embedded.features, { type: 'adoption' });
+            if (adoption && adoption.cardinality) {
+              return {
+                enrolled: enrolled,
+                minimum: adoption.cardinality.min,
+                maximum: adoption.cardinality.max
+              };
+            }
             return false;
+          } else if (policy && policy.enrollment) {
+            return policy.enrollment;
           } else {
-            return policy.enrollment.enrolled !== 0 && policy.enrollment.enrolled < policy.enrollment.maximum;
+            return false;
+          }
+        }
+      },
+      additionalEnrollment: {
+        deps: ['cardinality'],
+        fn: function fn(cardinality) {
+          if (cardinality) {
+            return cardinality.enrolled !== 0 && cardinality.enrolled < cardinality.maximum;
+          } else {
+            return false;
           }
         }
       },
@@ -36411,487 +33373,6 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 165 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(91), __webpack_require__(166), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginModel, CookieUtil, Enums) {
-
-  var _ = Okta._;
-
-  return BaseLoginModel.extend({
-
-    props: function props() {
-      var cookieUsername = CookieUtil.getCookieUsername(),
-          properties = this.getUsernameAndRemember(cookieUsername);
-
-      var props = {
-        username: {
-          type: 'string',
-          validate: function validate(value) {
-            if (_.isEmpty(value)) {
-              return Okta.loc('error.username.required', 'login');
-            }
-          },
-          value: properties.username
-        },
-        lastUsername: ['string', false, cookieUsername],
-        context: ['object', false],
-        remember: ['boolean', true, properties.remember],
-        multiOptionalFactorEnroll: ['boolean', true]
-      };
-      if (!(this.settings && this.settings.get('features.passwordlessAuth'))) {
-        props.password = {
-          type: 'string',
-          validate: function validate(value) {
-            if (_.isEmpty(value)) {
-              return Okta.loc('error.password.required', 'login');
-            }
-          }
-        };
-      }
-      return props;
-    },
-
-    getUsernameAndRemember: function getUsernameAndRemember(cookieUsername) {
-      var settingsUsername = this.settings && this.settings.get('username'),
-          rememberMeEnabled = this.settings && this.settings.get('features.rememberMe'),
-          remember = false,
-          username;
-
-      if (settingsUsername) {
-        username = settingsUsername;
-        remember = rememberMeEnabled && username === cookieUsername;
-      } else if (rememberMeEnabled && cookieUsername) {
-        // Only respect the cookie if the feature is enabled.
-        // Allows us to force prompting when necessary, e.g. SAML ForceAuthn
-        username = cookieUsername;
-        remember = true;
-      }
-
-      return {
-        username: username,
-        remember: remember
-      };
-    },
-
-    constructor: function constructor(options) {
-      this.settings = options && options.settings;
-      this.appState = options && options.appState;
-      Okta.Model.apply(this, arguments);
-      this.listenTo(this, 'change:username', function (model, username) {
-        this.set({ remember: username === this.get('lastUsername') });
-      });
-    },
-    parse: function parse(options) {
-      return _.omit(options, ['settings', 'appState']);
-    },
-
-    save: function save() {
-      var username = this.settings.transformUsername(this.get('username'), Enums.PRIMARY_AUTH),
-          remember = this.get('remember'),
-          lastUsername = this.get('lastUsername');
-
-      this.setUsernameCookie(username, remember, lastUsername);
-
-      //the 'save' event here is triggered and used in the BaseLoginController
-      //to disable the primary button on the primary auth form
-      this.trigger('save');
-
-      this.appState.trigger('loading', true);
-
-      var signInArgs = this.getSignInArgs(username);
-
-      var primaryAuthPromise;
-
-      if (this.appState.get('isUnauthenticated')) {
-        var authClient = this.appState.settings.authClient;
-        // bootstrapped with stateToken
-        if (this.appState.get('isIdxStateToken')) {
-          // if its an idx stateToken, we send the parameter as identifier to login API
-          primaryAuthPromise = this.doTransaction(function (transaction) {
-            return this.doPrimaryAuth(authClient, signInArgs, transaction.login);
-          });
-        } else {
-          primaryAuthPromise = this.doTransaction(function (transaction) {
-            return this.doPrimaryAuth(authClient, signInArgs, transaction.authenticate);
-          });
-        }
-      } else {
-        //normal username/password flow without stateToken
-        primaryAuthPromise = this.startTransaction(function (authClient) {
-          return this.doPrimaryAuth(authClient, signInArgs, _.bind(authClient.signIn, authClient));
-        });
-      }
-
-      return primaryAuthPromise.fail(_.bind(function () {
-        // Specific event handled by the Header for the case where the security image is not
-        // enabled and we want to show a spinner. (Triggered only here and handled only by Header).
-        this.appState.trigger('removeLoading');
-        CookieUtil.removeUsernameCookie();
-      }, this)).fin(_.bind(function () {
-        this.appState.trigger('loading', false);
-      }, this));
-    },
-
-    getSignInArgs: function getSignInArgs(username) {
-      var multiOptionalFactorEnroll = this.get('multiOptionalFactorEnroll');
-      var signInArgs = {};
-
-      if (!this.settings.get('features.passwordlessAuth')) {
-        signInArgs.password = this.get('password');
-      }
-
-      // if its an idx stateToken, we send the parameter as identifier to login API
-      if (this.appState.get('isIdxStateToken')) {
-        signInArgs.identifier = username;
-      } else {
-        //only post options param for non-idx flows
-        signInArgs.username = username;
-        signInArgs.options = {
-          warnBeforePasswordExpired: true,
-          multiOptionalFactorEnroll: multiOptionalFactorEnroll
-        };
-      }
-      return signInArgs;
-    },
-
-    setUsernameCookie: function setUsernameCookie(username, remember, lastUsername) {
-      // Do not modify the cookie when feature is disabled, relevant for SAML ForceAuthn prompts
-      if (this.settings.get('features.rememberMe')) {
-        // Only delete the cookie if its owner says so. This allows other
-        // users to log in on a one-off basis.
-        if (!remember && lastUsername === username) {
-          CookieUtil.removeUsernameCookie();
-        } else if (remember) {
-          CookieUtil.setUsernameCookie(username);
-        }
-      }
-    },
-
-    doPrimaryAuth: function doPrimaryAuth(authClient, signInArgs, func) {
-      var deviceFingerprintEnabled = this.settings.get('features.deviceFingerprinting'),
-          typingPatternEnabled = this.settings.get('features.trackTypingPattern');
-
-      // Add the custom header for fingerprint, typing pattern if needed, and then remove it afterwards
-      // Since we only need to send it for primary auth
-      if (deviceFingerprintEnabled) {
-        authClient.options.headers['X-Device-Fingerprint'] = this.appState.get('deviceFingerprint');
-      }
-      if (typingPatternEnabled) {
-        authClient.options.headers['X-Typing-Pattern'] = this.appState.get('typingPattern');
-      }
-      var self = this;
-      return func(signInArgs).fin(function () {
-        if (deviceFingerprintEnabled) {
-          delete authClient.options.headers['X-Device-Fingerprint'];
-          self.appState.unset('deviceFingerprint'); //Fingerprint can only be used once
-        }
-        if (typingPatternEnabled) {
-          delete authClient.options.headers['X-Typing-Pattern'];
-          self.appState.unset('typingPattern');
-        }
-      });
-    }
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 166 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
-  var Cookie = Okta.internal.util.Cookie;
-  var LAST_USERNAME_COOKIE_NAME = 'ln';
-  var DAYS_SAVE_REMEMBER = 365;
-
-  var fn = {};
-
-  fn.getCookieUsername = function () {
-    return Cookie.getCookie(LAST_USERNAME_COOKIE_NAME);
-  };
-
-  fn.setUsernameCookie = function (username) {
-    Cookie.setCookie(LAST_USERNAME_COOKIE_NAME, username, {
-      expires: DAYS_SAVE_REMEMBER,
-      path: '/'
-    });
-  };
-
-  fn.removeUsernameCookie = function () {
-    Cookie.removeCookie(LAST_USERNAME_COOKIE_NAME, { path: '/' });
-  };
-
-  return fn;
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 167 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-/* eslint complexity:[2, 9] */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
-  var fn = {};
-
-  fn.getU2fEnrollErrorMessageKeyByCode = function (errorCode) {
-    switch (errorCode) {
-      default:
-      case 1:
-        return 'u2f.error.other';
-      case 2:
-      case 3:
-        return 'u2f.error.badRequest';
-      case 4:
-        return 'u2f.error.unsupported';
-      case 5:
-        return 'u2f.error.timeout';
-    }
-  };
-
-  fn.getU2fVerifyErrorMessageKeyByCode = function (errorCode, isOneFactor) {
-    switch (errorCode) {
-      case 1:
-        // OTHER_ERROR
-        return isOneFactor ? 'u2f.error.other.oneFactor' : 'u2f.error.other';
-      case 2: // BAD_REQUEST
-      case 3:
-        // CONFIGURATION_UNSUPPORTED
-        return isOneFactor ? 'u2f.error.badRequest.oneFactor' : 'u2f.error.badRequest';
-      case 4:
-        // DEVICE_INELIGIBLE
-        return isOneFactor ? 'u2f.error.unsupported.oneFactor' : 'u2f.error.unsupported';
-      case 5:
-        // TIMEOUT
-        return 'u2f.error.timeout';
-    }
-  };
-
-  fn.getU2fEnrollErrorMessageByCode = function (errorCode) {
-    return Okta.loc(fn.getU2fEnrollErrorMessageKeyByCode(errorCode), 'login');
-  };
-
-  fn.getU2fVerifyErrorMessageByCode = function (errorCode, isOneFactor) {
-    return Okta.loc(fn.getU2fVerifyErrorMessageKeyByCode(errorCode, isOneFactor), 'login');
-  };
-
-  fn.getU2fVersion = function () {
-    return 'U2F_V2';
-  };
-
-  fn.isU2fAvailable = function () {
-    return window.hasOwnProperty('u2f');
-  };
-
-  return fn;
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 168 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(160), __webpack_require__(574)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, bundles, countryCallingCodes) {
-  var _ = Okta._;
-  var fn = {};
-
-  // () => [{ countryCode: countryName }], sorted by countryName
-  fn.getCountries = function () {
-    // HM, BV, and TF do not have phone prefixes, so don't give the
-    // user the option to choose these countries. FYI it appears that these
-    // countries do not have calling codes because they are ~~uninhabited~~
-    var countries = _.omit(bundles.country, 'HM', 'BV', 'TF');
-
-    // Sort it; figure out if there is a better way to do this (best would
-    // be to sort it in the properties file!!)
-    var collection = _.map(countries, function (name, code) {
-      return { name: name, code: code };
-    });
-    collection = _.sortBy(collection, 'name');
-    var sorted = {};
-    _.each(collection, function (country) {
-      sorted[country.code] = country.name;
-    });
-
-    return sorted;
-  };
-
-  fn.getCallingCodeForCountry = function (countryCode) {
-    return countryCallingCodes[countryCode];
-  };
-
-  return fn;
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 169 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(22)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, RouterUtil) {
-
-  var _ = Okta._;
-
-  return Okta.View.extend({
-    className: 'scan-instructions clearfix',
-    template: '\
-      <div class="scan-instructions-details-wrapper">\
-          <div class="scan-instructions-details">\
-              <p>{{instructions}}</p>\
-          </div>\
-      </div>\
-      <div class="scan-instructions-qrcode-wrapper">\
-          <div class="qrcode-wrap">\
-              <img data-se="qrcode" class="qrcode-image" src="{{qrcode}}">\
-              <div data-se="qrcode-success" class="qrcode-success"></div>\
-              <div data-se="qrcode-error" class="qrcode-error"></div>\
-          </div>\
-          <a href="#" data-type="manual-setup" data-se="manual-setup" class="link manual-setup">\
-            {{i18n code="enroll.totp.cannotScan" bundle="login"}}\
-          </a>\
-          <a href="#" data-type="refresh-qrcode" data-se="refresh-qrcode" class="link refresh-qrcode">\
-            {{i18n code="enroll.totp.refreshBarcode" bundle="login"}}\
-          </a>\
-      </div>\
-    ',
-
-    events: {
-      'click [data-type="manual-setup"]': function clickDataTypeManualSetup(e) {
-        e.preventDefault();
-        var url = RouterUtil.createActivateFactorUrl(this.model.get('__provider__'), this.model.get('__factorType__'), 'manual');
-        this.options.appState.trigger('navigate', url);
-      },
-      'click [data-type="refresh-qrcode"]': function clickDataTypeRefreshQrcode(e) {
-        e.preventDefault();
-        this.model.trigger('errors:clear');
-
-        var self = this;
-        this.model.doTransaction(function (transaction) {
-          if (this.appState.get('isWaitingForActivation')) {
-            return transaction.poll();
-          } else {
-            return transaction.activate();
-          }
-        }).then(function (trans) {
-          var res = trans.data;
-          if ((res.status === 'MFA_ENROLL_ACTIVATE' || res.status === 'FACTOR_ENROLL_ACTIVATE') && res.factorResult === 'WAITING') {
-            // defer the render here to have a lastResponse set in AppState
-            // so that we get new QRcode rendered
-            _.defer(_.bind(self.render, self));
-          }
-        });
-      }
-    },
-
-    initialize: function initialize() {
-      this.listenTo(this.options.appState, 'change:lastAuthResponse', function () {
-        if (this.options.appState.get('isMfaEnrollActivate')) {
-          this.$el.toggleClass('qrcode-expired', !this.options.appState.get('isWaitingForActivation'));
-        } else if (this.options.appState.get('isSuccessResponse')) {
-          this.$el.addClass('qrcode-success');
-        }
-      });
-      this.listenTo(this.model, 'error', function () {
-        if (this.options.appState.get('isMfaEnrollActivate')) {
-          this.$el.toggleClass('qrcode-expired', true);
-        }
-      });
-    },
-
-    getTemplateData: function getTemplateData() {
-      var factorName = FactorUtil.getFactorLabel(this.model.get('__provider__'), this.model.get('__factorType__'));
-      var instructions;
-      if (this.model.get('__provider__') === 'GOOGLE') {
-        instructions = Okta.loc('enroll.totp.setupGoogleAuthApp', 'login', [factorName]);
-      } else {
-        instructions = Okta.loc('enroll.totp.setupApp', 'login', [factorName]);
-      }
-      return {
-        instructions: instructions,
-        qrcode: this.options.appState.get('qrcode')
-      };
-    }
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
 /* 170 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -36911,9 +33392,9 @@ exports.f = __webpack_require__(9);
 /* 172 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var has = __webpack_require__(26);
-var toIObject = __webpack_require__(27);
-var arrayIndexOf = __webpack_require__(94)(false);
+var has = __webpack_require__(27);
+var toIObject = __webpack_require__(28);
+var arrayIndexOf = __webpack_require__(92)(false);
 var IE_PROTO = __webpack_require__(120)('IE_PROTO');
 
 module.exports = function (object, names) {
@@ -36936,7 +33417,7 @@ module.exports = function (object, names) {
 
 var dP = __webpack_require__(13);
 var anObject = __webpack_require__(2);
-var getKeys = __webpack_require__(55);
+var getKeys = __webpack_require__(56);
 
 module.exports = __webpack_require__(11) ? Object.defineProperties : function defineProperties(O, Properties) {
   anObject(O);
@@ -36954,8 +33435,8 @@ module.exports = __webpack_require__(11) ? Object.defineProperties : function de
 /***/ (function(module, exports, __webpack_require__) {
 
 // fallback for IE11 buggy Object.getOwnPropertyNames with iframe and window
-var toIObject = __webpack_require__(27);
-var gOPN = __webpack_require__(58).f;
+var toIObject = __webpack_require__(28);
+var gOPN = __webpack_require__(59).f;
 var toString = {}.toString;
 
 var windowNames = typeof window == 'object' && window && Object.getOwnPropertyNames
@@ -36982,8 +33463,8 @@ module.exports.f = function getOwnPropertyNames(it) {
 
 // 19.1.2.1 Object.assign(target, source, ...)
 var DESCRIPTORS = __webpack_require__(11);
-var getKeys = __webpack_require__(55);
-var gOPS = __webpack_require__(95);
+var getKeys = __webpack_require__(56);
+var gOPS = __webpack_require__(93);
 var pIE = __webpack_require__(82);
 var toObject = __webpack_require__(15);
 var IObject = __webpack_require__(81);
@@ -37036,7 +33517,7 @@ module.exports = Object.is || function is(x, y) {
 
 "use strict";
 
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var isObject = __webpack_require__(7);
 var invoke = __webpack_require__(178);
 var arraySlice = [].slice;
@@ -37117,7 +33598,7 @@ module.exports = 1 / $parseFloat(__webpack_require__(124) + '-0') !== -Infinity 
 /* 181 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var cof = __webpack_require__(32);
+var cof = __webpack_require__(33);
 module.exports = function (it, msg) {
   if (typeof it != 'number' && cof(it) != 'Number') throw TypeError(msg);
   return +it;
@@ -37197,7 +33678,7 @@ module.exports = function (iterator, fn, value, entries) {
 /* 186 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var toObject = __webpack_require__(15);
 var IObject = __webpack_require__(81);
 var toLength = __webpack_require__(10);
@@ -37235,7 +33716,7 @@ module.exports = function (that, callbackfn, aLen, memo, isRight) {
 // 22.1.3.3 Array.prototype.copyWithin(target, start, end = this.length)
 
 var toObject = __webpack_require__(15);
-var toAbsoluteIndex = __webpack_require__(56);
+var toAbsoluteIndex = __webpack_require__(57);
 var toLength = __webpack_require__(10);
 
 module.exports = [].copyWithin || function copyWithin(target /* = 0 */, start /* = 0, end = @length */) {
@@ -37334,11 +33815,11 @@ module.exports = function (C, x) {
 "use strict";
 
 var strong = __webpack_require__(194);
-var validate = __webpack_require__(63);
+var validate = __webpack_require__(64);
 var MAP = 'Map';
 
 // 23.1 Map Objects
-module.exports = __webpack_require__(103)(MAP, function (get) {
+module.exports = __webpack_require__(101)(MAP, function (get) {
   return function Map() { return get(this, arguments.length > 0 ? arguments[0] : undefined); };
 }, {
   // 23.1.3.6 Map.prototype.get(key)
@@ -37360,17 +33841,17 @@ module.exports = __webpack_require__(103)(MAP, function (get) {
 "use strict";
 
 var dP = __webpack_require__(13).f;
-var create = __webpack_require__(57);
-var redefineAll = __webpack_require__(62);
-var ctx = __webpack_require__(31);
-var anInstance = __webpack_require__(60);
-var forOf = __webpack_require__(61);
+var create = __webpack_require__(58);
+var redefineAll = __webpack_require__(63);
+var ctx = __webpack_require__(32);
+var anInstance = __webpack_require__(61);
+var forOf = __webpack_require__(62);
 var $iterDefine = __webpack_require__(129);
 var step = __webpack_require__(188);
-var setSpecies = __webpack_require__(59);
+var setSpecies = __webpack_require__(60);
 var DESCRIPTORS = __webpack_require__(11);
-var fastKey = __webpack_require__(48).fastKey;
-var validate = __webpack_require__(63);
+var fastKey = __webpack_require__(50).fastKey;
+var validate = __webpack_require__(64);
 var SIZE = DESCRIPTORS ? '_s' : 'size';
 
 var getEntry = function (that, key) {
@@ -37511,11 +33992,11 @@ module.exports = {
 "use strict";
 
 var strong = __webpack_require__(194);
-var validate = __webpack_require__(63);
+var validate = __webpack_require__(64);
 var SET = 'Set';
 
 // 23.2 Set Objects
-module.exports = __webpack_require__(103)(SET, function (get) {
+module.exports = __webpack_require__(101)(SET, function (get) {
   return function Set() { return get(this, arguments.length > 0 ? arguments[0] : undefined); };
 }, {
   // 23.2.3.1 Set.prototype.add(value)
@@ -37532,14 +34013,14 @@ module.exports = __webpack_require__(103)(SET, function (get) {
 "use strict";
 
 var global = __webpack_require__(4);
-var each = __webpack_require__(39)(0);
-var redefine = __webpack_require__(24);
-var meta = __webpack_require__(48);
+var each = __webpack_require__(40)(0);
+var redefine = __webpack_require__(25);
+var meta = __webpack_require__(50);
 var assign = __webpack_require__(175);
 var weak = __webpack_require__(197);
 var isObject = __webpack_require__(7);
-var validate = __webpack_require__(63);
-var NATIVE_WEAK_MAP = __webpack_require__(63);
+var validate = __webpack_require__(64);
+var NATIVE_WEAK_MAP = __webpack_require__(64);
 var IS_IE11 = !global.ActiveXObject && 'ActiveXObject' in global;
 var WEAK_MAP = 'WeakMap';
 var getWeak = meta.getWeak;
@@ -37569,7 +34050,7 @@ var methods = {
 };
 
 // 23.3 WeakMap Objects
-var $WeakMap = module.exports = __webpack_require__(103)(WEAK_MAP, wrapper, methods, weak, true, true);
+var $WeakMap = module.exports = __webpack_require__(101)(WEAK_MAP, wrapper, methods, weak, true, true);
 
 // IE11 WeakMap frozen keys fix
 if (NATIVE_WEAK_MAP && IS_IE11) {
@@ -37598,15 +34079,15 @@ if (NATIVE_WEAK_MAP && IS_IE11) {
 
 "use strict";
 
-var redefineAll = __webpack_require__(62);
-var getWeak = __webpack_require__(48).getWeak;
+var redefineAll = __webpack_require__(63);
+var getWeak = __webpack_require__(50).getWeak;
 var anObject = __webpack_require__(2);
 var isObject = __webpack_require__(7);
-var anInstance = __webpack_require__(60);
-var forOf = __webpack_require__(61);
-var createArrayMethod = __webpack_require__(39);
-var $has = __webpack_require__(26);
-var validate = __webpack_require__(63);
+var anInstance = __webpack_require__(61);
+var forOf = __webpack_require__(62);
+var createArrayMethod = __webpack_require__(40);
+var $has = __webpack_require__(27);
+var validate = __webpack_require__(64);
 var arrayFind = createArrayMethod(5);
 var arrayFindIndex = createArrayMethod(6);
 var id = 0;
@@ -37689,7 +34170,7 @@ module.exports = {
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/ecma262/#sec-toindex
-var toInteger = __webpack_require__(33);
+var toInteger = __webpack_require__(34);
 var toLength = __webpack_require__(10);
 module.exports = function (it) {
   if (it === undefined) return 0;
@@ -37705,8 +34186,8 @@ module.exports = function (it) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // all object keys, includes non-enumerable and symbols
-var gOPN = __webpack_require__(58);
-var gOPS = __webpack_require__(95);
+var gOPN = __webpack_require__(59);
+var gOPS = __webpack_require__(93);
 var anObject = __webpack_require__(2);
 var Reflect = __webpack_require__(4).Reflect;
 module.exports = Reflect && Reflect.ownKeys || function ownKeys(it) {
@@ -37723,10 +34204,10 @@ module.exports = Reflect && Reflect.ownKeys || function ownKeys(it) {
 "use strict";
 
 // https://tc39.github.io/proposal-flatMap/#sec-FlattenIntoArray
-var isArray = __webpack_require__(96);
+var isArray = __webpack_require__(94);
 var isObject = __webpack_require__(7);
 var toLength = __webpack_require__(10);
-var ctx = __webpack_require__(31);
+var ctx = __webpack_require__(32);
 var IS_CONCAT_SPREADABLE = __webpack_require__(9)('isConcatSpreadable');
 
 function flattenIntoArray(target, original, source, sourceLen, start, depth, mapper, thisArg) {
@@ -37769,7 +34250,7 @@ module.exports = flattenIntoArray;
 // https://github.com/tc39/proposal-string-pad-start-end
 var toLength = __webpack_require__(10);
 var repeat = __webpack_require__(126);
-var defined = __webpack_require__(37);
+var defined = __webpack_require__(38);
 
 module.exports = function (that, maxLength, fillString, left) {
   var S = String(defined(that));
@@ -37789,8 +34270,8 @@ module.exports = function (that, maxLength, fillString, left) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var DESCRIPTORS = __webpack_require__(11);
-var getKeys = __webpack_require__(55);
-var toIObject = __webpack_require__(27);
+var getKeys = __webpack_require__(56);
+var toIObject = __webpack_require__(28);
 var isEnum = __webpack_require__(82).f;
 module.exports = function (isEntries) {
   return function (it) {
@@ -37830,7 +34311,7 @@ module.exports = function (NAME) {
 /* 204 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var forOf = __webpack_require__(61);
+var forOf = __webpack_require__(62);
 
 module.exports = function (iter, ITERATOR) {
   var result = [];
@@ -37869,15 +34350,15 @@ module.exports = Math.scale || function scale(x, inLow, inHigh, outLow, outHigh)
 
 "use strict";
 
-var LIBRARY = __webpack_require__(86);
-var $export = __webpack_require__(44);
+var LIBRARY = __webpack_require__(85);
+var $export = __webpack_require__(41);
 var redefine = __webpack_require__(208);
-var hide = __webpack_require__(64);
+var hide = __webpack_require__(65);
 var Iterators = __webpack_require__(75);
 var $iterCreate = __webpack_require__(453);
-var setToStringTag = __webpack_require__(113);
+var setToStringTag = __webpack_require__(112);
 var getPrototypeOf = __webpack_require__(457);
-var ITERATOR = __webpack_require__(21)('iterator');
+var ITERATOR = __webpack_require__(22)('iterator');
 var BUGGY = !([].keys && 'next' in [].keys()); // Safari has buggy iterators w/o `next`
 var FF_ITERATOR = '@@iterator';
 var KEYS = 'keys';
@@ -37943,7 +34424,7 @@ module.exports = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCE
 /* 207 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = !__webpack_require__(40) && !__webpack_require__(74)(function () {
+module.exports = !__webpack_require__(42) && !__webpack_require__(74)(function () {
   return Object.defineProperty(__webpack_require__(151)('div'), 'a', { get: function () { return 7; } }).a != 7;
 });
 
@@ -37952,7 +34433,7 @@ module.exports = !__webpack_require__(40) && !__webpack_require__(74)(function (
 /* 208 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(64);
+module.exports = __webpack_require__(65);
 
 
 /***/ }),
@@ -37960,7 +34441,7 @@ module.exports = __webpack_require__(64);
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
-var anObject = __webpack_require__(45);
+var anObject = __webpack_require__(46);
 var dPs = __webpack_require__(454);
 var enumBugKeys = __webpack_require__(155);
 var IE_PROTO = __webpack_require__(153)('IE_PROTO');
@@ -38006,8 +34487,8 @@ module.exports = Object.create || function create(O, Properties) {
 /* 210 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var has = __webpack_require__(65);
-var toIObject = __webpack_require__(66);
+var has = __webpack_require__(66);
+var toIObject = __webpack_require__(67);
 var arrayIndexOf = __webpack_require__(455)(false);
 var IE_PROTO = __webpack_require__(153)('IE_PROTO');
 
@@ -38030,7 +34511,7 @@ module.exports = function (object, names) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // fallback for non-array-like ES3 and non-enumerable old V8 strings
-var cof = __webpack_require__(87);
+var cof = __webpack_require__(86);
 // eslint-disable-next-line no-prototype-builtins
 module.exports = Object('z').propertyIsEnumerable(0) ? Object : function (it) {
   return cof(it) == 'String' ? it.split('') : Object(it);
@@ -38053,7 +34534,7 @@ module.exports = function (it) {
 /* 213 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var document = __webpack_require__(20).document;
+var document = __webpack_require__(21).document;
 module.exports = document && document.documentElement;
 
 
@@ -38061,10 +34542,10 @@ module.exports = document && document.documentElement;
 /* 214 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var META = __webpack_require__(112)('meta');
-var isObject = __webpack_require__(51);
-var has = __webpack_require__(65);
-var setDesc = __webpack_require__(50).f;
+var META = __webpack_require__(111)('meta');
+var isObject = __webpack_require__(47);
+var has = __webpack_require__(66);
+var setDesc = __webpack_require__(52).f;
 var id = 0;
 var isExtensible = Object.isExtensible || function () {
   return true;
@@ -43008,7 +39489,7 @@ return /******/ (function(modules) { // webpackBootstrap
  *
  */
 
-var AuthSdkError = __webpack_require__(52);
+var AuthSdkError = __webpack_require__(53);
 
 // storage must have getItem and setItem
 function storageBuilder(webstorage, storageName) {
@@ -43080,10 +39561,10 @@ module.exports = storageBuilder;
 
 /* eslint-disable complexity, max-statements */
 var http              = __webpack_require__(78);
-var util              = __webpack_require__(41);
+var util              = __webpack_require__(43);
 var Q                 = __webpack_require__(12);
-var AuthSdkError      = __webpack_require__(52);
-var AuthPollStopError = __webpack_require__(485);
+var AuthSdkError      = __webpack_require__(53);
+var AuthPollStopError = __webpack_require__(486);
 var config            = __webpack_require__(77);
 
 function addStateToken(res, options) {
@@ -43442,9 +39923,9 @@ module.exports = {
 
 /* eslint-disable complexity, max-statements */
 var http = __webpack_require__(78);
-var util = __webpack_require__(41);
-var storageUtil = __webpack_require__(90);
-var AuthSdkError = __webpack_require__(52);
+var util = __webpack_require__(43);
+var storageUtil = __webpack_require__(88);
+var AuthSdkError = __webpack_require__(53);
 
 var httpCache = storageUtil.getHttpCache();
 
@@ -43717,16 +40198,6 @@ module.exports = {
 "use strict";
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
-var _regenerator = __webpack_require__(499);
-
-var _regenerator2 = _interopRequireDefault(_regenerator);
-
-var _asyncToGenerator2 = __webpack_require__(502);
-
-var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 /*!
  * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
  * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
@@ -43739,451 +40210,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(161)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Animations) {
-  var updateSecurityImage = function () {
-    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee($el, appState, animate) {
-      var image, border, hasBorder, hasAntiPhishing, radialProgressBar, host, duration;
-      return _regenerator2.default.wrap(function _callee$(_context) {
-        while (1) {
-          switch (_context.prev = _context.next) {
-            case 0:
-              image = $el.find('.auth-beacon-security'), border = $el.find('.js-auth-beacon-border'), hasBorder = !appState.get('isUndefinedUser'), hasAntiPhishing = appState.get('isNewUser'), radialProgressBar = $el.find('.radial-progress-bar'), host = appState.get('baseUrl').match(/https?:\/\/(.[^/]+)/)[1], duration = 200;
-
-              if (animate) {
-                _context.next = 5;
-                break;
-              }
-
-              // Do not animate the security beacon
-              // This occurs when initializing the form
-              setBackgroundImage(image, appState);
-              border.toggleClass('auth-beacon-border', hasBorder);
-              return _context.abrupt('return');
-
-            case 5:
-
-              destroyAntiPhishingMessage(image);
-
-              // Animate loading the security beacon
-
-              if (hasBorder) {
-                _context.next = 10;
-                break;
-              }
-
-              // This occurrs when appState username is blank
-              // we do not yet know if the user is recognized
-              image.fadeOut(duration, function () {
-                setBackgroundImage(image, appState);
-                border.removeClass('auth-beacon-border');
-                image.fadeIn(duration);
-              });
-              _context.next = 15;
-              break;
-
-            case 10:
-              // Animate loading the security beacon with a loading bar for the border
-              // This occurrs when the username has been checked against Okta.
-              border.removeClass('auth-beacon-border');
-              _context.next = 13;
-              return Animations.radialProgressBar({
-                $el: radialProgressBar,
-                swap: function swap() {
-                  image.fadeOut(duration, function () {
-                    setBackgroundImage(image, appState);
-                    image.fadeIn(duration);
-                  });
-                }
-              });
-
-            case 13:
-              border.addClass('auth-beacon-border');
-              if (hasAntiPhishing) {
-                antiPhishingMessage(image, host);
-              }
-
-            case 15:
-            case 'end':
-              return _context.stop();
-          }
-        }
-      }, _callee, this);
-    }));
-
-    return function updateSecurityImage(_x, _x2, _x3) {
-      return _ref.apply(this, arguments);
-    };
-  }();
-
-  var _ = Okta._,
-      $ = Okta.$;
-
-  function setBackgroundImage(el, appState) {
-    // NOTE: The imgSrc is returned by the server so that every
-    // user has a unique image. However new and undefined user states
-    // are hard coded into the css and the value returned by the server
-    // is ignored.
-    var imgSrc = appState.get('securityImage'),
-        imgDescription = appState.get('securityImageDescription'),
-        isUndefinedUser = appState.get('isUndefinedUser'),
-        isNewUser = appState.get('isNewUser'),
-        isSecurityImage = !isUndefinedUser && !isNewUser;
-
-    el.css('background-image', '');
-    el.removeClass('new-user undefined-user');
-    if (isNewUser) {
-      el.addClass('new-user');
-      return;
-    }
-    if (isUndefinedUser) {
-      el.addClass('undefined-user');
-      return;
-    }
-    if (isSecurityImage) {
-      // TODO: Newer versions of qtip will remove aria-describedby on their own when destroy() is called.
-      el.removeAttr('aria-describedby');
-      el.find('.accessibility-text').text(imgDescription);
-      el.css('background-image', 'url(' + _.escape(imgSrc) + ')');
-      return;
-    }
-  }
-
-  function antiPhishingMessage(image, host) {
-    $(window).on('resize.securityBeaconQtip', _.debounce(function () {
-      if (image.is(':visible')) {
-        image.qtip('show');
-      }
-    }, 300));
-
-    // Show the message that the user has not logged in from this device before.
-    image.qtip({
-      prerender: true,
-      content: {
-        text: Okta.loc('primaryauth.newUser.tooltip', 'login', [_.escape(host)]),
-        button: Okta.loc('primaryauth.newUser.tooltip.close', 'login')
-      },
-      style: {
-        classes: 'okta-security-image-tooltip security-image-qtip qtip-custom qtip-shadow qtip-rounded',
-        tip: { height: 12, width: 16 }
-      },
-      position: {
-        my: 'top center',
-        at: 'center',
-        target: $('.auth-beacon-security'),
-        adjust: { method: 'flip', scroll: false, resize: true },
-        effect: false
-      },
-      hide: { event: false, fixed: true },
-      show: { event: false, delay: 200 },
-      events: {
-        move: function move(event, api) {
-          if (!api.elements.target.is(':visible')) {
-            // Have to hide it immediately, with no effect
-            api.set('hide.effect', false);
-            api.hide();
-            api.set('hide.effect', true);
-          }
-        }
-      }
-    });
-
-    image.qtip('toggle', image.is(':visible'));
-  }
-
-  function destroyAntiPhishingMessage(image) {
-    image.qtip('destroy');
-    $(window).off('resize.securityBeaconQtip');
-  }
-
-  return Okta.View.extend({
-
-    template: '\
-    <div class="beacon-blank">\
-      <div class="radial-progress-bar">\
-        <div class="circle left"></div>\
-        <div class="circle right"></div>\
-      </div>\
-    </div>\
-    <div aria-live="polite" role="img" class="bg-helper auth-beacon auth-beacon-security" data-se="security-beacon">\
-      <span class="accessibility-text"></span>\
-      <div class="okta-sign-in-beacon-border auth-beacon-border js-auth-beacon-border">\
-      </div>\
-    </div>\
-    ',
-    className: 'js-security-beacon',
-
-    initialize: function initialize(options) {
-      this.update = _.partial(updateSecurityImage, this.$el, options.appState);
-      this.listenTo(options.appState, 'change:securityImage', this.update);
-      this.listenTo(options.appState, 'loading', function (isLoading) {
-        this.$el.toggleClass('beacon-loading', isLoading);
-        this.removeAntiPhishingMessage();
-      });
-      this.options.appState.set('beaconType', 'security');
-
-      this.listenTo(options.appState, 'navigate', this.removeAntiPhishingMessage);
-    },
-
-    postRender: function postRender() {
-      this.update(false);
-    },
-
-    equals: function equals(Beacon) {
-      return Beacon && this instanceof Beacon;
-    },
-
-    removeAntiPhishingMessage: function removeAntiPhishingMessage() {
-      var image = this.$el.find('.auth-beacon-security');
-      image.qtip('destroy');
-    }
-
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 223 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var classof = __webpack_require__(162);
-var ITERATOR = __webpack_require__(21)('iterator');
-var Iterators = __webpack_require__(75);
-module.exports = __webpack_require__(16).getIteratorMethod = function (it) {
-  if (it != undefined) return it[ITERATOR]
-    || it['@@iterator']
-    || Iterators[classof(it)];
-};
-
-
-/***/ }),
-/* 224 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// 7.3.20 SpeciesConstructor(O, defaultConstructor)
-var anObject = __webpack_require__(45);
-var aFunction = __webpack_require__(110);
-var SPECIES = __webpack_require__(21)('species');
-module.exports = function (O, D) {
-  var C = anObject(O).constructor;
-  var S;
-  return C === undefined || (S = anObject(C)[SPECIES]) == undefined ? D : aFunction(S);
-};
-
-
-/***/ }),
-/* 225 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var ctx = __webpack_require__(109);
-var invoke = __webpack_require__(510);
-var html = __webpack_require__(213);
-var cel = __webpack_require__(151);
-var global = __webpack_require__(20);
-var process = global.process;
-var setTask = global.setImmediate;
-var clearTask = global.clearImmediate;
-var MessageChannel = global.MessageChannel;
-var Dispatch = global.Dispatch;
-var counter = 0;
-var queue = {};
-var ONREADYSTATECHANGE = 'onreadystatechange';
-var defer, channel, port;
-var run = function () {
-  var id = +this;
-  // eslint-disable-next-line no-prototype-builtins
-  if (queue.hasOwnProperty(id)) {
-    var fn = queue[id];
-    delete queue[id];
-    fn();
-  }
-};
-var listener = function (event) {
-  run.call(event.data);
-};
-// Node.js 0.9+ & IE10+ has setImmediate, otherwise:
-if (!setTask || !clearTask) {
-  setTask = function setImmediate(fn) {
-    var args = [];
-    var i = 1;
-    while (arguments.length > i) args.push(arguments[i++]);
-    queue[++counter] = function () {
-      // eslint-disable-next-line no-new-func
-      invoke(typeof fn == 'function' ? fn : Function(fn), args);
-    };
-    defer(counter);
-    return counter;
-  };
-  clearTask = function clearImmediate(id) {
-    delete queue[id];
-  };
-  // Node.js 0.8-
-  if (__webpack_require__(87)(process) == 'process') {
-    defer = function (id) {
-      process.nextTick(ctx(run, id, 1));
-    };
-  // Sphere (JS game engine) Dispatch API
-  } else if (Dispatch && Dispatch.now) {
-    defer = function (id) {
-      Dispatch.now(ctx(run, id, 1));
-    };
-  // Browsers with MessageChannel, includes WebWorkers
-  } else if (MessageChannel) {
-    channel = new MessageChannel();
-    port = channel.port2;
-    channel.port1.onmessage = listener;
-    defer = ctx(port.postMessage, port, 1);
-  // Browsers with postMessage, skip WebWorkers
-  // IE8 has postMessage, but it's sync & typeof its postMessage is 'object'
-  } else if (global.addEventListener && typeof postMessage == 'function' && !global.importScripts) {
-    defer = function (id) {
-      global.postMessage(id + '', '*');
-    };
-    global.addEventListener('message', listener, false);
-  // IE8-
-  } else if (ONREADYSTATECHANGE in cel('script')) {
-    defer = function (id) {
-      html.appendChild(cel('script'))[ONREADYSTATECHANGE] = function () {
-        html.removeChild(this);
-        run.call(id);
-      };
-    };
-  // Rest old browsers
-  } else {
-    defer = function (id) {
-      setTimeout(ctx(run, id, 1), 0);
-    };
-  }
-}
-module.exports = {
-  set: setTask,
-  clear: clearTask
-};
-
-
-/***/ }),
-/* 226 */
-/***/ (function(module, exports) {
-
-module.exports = function (exec) {
-  try {
-    return { e: false, v: exec() };
-  } catch (e) {
-    return { e: true, v: e };
-  }
-};
-
-
-/***/ }),
-/* 227 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var anObject = __webpack_require__(45);
-var isObject = __webpack_require__(51);
-var newPromiseCapability = __webpack_require__(163);
-
-module.exports = function (C, x) {
-  anObject(C);
-  if (isObject(x) && x.constructor === C) return x;
-  var promiseCapability = newPromiseCapability.f(C);
-  var resolve = promiseCapability.resolve;
-  resolve(x);
-  return promiseCapability.promise;
-};
-
-
-/***/ }),
-/* 228 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// most Object methods by ES6 should accept primitives
-var $export = __webpack_require__(44);
-var core = __webpack_require__(16);
-var fails = __webpack_require__(74);
-module.exports = function (KEY, exec) {
-  var fn = (core.Object || {})[KEY] || Object[KEY];
-  var exp = {};
-  exp[KEY] = exec(fn);
-  $export($export.S + $export.F * fails(function () { fn(1); }), 'Object', exp);
-};
-
-
-/***/ }),
-/* 229 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-exports.__esModule = true;
-
-var _isIterable2 = __webpack_require__(531);
-
-var _isIterable3 = _interopRequireDefault(_isIterable2);
-
-var _getIterator2 = __webpack_require__(534);
-
-var _getIterator3 = _interopRequireDefault(_getIterator2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = function () {
-  function sliceIterator(arr, i) {
-    var _arr = [];
-    var _n = true;
-    var _d = false;
-    var _e = undefined;
-
-    try {
-      for (var _i = (0, _getIterator3.default)(arr), _s; !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);
-
-        if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;
-      _e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"]) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }
-
-    return _arr;
-  }
-
-  return function (arr, i) {
-    if (Array.isArray(arr)) {
-      return arr;
-    } else if ((0, _isIterable3.default)(Object(arr))) {
-      return sliceIterator(arr, i);
-    } else {
-      throw new TypeError("Invalid attempt to destructure non-iterable instance");
-    }
-  };
-}();
-
-/***/ }),
-/* 230 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(231), __webpack_require__(233), __webpack_require__(546), __webpack_require__(165), __webpack_require__(234), __webpack_require__(79), __webpack_require__(232)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, PrimaryAuthForm, CustomButtons, FooterRegistration, PrimaryAuthModel, Footer, BaseLoginController, DeviceFingerprint) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(223), __webpack_require__(227), __webpack_require__(505), __webpack_require__(162), __webpack_require__(228), __webpack_require__(79), __webpack_require__(224)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, PrimaryAuthForm, CustomButtons, FooterRegistration, PrimaryAuthModel, Footer, BaseLoginController, DeviceFingerprint) {
 
   var $ = Okta.$;
 
@@ -44210,10 +40237,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       // If social auth is configured, 'socialAuthPositionTop' will determine
       // the order in which the social auth and primary auth are shown on the screen.
       if (options.settings.get('hasConfiguredButtons')) {
-        // CustomButtons needs current controller as parameter
         this.add(CustomButtons, {
           prepend: options.settings.get('socialAuthPositionTop'),
-          options: { currentController: this }
+          options: {
+            // To trigger an afterError event, we require the current controller
+            currentController: this
+          }
         });
       }
 
@@ -44293,7 +40322,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 231 */
+/* 223 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -44311,7 +40340,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(14), __webpack_require__(232), __webpack_require__(544)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, TextBox, DeviceFingerprint, TypingUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(14), __webpack_require__(224), __webpack_require__(497), __webpack_require__(17)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, TextBox, DeviceFingerprint, TypingUtil, Util) {
 
   var _ = Okta._;
 
@@ -44389,52 +40418,62 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     },
 
     getUsernameField: function getUsernameField() {
+      var _this = this;
+
       var userNameFieldObject = {
-        label: false,
+        className: 'margin-btm-5',
+        label: Okta.loc('primaryauth.username.placeholder', 'login'),
         'label-top': true,
-        placeholder: Okta.loc('primaryauth.username.placeholder', 'login'),
+        explain: function explain() {
+          if (_this.settings.get('features.hideDefaultTip') && !_this.isCustomized('primaryauth.username.tooltip')) {
+            return false;
+          }
+
+          return Util.createInputExplain('primaryauth.username.tooltip', 'primaryauth.username.placeholder', 'login');
+        },
+        'explain-top': true,
         name: 'username',
         input: TextBox,
         inputId: 'okta-signin-username',
         type: 'text',
-        disabled: this.options.appState.get('disableUsername'),
-        params: {
-          innerTooltip: {
-            title: Okta.loc('primaryauth.username.placeholder', 'login'),
-            text: Okta.loc('primaryauth.username.tooltip', 'login')
-          },
-          icon: 'person-16-gray'
-        }
+        disabled: this.options.appState.get('disableUsername')
       };
 
-      if (this.settings.get('features.showPasswordToggleOnSignInPage')) {
-        userNameFieldObject.params.iconDivider = true;
-      }
       return userNameFieldObject;
     },
 
     getPasswordField: function getPasswordField() {
+      var _this2 = this;
+
       var passwordFieldObject = {
-        label: false,
+        className: 'margin-btm-30',
+        label: Okta.loc('primaryauth.password.placeholder', 'login'),
         'label-top': true,
-        placeholder: Okta.loc('primaryauth.password.placeholder', 'login'),
+        explain: function explain() {
+          if (_this2.settings.get('features.hideDefaultTip') && !_this2.isCustomized('primaryauth.password.tooltip')) {
+            return false;
+          }
+
+          return Util.createInputExplain('primaryauth.password.tooltip', 'primaryauth.password.placeholder', 'login');
+        },
+        'explain-top': true,
         name: 'password',
         inputId: 'okta-signin-password',
         validateOnlyIfDirty: true,
-        type: 'password',
-        params: {
-          innerTooltip: {
-            title: Okta.loc('primaryauth.password.placeholder', 'login'),
-            text: Okta.loc('primaryauth.password.tooltip', 'login')
-          },
-          icon: 'remote-lock-16'
-        }
+        type: 'password'
       };
       if (this.settings.get('features.showPasswordToggleOnSignInPage')) {
-        passwordFieldObject.params.iconDivider = true;
+        passwordFieldObject.params = {};
         passwordFieldObject.params.showPasswordToggle = true;
       }
       return passwordFieldObject;
+    },
+
+    isCustomized: function isCustomized(property) {
+      var language = this.settings.get('language');
+      var i18n = this.settings.get('i18n');
+      var customizedProperty = i18n && i18n[language] && i18n[language][property];
+      return !!customizedProperty;
     },
 
     getRemeberMeCheckbox: function getRemeberMeCheckbox() {
@@ -44473,7 +40512,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 232 */
+/* 224 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -44580,7 +40619,78 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 233 */
+/* 225 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+exports.__esModule = true;
+
+var _isIterable2 = __webpack_require__(499);
+
+var _isIterable3 = _interopRequireDefault(_isIterable2);
+
+var _getIterator2 = __webpack_require__(502);
+
+var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = function () {
+  function sliceIterator(arr, i) {
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _e = undefined;
+
+    try {
+      for (var _i = (0, _getIterator3.default)(arr), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"]) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  return function (arr, i) {
+    if (Array.isArray(arr)) {
+      return arr;
+    } else if ((0, _isIterable3.default)(Object(arr))) {
+      return sliceIterator(arr, i);
+    } else {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+    }
+  };
+}();
+
+/***/ }),
+/* 226 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var classof = __webpack_require__(161);
+var ITERATOR = __webpack_require__(22)('iterator');
+var Iterators = __webpack_require__(75);
+module.exports = __webpack_require__(16).getIteratorMethod = function (it) {
+  if (it != undefined) return it[ITERATOR]
+    || it['@@iterator']
+    || Iterators[classof(it)];
+};
+
+
+/***/ }),
+/* 227 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -44684,7 +40794,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 234 */
+/* 228 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -44808,13 +40918,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 235 */
+/* 229 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
-var _typeof2 = __webpack_require__(85);
+var _typeof2 = __webpack_require__(106);
 
 var _typeof3 = _interopRequireDefault(_typeof2);
 
@@ -45220,7 +41330,23 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 });
 
 /***/ }),
-/* 236 */
+/* 230 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// most Object methods by ES6 should accept primitives
+var $export = __webpack_require__(41);
+var core = __webpack_require__(16);
+var fails = __webpack_require__(74);
+module.exports = function (KEY, exec) {
+  var fn = (core.Object || {})[KEY] || Object[KEY];
+  var exp = {};
+  exp[KEY] = exec(fn);
+  $export($export.S + $export.F * fails(function () { fn(1); }), 'Object', exp);
+};
+
+
+/***/ }),
+/* 231 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -45268,7 +41394,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 237 */
+/* 232 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -45285,7 +41411,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
 
 (function (){
-  if ('u2f' in window || !('chrome' in window)) {
+  var isChrome = 'chrome' in window && window.navigator.userAgent.indexOf('Edge') < 0;
+  if ('u2f' in window || !isChrome) {
     return;
   }
 
@@ -45508,7 +41635,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
    * @private
    */
   u2f.isIosChrome_ = function() {
-    return $.inArray(navigator.platform, ["iPhone", "iPad", "iPod"]) > -1;
+    return ["iPhone", "iPad", "iPod"].indexOf(navigator.platform) > -1;
   };
 
   /**
@@ -46028,7 +42155,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
 
 /***/ }),
-/* 238 */
+/* 233 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -46104,7 +42231,7 @@ var __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 239 */
+/* 234 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -46122,7 +42249,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(22), __webpack_require__(17)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil, FactorUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(23), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil, FactorUtil) {
 
   var _ = Okta._,
       cardinalityTextTpl = Okta.tpl('<span class="factor-cardinality">{{cardinalityText}}</span>');
@@ -46152,7 +42279,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       var children = [],
           enrolled = this.model.get('enrolled'),
           required = this.model.get('required'),
-          policy = this.model.get('policy');
+          cardinality = this.model.get('cardinality');
 
       if (this.options.showInlineSetupButton) {
         return [[Okta.createButton({
@@ -46168,7 +42295,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         children.push(['<span class="icon success-16-gray"></span>', '.enroll-factor-label']);
       }
 
-      var cardinalityText = FactorUtil.getCardinalityText(enrolled, required, policy);
+      var cardinalityText = FactorUtil.getCardinalityText(enrolled, required, cardinality);
       if (cardinalityText) {
         children.push([cardinalityTextTpl({ cardinalityText: cardinalityText }), '.enroll-factor-description']);
       }
@@ -46220,7 +42347,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 240 */
+/* 235 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -46277,6 +42404,373 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
+/* 236 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+var _regenerator = __webpack_require__(568);
+
+var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _asyncToGenerator2 = __webpack_require__(571);
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(167)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Animations) {
+  var updateSecurityImage = function () {
+    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee($el, appState, animate) {
+      var image, border, hasBorder, hasAntiPhishing, radialProgressBar, host, duration;
+      return _regenerator2.default.wrap(function _callee$(_context) {
+        while (1) {
+          switch (_context.prev = _context.next) {
+            case 0:
+              image = $el.find('.auth-beacon-security'), border = $el.find('.js-auth-beacon-border'), hasBorder = !appState.get('isUndefinedUser'), hasAntiPhishing = appState.get('isNewUser'), radialProgressBar = $el.find('.radial-progress-bar'), host = appState.get('baseUrl').match(/https?:\/\/(.[^/]+)/)[1], duration = 200;
+
+              if (animate) {
+                _context.next = 5;
+                break;
+              }
+
+              // Do not animate the security beacon
+              // This occurs when initializing the form
+              setBackgroundImage(image, appState);
+              border.toggleClass('auth-beacon-border', hasBorder);
+              return _context.abrupt('return');
+
+            case 5:
+
+              destroyAntiPhishingMessage(image);
+
+              // Animate loading the security beacon
+
+              if (hasBorder) {
+                _context.next = 10;
+                break;
+              }
+
+              // This occurrs when appState username is blank
+              // we do not yet know if the user is recognized
+              image.fadeOut(duration, function () {
+                setBackgroundImage(image, appState);
+                border.removeClass('auth-beacon-border');
+                image.fadeIn(duration);
+              });
+              _context.next = 15;
+              break;
+
+            case 10:
+              // Animate loading the security beacon with a loading bar for the border
+              // This occurrs when the username has been checked against Okta.
+              border.removeClass('auth-beacon-border');
+              _context.next = 13;
+              return Animations.radialProgressBar({
+                $el: radialProgressBar,
+                swap: function swap() {
+                  image.fadeOut(duration, function () {
+                    setBackgroundImage(image, appState);
+                    image.fadeIn(duration);
+                  });
+                }
+              });
+
+            case 13:
+              border.addClass('auth-beacon-border');
+              if (hasAntiPhishing) {
+                antiPhishingMessage(image, host);
+              }
+
+            case 15:
+            case 'end':
+              return _context.stop();
+          }
+        }
+      }, _callee, this);
+    }));
+
+    return function updateSecurityImage(_x, _x2, _x3) {
+      return _ref.apply(this, arguments);
+    };
+  }();
+
+  var _ = Okta._,
+      $ = Okta.$;
+
+  function setBackgroundImage(el, appState) {
+    // NOTE: The imgSrc is returned by the server so that every
+    // user has a unique image. However new and undefined user states
+    // are hard coded into the css and the value returned by the server
+    // is ignored.
+    var imgSrc = appState.get('securityImage'),
+        imgDescription = appState.get('securityImageDescription'),
+        isUndefinedUser = appState.get('isUndefinedUser'),
+        isNewUser = appState.get('isNewUser'),
+        isSecurityImage = !isUndefinedUser && !isNewUser;
+
+    el.css('background-image', '');
+    el.removeClass('new-user undefined-user');
+    if (isNewUser) {
+      el.addClass('new-user');
+      return;
+    }
+    if (isUndefinedUser) {
+      el.addClass('undefined-user');
+      return;
+    }
+    if (isSecurityImage) {
+      // TODO: Newer versions of qtip will remove aria-describedby on their own when destroy() is called.
+      el.removeAttr('aria-describedby');
+      el.find('.accessibility-text').text(imgDescription);
+      el.css('background-image', 'url(' + _.escape(imgSrc) + ')');
+      return;
+    }
+  }
+
+  function antiPhishingMessage(image, host) {
+    $(window).on('resize.securityBeaconQtip', _.debounce(function () {
+      if (image.is(':visible')) {
+        image.qtip('show');
+      }
+    }, 300));
+
+    // Show the message that the user has not logged in from this device before.
+    image.qtip({
+      prerender: true,
+      content: {
+        text: Okta.loc('primaryauth.newUser.tooltip', 'login', [_.escape(host)]),
+        button: Okta.loc('primaryauth.newUser.tooltip.close', 'login')
+      },
+      style: {
+        classes: 'okta-security-image-tooltip security-image-qtip qtip-custom qtip-shadow qtip-rounded',
+        tip: { height: 12, width: 16 }
+      },
+      position: {
+        my: 'top center',
+        at: 'center',
+        target: $('.auth-beacon-security'),
+        adjust: { method: 'flip', scroll: false, resize: true },
+        effect: false
+      },
+      hide: { event: false, fixed: true },
+      show: { event: false, delay: 200 },
+      events: {
+        move: function move(event, api) {
+          if (!api.elements.target.is(':visible')) {
+            // Have to hide it immediately, with no effect
+            api.set('hide.effect', false);
+            api.hide();
+            api.set('hide.effect', true);
+          }
+        }
+      }
+    });
+
+    image.qtip('toggle', image.is(':visible'));
+  }
+
+  function destroyAntiPhishingMessage(image) {
+    image.qtip('destroy');
+    $(window).off('resize.securityBeaconQtip');
+  }
+
+  return Okta.View.extend({
+
+    template: '\
+    <div class="beacon-blank">\
+      <div class="radial-progress-bar">\
+        <div class="circle left"></div>\
+        <div class="circle right"></div>\
+      </div>\
+    </div>\
+    <div aria-live="polite" role="img" class="bg-helper auth-beacon auth-beacon-security" data-se="security-beacon">\
+      <span class="accessibility-text"></span>\
+      <div class="okta-sign-in-beacon-border auth-beacon-border js-auth-beacon-border">\
+      </div>\
+    </div>\
+    ',
+    className: 'js-security-beacon',
+
+    initialize: function initialize(options) {
+      this.update = _.partial(updateSecurityImage, this.$el, options.appState);
+      this.listenTo(options.appState, 'change:securityImage', this.update);
+      this.listenTo(options.appState, 'loading', function (isLoading) {
+        this.$el.toggleClass('beacon-loading', isLoading);
+        this.removeAntiPhishingMessage();
+      });
+      this.options.appState.set('beaconType', 'security');
+
+      this.listenTo(options.appState, 'navigate', this.removeAntiPhishingMessage);
+    },
+
+    postRender: function postRender() {
+      this.update(false);
+    },
+
+    equals: function equals(Beacon) {
+      return Beacon && this instanceof Beacon;
+    },
+
+    removeAntiPhishingMessage: function removeAntiPhishingMessage() {
+      var image = this.$el.find('.auth-beacon-security');
+      image.qtip('destroy');
+    }
+
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 237 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 7.3.20 SpeciesConstructor(O, defaultConstructor)
+var anObject = __webpack_require__(46);
+var aFunction = __webpack_require__(109);
+var SPECIES = __webpack_require__(22)('species');
+module.exports = function (O, D) {
+  var C = anObject(O).constructor;
+  var S;
+  return C === undefined || (S = anObject(C)[SPECIES]) == undefined ? D : aFunction(S);
+};
+
+
+/***/ }),
+/* 238 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var ctx = __webpack_require__(108);
+var invoke = __webpack_require__(579);
+var html = __webpack_require__(213);
+var cel = __webpack_require__(151);
+var global = __webpack_require__(21);
+var process = global.process;
+var setTask = global.setImmediate;
+var clearTask = global.clearImmediate;
+var MessageChannel = global.MessageChannel;
+var Dispatch = global.Dispatch;
+var counter = 0;
+var queue = {};
+var ONREADYSTATECHANGE = 'onreadystatechange';
+var defer, channel, port;
+var run = function () {
+  var id = +this;
+  // eslint-disable-next-line no-prototype-builtins
+  if (queue.hasOwnProperty(id)) {
+    var fn = queue[id];
+    delete queue[id];
+    fn();
+  }
+};
+var listener = function (event) {
+  run.call(event.data);
+};
+// Node.js 0.9+ & IE10+ has setImmediate, otherwise:
+if (!setTask || !clearTask) {
+  setTask = function setImmediate(fn) {
+    var args = [];
+    var i = 1;
+    while (arguments.length > i) args.push(arguments[i++]);
+    queue[++counter] = function () {
+      // eslint-disable-next-line no-new-func
+      invoke(typeof fn == 'function' ? fn : Function(fn), args);
+    };
+    defer(counter);
+    return counter;
+  };
+  clearTask = function clearImmediate(id) {
+    delete queue[id];
+  };
+  // Node.js 0.8-
+  if (__webpack_require__(86)(process) == 'process') {
+    defer = function (id) {
+      process.nextTick(ctx(run, id, 1));
+    };
+  // Sphere (JS game engine) Dispatch API
+  } else if (Dispatch && Dispatch.now) {
+    defer = function (id) {
+      Dispatch.now(ctx(run, id, 1));
+    };
+  // Browsers with MessageChannel, includes WebWorkers
+  } else if (MessageChannel) {
+    channel = new MessageChannel();
+    port = channel.port2;
+    channel.port1.onmessage = listener;
+    defer = ctx(port.postMessage, port, 1);
+  // Browsers with postMessage, skip WebWorkers
+  // IE8 has postMessage, but it's sync & typeof its postMessage is 'object'
+  } else if (global.addEventListener && typeof postMessage == 'function' && !global.importScripts) {
+    defer = function (id) {
+      global.postMessage(id + '', '*');
+    };
+    global.addEventListener('message', listener, false);
+  // IE8-
+  } else if (ONREADYSTATECHANGE in cel('script')) {
+    defer = function (id) {
+      html.appendChild(cel('script'))[ONREADYSTATECHANGE] = function () {
+        html.removeChild(this);
+        run.call(id);
+      };
+    };
+  // Rest old browsers
+  } else {
+    defer = function (id) {
+      setTimeout(ctx(run, id, 1), 0);
+    };
+  }
+}
+module.exports = {
+  set: setTask,
+  clear: clearTask
+};
+
+
+/***/ }),
+/* 239 */
+/***/ (function(module, exports) {
+
+module.exports = function (exec) {
+  try {
+    return { e: false, v: exec() };
+  } catch (e) {
+    return { e: true, v: e };
+  }
+};
+
+
+/***/ }),
+/* 240 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var anObject = __webpack_require__(46);
+var isObject = __webpack_require__(47);
+var newPromiseCapability = __webpack_require__(168);
+
+module.exports = function (C, x) {
+  anObject(C);
+  if (isObject(x) && x.constructor === C) return x;
+  var promiseCapability = newPromiseCapability.f(C);
+  var resolve = promiseCapability.resolve;
+  resolve(x);
+  return promiseCapability.promise;
+};
+
+
+/***/ }),
 /* 241 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -46295,7 +42789,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(5), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormType, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(18), __webpack_require__(5), __webpack_require__(17), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormType, Util, TextBox) {
 
   var _ = Okta._;
 
@@ -46311,13 +42805,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
     formChildren: function formChildren() {
       return [FormType.Input({
+        label: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+        'label-top': true,
+        explain: Util.createInputExplain('mfa.challenge.enterCode.tooltip', 'mfa.challenge.enterCode.placeholder', 'login'),
+        'explain-top': true,
         name: 'passCode',
         input: TextBox,
-        type: 'tel',
-        placeholder: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
-        params: {
-          innerTooltip: Okta.loc('mfa.challenge.enterCode.tooltip', 'login')
-        }
+        type: 'tel'
       }), FormType.Toolbar({
         noCancelButton: true,
         save: Okta.loc('oform.verify', 'login')
@@ -46657,7 +43151,7 @@ define(String.prototype, "padRight", "".padEnd);
 "pop,reverse,shift,keys,values,entries,indexOf,every,some,forEach,map,filter,find,findIndex,includes,join,slice,concat,push,splice,unshift,sort,lastIndexOf,reduce,reduceRight,copyWithin,fill".split(",").forEach(function (key) {
   [][key] && define(Array, key, Function.call.bind([][key]));
 });
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(93)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(91)))
 
 /***/ }),
 /* 247 */
@@ -46860,7 +43354,7 @@ __webpack_require__(440);
 __webpack_require__(441);
 __webpack_require__(442);
 __webpack_require__(443);
-module.exports = __webpack_require__(30);
+module.exports = __webpack_require__(31);
 
 
 /***/ }),
@@ -46871,32 +43365,32 @@ module.exports = __webpack_require__(30);
 
 // ECMAScript 6 symbols shim
 var global = __webpack_require__(4);
-var has = __webpack_require__(26);
+var has = __webpack_require__(27);
 var DESCRIPTORS = __webpack_require__(11);
 var $export = __webpack_require__(0);
-var redefine = __webpack_require__(24);
-var META = __webpack_require__(48).KEY;
+var redefine = __webpack_require__(25);
+var META = __webpack_require__(50).KEY;
 var $fails = __webpack_require__(6);
 var shared = __webpack_require__(80);
 var setToStringTag = __webpack_require__(70);
-var uid = __webpack_require__(54);
+var uid = __webpack_require__(55);
 var wks = __webpack_require__(9);
 var wksExt = __webpack_require__(171);
 var wksDefine = __webpack_require__(119);
 var enumKeys = __webpack_require__(250);
-var isArray = __webpack_require__(96);
+var isArray = __webpack_require__(94);
 var anObject = __webpack_require__(2);
 var isObject = __webpack_require__(7);
 var toObject = __webpack_require__(15);
-var toIObject = __webpack_require__(27);
-var toPrimitive = __webpack_require__(36);
-var createDesc = __webpack_require__(53);
-var _create = __webpack_require__(57);
+var toIObject = __webpack_require__(28);
+var toPrimitive = __webpack_require__(37);
+var createDesc = __webpack_require__(54);
+var _create = __webpack_require__(58);
 var gOPNExt = __webpack_require__(174);
-var $GOPD = __webpack_require__(28);
-var $GOPS = __webpack_require__(95);
+var $GOPD = __webpack_require__(29);
+var $GOPS = __webpack_require__(93);
 var $DP = __webpack_require__(13);
-var $keys = __webpack_require__(55);
+var $keys = __webpack_require__(56);
 var gOPD = $GOPD.f;
 var dP = $DP.f;
 var gOPN = gOPNExt.f;
@@ -47019,11 +43513,11 @@ if (!USE_NATIVE) {
 
   $GOPD.f = $getOwnPropertyDescriptor;
   $DP.f = $defineProperty;
-  __webpack_require__(58).f = gOPNExt.f = $getOwnPropertyNames;
+  __webpack_require__(59).f = gOPNExt.f = $getOwnPropertyNames;
   __webpack_require__(82).f = $propertyIsEnumerable;
   $GOPS.f = $getOwnPropertySymbols;
 
-  if (DESCRIPTORS && !__webpack_require__(47)) {
+  if (DESCRIPTORS && !__webpack_require__(49)) {
     redefine(ObjectProto, 'propertyIsEnumerable', $propertyIsEnumerable, true);
   }
 
@@ -47107,7 +43601,7 @@ $JSON && $export($export.S + $export.F * (!USE_NATIVE || $fails(function () {
 });
 
 // 19.4.3.4 Symbol.prototype[@@toPrimitive](hint)
-$Symbol[PROTOTYPE][TO_PRIMITIVE] || __webpack_require__(23)($Symbol[PROTOTYPE], TO_PRIMITIVE, $Symbol[PROTOTYPE].valueOf);
+$Symbol[PROTOTYPE][TO_PRIMITIVE] || __webpack_require__(24)($Symbol[PROTOTYPE], TO_PRIMITIVE, $Symbol[PROTOTYPE].valueOf);
 // 19.4.3.5 Symbol.prototype[@@toStringTag]
 setToStringTag($Symbol, 'Symbol');
 // 20.2.1.9 Math[@@toStringTag]
@@ -47128,8 +43622,8 @@ module.exports = __webpack_require__(80)('native-function-to-string', Function.t
 /***/ (function(module, exports, __webpack_require__) {
 
 // all enumerable object keys, includes symbols
-var getKeys = __webpack_require__(55);
-var gOPS = __webpack_require__(95);
+var getKeys = __webpack_require__(56);
+var gOPS = __webpack_require__(93);
 var pIE = __webpack_require__(82);
 module.exports = function (it) {
   var result = getKeys(it);
@@ -47150,7 +43644,7 @@ module.exports = function (it) {
 
 var $export = __webpack_require__(0);
 // 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
-$export($export.S, 'Object', { create: __webpack_require__(57) });
+$export($export.S, 'Object', { create: __webpack_require__(58) });
 
 
 /***/ }),
@@ -47176,10 +43670,10 @@ $export($export.S + $export.F * !__webpack_require__(11), 'Object', { defineProp
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.6 Object.getOwnPropertyDescriptor(O, P)
-var toIObject = __webpack_require__(27);
-var $getOwnPropertyDescriptor = __webpack_require__(28).f;
+var toIObject = __webpack_require__(28);
+var $getOwnPropertyDescriptor = __webpack_require__(29).f;
 
-__webpack_require__(38)('getOwnPropertyDescriptor', function () {
+__webpack_require__(39)('getOwnPropertyDescriptor', function () {
   return function getOwnPropertyDescriptor(it, key) {
     return $getOwnPropertyDescriptor(toIObject(it), key);
   };
@@ -47192,9 +43686,9 @@ __webpack_require__(38)('getOwnPropertyDescriptor', function () {
 
 // 19.1.2.9 Object.getPrototypeOf(O)
 var toObject = __webpack_require__(15);
-var $getPrototypeOf = __webpack_require__(29);
+var $getPrototypeOf = __webpack_require__(30);
 
-__webpack_require__(38)('getPrototypeOf', function () {
+__webpack_require__(39)('getPrototypeOf', function () {
   return function getPrototypeOf(it) {
     return $getPrototypeOf(toObject(it));
   };
@@ -47207,9 +43701,9 @@ __webpack_require__(38)('getPrototypeOf', function () {
 
 // 19.1.2.14 Object.keys(O)
 var toObject = __webpack_require__(15);
-var $keys = __webpack_require__(55);
+var $keys = __webpack_require__(56);
 
-__webpack_require__(38)('keys', function () {
+__webpack_require__(39)('keys', function () {
   return function keys(it) {
     return $keys(toObject(it));
   };
@@ -47221,7 +43715,7 @@ __webpack_require__(38)('keys', function () {
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.7 Object.getOwnPropertyNames(O)
-__webpack_require__(38)('getOwnPropertyNames', function () {
+__webpack_require__(39)('getOwnPropertyNames', function () {
   return __webpack_require__(174).f;
 });
 
@@ -47232,9 +43726,9 @@ __webpack_require__(38)('getOwnPropertyNames', function () {
 
 // 19.1.2.5 Object.freeze(O)
 var isObject = __webpack_require__(7);
-var meta = __webpack_require__(48).onFreeze;
+var meta = __webpack_require__(50).onFreeze;
 
-__webpack_require__(38)('freeze', function ($freeze) {
+__webpack_require__(39)('freeze', function ($freeze) {
   return function freeze(it) {
     return $freeze && isObject(it) ? $freeze(meta(it)) : it;
   };
@@ -47247,9 +43741,9 @@ __webpack_require__(38)('freeze', function ($freeze) {
 
 // 19.1.2.17 Object.seal(O)
 var isObject = __webpack_require__(7);
-var meta = __webpack_require__(48).onFreeze;
+var meta = __webpack_require__(50).onFreeze;
 
-__webpack_require__(38)('seal', function ($seal) {
+__webpack_require__(39)('seal', function ($seal) {
   return function seal(it) {
     return $seal && isObject(it) ? $seal(meta(it)) : it;
   };
@@ -47262,9 +43756,9 @@ __webpack_require__(38)('seal', function ($seal) {
 
 // 19.1.2.15 Object.preventExtensions(O)
 var isObject = __webpack_require__(7);
-var meta = __webpack_require__(48).onFreeze;
+var meta = __webpack_require__(50).onFreeze;
 
-__webpack_require__(38)('preventExtensions', function ($preventExtensions) {
+__webpack_require__(39)('preventExtensions', function ($preventExtensions) {
   return function preventExtensions(it) {
     return $preventExtensions && isObject(it) ? $preventExtensions(meta(it)) : it;
   };
@@ -47278,7 +43772,7 @@ __webpack_require__(38)('preventExtensions', function ($preventExtensions) {
 // 19.1.2.12 Object.isFrozen(O)
 var isObject = __webpack_require__(7);
 
-__webpack_require__(38)('isFrozen', function ($isFrozen) {
+__webpack_require__(39)('isFrozen', function ($isFrozen) {
   return function isFrozen(it) {
     return isObject(it) ? $isFrozen ? $isFrozen(it) : false : true;
   };
@@ -47292,7 +43786,7 @@ __webpack_require__(38)('isFrozen', function ($isFrozen) {
 // 19.1.2.13 Object.isSealed(O)
 var isObject = __webpack_require__(7);
 
-__webpack_require__(38)('isSealed', function ($isSealed) {
+__webpack_require__(39)('isSealed', function ($isSealed) {
   return function isSealed(it) {
     return isObject(it) ? $isSealed ? $isSealed(it) : false : true;
   };
@@ -47306,7 +43800,7 @@ __webpack_require__(38)('isSealed', function ($isSealed) {
 // 19.1.2.11 Object.isExtensible(O)
 var isObject = __webpack_require__(7);
 
-__webpack_require__(38)('isExtensible', function ($isExtensible) {
+__webpack_require__(39)('isExtensible', function ($isExtensible) {
   return function isExtensible(it) {
     return isObject(it) ? $isExtensible ? $isExtensible(it) : true : false;
   };
@@ -47352,7 +43846,7 @@ var classof = __webpack_require__(71);
 var test = {};
 test[__webpack_require__(9)('toStringTag')] = 'z';
 if (test + '' != '[object z]') {
-  __webpack_require__(24)(Object.prototype, 'toString', function toString() {
+  __webpack_require__(25)(Object.prototype, 'toString', function toString() {
     return '[object ' + classof(this) + ']';
   }, true);
 }
@@ -47397,7 +43891,7 @@ NAME in FProto || __webpack_require__(11) && dP(FProto, NAME, {
 "use strict";
 
 var isObject = __webpack_require__(7);
-var getPrototypeOf = __webpack_require__(29);
+var getPrototypeOf = __webpack_require__(30);
 var HAS_INSTANCE = __webpack_require__(9)('hasInstance');
 var FunctionProto = Function.prototype;
 // 19.2.3.6 Function.prototype[@@hasInstance](V)
@@ -47437,13 +43931,13 @@ $export($export.G + $export.F * (parseFloat != $parseFloat), { parseFloat: $pars
 "use strict";
 
 var global = __webpack_require__(4);
-var has = __webpack_require__(26);
-var cof = __webpack_require__(32);
+var has = __webpack_require__(27);
+var cof = __webpack_require__(33);
 var inheritIfRequired = __webpack_require__(125);
-var toPrimitive = __webpack_require__(36);
+var toPrimitive = __webpack_require__(37);
 var fails = __webpack_require__(6);
-var gOPN = __webpack_require__(58).f;
-var gOPD = __webpack_require__(28).f;
+var gOPN = __webpack_require__(59).f;
+var gOPD = __webpack_require__(29).f;
 var dP = __webpack_require__(13).f;
 var $trim = __webpack_require__(72).trim;
 var NUMBER = 'Number';
@@ -47451,7 +43945,7 @@ var $Number = global[NUMBER];
 var Base = $Number;
 var proto = $Number.prototype;
 // Opera ~12 has broken Object#toString
-var BROKEN_COF = cof(__webpack_require__(57)(proto)) == NUMBER;
+var BROKEN_COF = cof(__webpack_require__(58)(proto)) == NUMBER;
 var TRIM = 'trim' in String.prototype;
 
 // 7.1.3 ToNumber(argument)
@@ -47502,7 +43996,7 @@ if (!$Number(' 0o1') || !$Number('0b1') || $Number('+0x1')) {
   }
   $Number.prototype = proto;
   proto.constructor = $Number;
-  __webpack_require__(24)(global, NUMBER, $Number);
+  __webpack_require__(25)(global, NUMBER, $Number);
 }
 
 
@@ -47513,7 +44007,7 @@ if (!$Number(' 0o1') || !$Number('0b1') || $Number('+0x1')) {
 "use strict";
 
 var $export = __webpack_require__(0);
-var toInteger = __webpack_require__(33);
+var toInteger = __webpack_require__(34);
 var aNumberValue = __webpack_require__(181);
 var repeat = __webpack_require__(126);
 var $toFixed = 1.0.toFixed;
@@ -48039,7 +44533,7 @@ $export($export.S, 'Math', {
 /***/ (function(module, exports, __webpack_require__) {
 
 var $export = __webpack_require__(0);
-var toAbsoluteIndex = __webpack_require__(56);
+var toAbsoluteIndex = __webpack_require__(57);
 var fromCharCode = String.fromCharCode;
 var $fromCodePoint = String.fromCodePoint;
 
@@ -48068,7 +44562,7 @@ $export($export.S + $export.F * (!!$fromCodePoint && $fromCodePoint.length != 1)
 /***/ (function(module, exports, __webpack_require__) {
 
 var $export = __webpack_require__(0);
-var toIObject = __webpack_require__(27);
+var toIObject = __webpack_require__(28);
 var toLength = __webpack_require__(10);
 
 $export($export.S, 'String', {
@@ -48107,7 +44601,7 @@ __webpack_require__(72)('trim', function ($trim) {
 
 "use strict";
 
-var $at = __webpack_require__(97)(true);
+var $at = __webpack_require__(95)(true);
 
 // 21.1.3.27 String.prototype[@@iterator]()
 __webpack_require__(129)(String, 'String', function (iterated) {
@@ -48132,7 +44626,7 @@ __webpack_require__(129)(String, 'String', function (iterated) {
 "use strict";
 
 var $export = __webpack_require__(0);
-var $at = __webpack_require__(97)(false);
+var $at = __webpack_require__(95)(false);
 $export($export.P, 'String', {
   // 21.1.3.3 String.prototype.codePointAt(pos)
   codePointAt: function codePointAt(pos) {
@@ -48231,7 +44725,7 @@ $export($export.P + $export.F * __webpack_require__(132)(STARTS_WITH), 'String',
 "use strict";
 
 // B.2.3.2 String.prototype.anchor(name)
-__webpack_require__(25)('anchor', function (createHTML) {
+__webpack_require__(26)('anchor', function (createHTML) {
   return function anchor(name) {
     return createHTML(this, 'a', 'name', name);
   };
@@ -48245,7 +44739,7 @@ __webpack_require__(25)('anchor', function (createHTML) {
 "use strict";
 
 // B.2.3.3 String.prototype.big()
-__webpack_require__(25)('big', function (createHTML) {
+__webpack_require__(26)('big', function (createHTML) {
   return function big() {
     return createHTML(this, 'big', '', '');
   };
@@ -48259,7 +44753,7 @@ __webpack_require__(25)('big', function (createHTML) {
 "use strict";
 
 // B.2.3.4 String.prototype.blink()
-__webpack_require__(25)('blink', function (createHTML) {
+__webpack_require__(26)('blink', function (createHTML) {
   return function blink() {
     return createHTML(this, 'blink', '', '');
   };
@@ -48273,7 +44767,7 @@ __webpack_require__(25)('blink', function (createHTML) {
 "use strict";
 
 // B.2.3.5 String.prototype.bold()
-__webpack_require__(25)('bold', function (createHTML) {
+__webpack_require__(26)('bold', function (createHTML) {
   return function bold() {
     return createHTML(this, 'b', '', '');
   };
@@ -48287,7 +44781,7 @@ __webpack_require__(25)('bold', function (createHTML) {
 "use strict";
 
 // B.2.3.6 String.prototype.fixed()
-__webpack_require__(25)('fixed', function (createHTML) {
+__webpack_require__(26)('fixed', function (createHTML) {
   return function fixed() {
     return createHTML(this, 'tt', '', '');
   };
@@ -48301,7 +44795,7 @@ __webpack_require__(25)('fixed', function (createHTML) {
 "use strict";
 
 // B.2.3.7 String.prototype.fontcolor(color)
-__webpack_require__(25)('fontcolor', function (createHTML) {
+__webpack_require__(26)('fontcolor', function (createHTML) {
   return function fontcolor(color) {
     return createHTML(this, 'font', 'color', color);
   };
@@ -48315,7 +44809,7 @@ __webpack_require__(25)('fontcolor', function (createHTML) {
 "use strict";
 
 // B.2.3.8 String.prototype.fontsize(size)
-__webpack_require__(25)('fontsize', function (createHTML) {
+__webpack_require__(26)('fontsize', function (createHTML) {
   return function fontsize(size) {
     return createHTML(this, 'font', 'size', size);
   };
@@ -48329,7 +44823,7 @@ __webpack_require__(25)('fontsize', function (createHTML) {
 "use strict";
 
 // B.2.3.9 String.prototype.italics()
-__webpack_require__(25)('italics', function (createHTML) {
+__webpack_require__(26)('italics', function (createHTML) {
   return function italics() {
     return createHTML(this, 'i', '', '');
   };
@@ -48343,7 +44837,7 @@ __webpack_require__(25)('italics', function (createHTML) {
 "use strict";
 
 // B.2.3.10 String.prototype.link(url)
-__webpack_require__(25)('link', function (createHTML) {
+__webpack_require__(26)('link', function (createHTML) {
   return function link(url) {
     return createHTML(this, 'a', 'href', url);
   };
@@ -48357,7 +44851,7 @@ __webpack_require__(25)('link', function (createHTML) {
 "use strict";
 
 // B.2.3.11 String.prototype.small()
-__webpack_require__(25)('small', function (createHTML) {
+__webpack_require__(26)('small', function (createHTML) {
   return function small() {
     return createHTML(this, 'small', '', '');
   };
@@ -48371,7 +44865,7 @@ __webpack_require__(25)('small', function (createHTML) {
 "use strict";
 
 // B.2.3.12 String.prototype.strike()
-__webpack_require__(25)('strike', function (createHTML) {
+__webpack_require__(26)('strike', function (createHTML) {
   return function strike() {
     return createHTML(this, 'strike', '', '');
   };
@@ -48385,7 +44879,7 @@ __webpack_require__(25)('strike', function (createHTML) {
 "use strict";
 
 // B.2.3.13 String.prototype.sub()
-__webpack_require__(25)('sub', function (createHTML) {
+__webpack_require__(26)('sub', function (createHTML) {
   return function sub() {
     return createHTML(this, 'sub', '', '');
   };
@@ -48399,7 +44893,7 @@ __webpack_require__(25)('sub', function (createHTML) {
 "use strict";
 
 // B.2.3.14 String.prototype.sup()
-__webpack_require__(25)('sup', function (createHTML) {
+__webpack_require__(26)('sup', function (createHTML) {
   return function sup() {
     return createHTML(this, 'sup', '', '');
   };
@@ -48424,7 +44918,7 @@ $export($export.S, 'Date', { now: function () { return new Date().getTime(); } }
 
 var $export = __webpack_require__(0);
 var toObject = __webpack_require__(15);
-var toPrimitive = __webpack_require__(36);
+var toPrimitive = __webpack_require__(37);
 
 $export($export.P + $export.F * __webpack_require__(6)(function () {
   return new Date(NaN).toJSON() !== null
@@ -48496,7 +44990,7 @@ var TO_STRING = 'toString';
 var $toString = DateProto[TO_STRING];
 var getTime = DateProto.getTime;
 if (new Date(NaN) + '' != INVALID_DATE) {
-  __webpack_require__(24)(DateProto, TO_STRING, function toString() {
+  __webpack_require__(25)(DateProto, TO_STRING, function toString() {
     var value = getTime.call(this);
     // eslint-disable-next-line no-self-compare
     return value === value ? $toString.call(this) : INVALID_DATE;
@@ -48511,7 +45005,7 @@ if (new Date(NaN) + '' != INVALID_DATE) {
 var TO_PRIMITIVE = __webpack_require__(9)('toPrimitive');
 var proto = Date.prototype;
 
-if (!(TO_PRIMITIVE in proto)) __webpack_require__(23)(proto, TO_PRIMITIVE, __webpack_require__(330));
+if (!(TO_PRIMITIVE in proto)) __webpack_require__(24)(proto, TO_PRIMITIVE, __webpack_require__(330));
 
 
 /***/ }),
@@ -48521,7 +45015,7 @@ if (!(TO_PRIMITIVE in proto)) __webpack_require__(23)(proto, TO_PRIMITIVE, __web
 "use strict";
 
 var anObject = __webpack_require__(2);
-var toPrimitive = __webpack_require__(36);
+var toPrimitive = __webpack_require__(37);
 var NUMBER = 'number';
 
 module.exports = function (hint) {
@@ -48537,7 +45031,7 @@ module.exports = function (hint) {
 // 22.1.2.2 / 15.4.3.2 Array.isArray(arg)
 var $export = __webpack_require__(0);
 
-$export($export.S, 'Array', { isArray: __webpack_require__(96) });
+$export($export.S, 'Array', { isArray: __webpack_require__(94) });
 
 
 /***/ }),
@@ -48546,7 +45040,7 @@ $export($export.S, 'Array', { isArray: __webpack_require__(96) });
 
 "use strict";
 
-var ctx = __webpack_require__(31);
+var ctx = __webpack_require__(32);
 var $export = __webpack_require__(0);
 var toObject = __webpack_require__(15);
 var call = __webpack_require__(185);
@@ -48555,7 +45049,7 @@ var toLength = __webpack_require__(10);
 var createProperty = __webpack_require__(134);
 var getIterFn = __webpack_require__(135);
 
-$export($export.S + $export.F * !__webpack_require__(99)(function (iter) { Array.from(iter); }), 'Array', {
+$export($export.S + $export.F * !__webpack_require__(97)(function (iter) { Array.from(iter); }), 'Array', {
   // 22.1.2.1 Array.from(arrayLike, mapfn = undefined, thisArg = undefined)
   from: function from(arrayLike /* , mapfn = undefined, thisArg = undefined */) {
     var O = toObject(arrayLike);
@@ -48618,11 +45112,11 @@ $export($export.S + $export.F * __webpack_require__(6)(function () {
 
 // 22.1.3.13 Array.prototype.join(separator)
 var $export = __webpack_require__(0);
-var toIObject = __webpack_require__(27);
+var toIObject = __webpack_require__(28);
 var arrayJoin = [].join;
 
 // fallback for not array-like strings
-$export($export.P + $export.F * (__webpack_require__(81) != Object || !__webpack_require__(34)(arrayJoin)), 'Array', {
+$export($export.P + $export.F * (__webpack_require__(81) != Object || !__webpack_require__(35)(arrayJoin)), 'Array', {
   join: function join(separator) {
     return arrayJoin.call(toIObject(this), separator === undefined ? ',' : separator);
   }
@@ -48637,8 +45131,8 @@ $export($export.P + $export.F * (__webpack_require__(81) != Object || !__webpack
 
 var $export = __webpack_require__(0);
 var html = __webpack_require__(122);
-var cof = __webpack_require__(32);
-var toAbsoluteIndex = __webpack_require__(56);
+var cof = __webpack_require__(33);
+var toAbsoluteIndex = __webpack_require__(57);
 var toLength = __webpack_require__(10);
 var arraySlice = [].slice;
 
@@ -48671,7 +45165,7 @@ $export($export.P + $export.F * __webpack_require__(6)(function () {
 "use strict";
 
 var $export = __webpack_require__(0);
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var toObject = __webpack_require__(15);
 var fails = __webpack_require__(6);
 var $sort = [].sort;
@@ -48684,7 +45178,7 @@ $export($export.P + $export.F * (fails(function () {
   // V8 bug
   test.sort(null);
   // Old WebKit
-}) || !__webpack_require__(34)($sort)), 'Array', {
+}) || !__webpack_require__(35)($sort)), 'Array', {
   // 22.1.3.25 Array.prototype.sort(comparefn)
   sort: function sort(comparefn) {
     return comparefn === undefined
@@ -48701,8 +45195,8 @@ $export($export.P + $export.F * (fails(function () {
 "use strict";
 
 var $export = __webpack_require__(0);
-var $forEach = __webpack_require__(39)(0);
-var STRICT = __webpack_require__(34)([].forEach, true);
+var $forEach = __webpack_require__(40)(0);
+var STRICT = __webpack_require__(35)([].forEach, true);
 
 $export($export.P + $export.F * !STRICT, 'Array', {
   // 22.1.3.10 / 15.4.4.18 Array.prototype.forEach(callbackfn [, thisArg])
@@ -48717,7 +45211,7 @@ $export($export.P + $export.F * !STRICT, 'Array', {
 /***/ (function(module, exports, __webpack_require__) {
 
 var isObject = __webpack_require__(7);
-var isArray = __webpack_require__(96);
+var isArray = __webpack_require__(94);
 var SPECIES = __webpack_require__(9)('species');
 
 module.exports = function (original) {
@@ -48741,9 +45235,9 @@ module.exports = function (original) {
 "use strict";
 
 var $export = __webpack_require__(0);
-var $map = __webpack_require__(39)(1);
+var $map = __webpack_require__(40)(1);
 
-$export($export.P + $export.F * !__webpack_require__(34)([].map, true), 'Array', {
+$export($export.P + $export.F * !__webpack_require__(35)([].map, true), 'Array', {
   // 22.1.3.15 / 15.4.4.19 Array.prototype.map(callbackfn [, thisArg])
   map: function map(callbackfn /* , thisArg */) {
     return $map(this, callbackfn, arguments[1]);
@@ -48758,9 +45252,9 @@ $export($export.P + $export.F * !__webpack_require__(34)([].map, true), 'Array',
 "use strict";
 
 var $export = __webpack_require__(0);
-var $filter = __webpack_require__(39)(2);
+var $filter = __webpack_require__(40)(2);
 
-$export($export.P + $export.F * !__webpack_require__(34)([].filter, true), 'Array', {
+$export($export.P + $export.F * !__webpack_require__(35)([].filter, true), 'Array', {
   // 22.1.3.7 / 15.4.4.20 Array.prototype.filter(callbackfn [, thisArg])
   filter: function filter(callbackfn /* , thisArg */) {
     return $filter(this, callbackfn, arguments[1]);
@@ -48775,9 +45269,9 @@ $export($export.P + $export.F * !__webpack_require__(34)([].filter, true), 'Arra
 "use strict";
 
 var $export = __webpack_require__(0);
-var $some = __webpack_require__(39)(3);
+var $some = __webpack_require__(40)(3);
 
-$export($export.P + $export.F * !__webpack_require__(34)([].some, true), 'Array', {
+$export($export.P + $export.F * !__webpack_require__(35)([].some, true), 'Array', {
   // 22.1.3.23 / 15.4.4.17 Array.prototype.some(callbackfn [, thisArg])
   some: function some(callbackfn /* , thisArg */) {
     return $some(this, callbackfn, arguments[1]);
@@ -48792,9 +45286,9 @@ $export($export.P + $export.F * !__webpack_require__(34)([].some, true), 'Array'
 "use strict";
 
 var $export = __webpack_require__(0);
-var $every = __webpack_require__(39)(4);
+var $every = __webpack_require__(40)(4);
 
-$export($export.P + $export.F * !__webpack_require__(34)([].every, true), 'Array', {
+$export($export.P + $export.F * !__webpack_require__(35)([].every, true), 'Array', {
   // 22.1.3.5 / 15.4.4.16 Array.prototype.every(callbackfn [, thisArg])
   every: function every(callbackfn /* , thisArg */) {
     return $every(this, callbackfn, arguments[1]);
@@ -48811,7 +45305,7 @@ $export($export.P + $export.F * !__webpack_require__(34)([].every, true), 'Array
 var $export = __webpack_require__(0);
 var $reduce = __webpack_require__(186);
 
-$export($export.P + $export.F * !__webpack_require__(34)([].reduce, true), 'Array', {
+$export($export.P + $export.F * !__webpack_require__(35)([].reduce, true), 'Array', {
   // 22.1.3.18 / 15.4.4.21 Array.prototype.reduce(callbackfn [, initialValue])
   reduce: function reduce(callbackfn /* , initialValue */) {
     return $reduce(this, callbackfn, arguments.length, arguments[1], false);
@@ -48828,7 +45322,7 @@ $export($export.P + $export.F * !__webpack_require__(34)([].reduce, true), 'Arra
 var $export = __webpack_require__(0);
 var $reduce = __webpack_require__(186);
 
-$export($export.P + $export.F * !__webpack_require__(34)([].reduceRight, true), 'Array', {
+$export($export.P + $export.F * !__webpack_require__(35)([].reduceRight, true), 'Array', {
   // 22.1.3.19 / 15.4.4.22 Array.prototype.reduceRight(callbackfn [, initialValue])
   reduceRight: function reduceRight(callbackfn /* , initialValue */) {
     return $reduce(this, callbackfn, arguments.length, arguments[1], true);
@@ -48843,11 +45337,11 @@ $export($export.P + $export.F * !__webpack_require__(34)([].reduceRight, true), 
 "use strict";
 
 var $export = __webpack_require__(0);
-var $indexOf = __webpack_require__(94)(false);
+var $indexOf = __webpack_require__(92)(false);
 var $native = [].indexOf;
 var NEGATIVE_ZERO = !!$native && 1 / [1].indexOf(1, -0) < 0;
 
-$export($export.P + $export.F * (NEGATIVE_ZERO || !__webpack_require__(34)($native)), 'Array', {
+$export($export.P + $export.F * (NEGATIVE_ZERO || !__webpack_require__(35)($native)), 'Array', {
   // 22.1.3.11 / 15.4.4.14 Array.prototype.indexOf(searchElement [, fromIndex])
   indexOf: function indexOf(searchElement /* , fromIndex = 0 */) {
     return NEGATIVE_ZERO
@@ -48865,13 +45359,13 @@ $export($export.P + $export.F * (NEGATIVE_ZERO || !__webpack_require__(34)($nati
 "use strict";
 
 var $export = __webpack_require__(0);
-var toIObject = __webpack_require__(27);
-var toInteger = __webpack_require__(33);
+var toIObject = __webpack_require__(28);
+var toInteger = __webpack_require__(34);
 var toLength = __webpack_require__(10);
 var $native = [].lastIndexOf;
 var NEGATIVE_ZERO = !!$native && 1 / [1].lastIndexOf(1, -0) < 0;
 
-$export($export.P + $export.F * (NEGATIVE_ZERO || !__webpack_require__(34)($native)), 'Array', {
+$export($export.P + $export.F * (NEGATIVE_ZERO || !__webpack_require__(35)($native)), 'Array', {
   // 22.1.3.14 / 15.4.4.15 Array.prototype.lastIndexOf(searchElement [, fromIndex])
   lastIndexOf: function lastIndexOf(searchElement /* , fromIndex = @[*-1] */) {
     // convert -0 to +0
@@ -48896,7 +45390,7 @@ var $export = __webpack_require__(0);
 
 $export($export.P, 'Array', { copyWithin: __webpack_require__(187) });
 
-__webpack_require__(49)('copyWithin');
+__webpack_require__(51)('copyWithin');
 
 
 /***/ }),
@@ -48908,7 +45402,7 @@ var $export = __webpack_require__(0);
 
 $export($export.P, 'Array', { fill: __webpack_require__(137) });
 
-__webpack_require__(49)('fill');
+__webpack_require__(51)('fill');
 
 
 /***/ }),
@@ -48919,7 +45413,7 @@ __webpack_require__(49)('fill');
 
 // 22.1.3.8 Array.prototype.find(predicate, thisArg = undefined)
 var $export = __webpack_require__(0);
-var $find = __webpack_require__(39)(5);
+var $find = __webpack_require__(40)(5);
 var KEY = 'find';
 var forced = true;
 // Shouldn't skip holes
@@ -48929,7 +45423,7 @@ $export($export.P + $export.F * forced, 'Array', {
     return $find(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
   }
 });
-__webpack_require__(49)(KEY);
+__webpack_require__(51)(KEY);
 
 
 /***/ }),
@@ -48940,7 +45434,7 @@ __webpack_require__(49)(KEY);
 
 // 22.1.3.9 Array.prototype.findIndex(predicate, thisArg = undefined)
 var $export = __webpack_require__(0);
-var $find = __webpack_require__(39)(6);
+var $find = __webpack_require__(40)(6);
 var KEY = 'findIndex';
 var forced = true;
 // Shouldn't skip holes
@@ -48950,14 +45444,14 @@ $export($export.P + $export.F * forced, 'Array', {
     return $find(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
   }
 });
-__webpack_require__(49)(KEY);
+__webpack_require__(51)(KEY);
 
 
 /***/ }),
 /* 351 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(59)('Array');
+__webpack_require__(60)('Array');
 
 
 /***/ }),
@@ -48967,8 +45461,8 @@ __webpack_require__(59)('Array');
 var global = __webpack_require__(4);
 var inheritIfRequired = __webpack_require__(125);
 var dP = __webpack_require__(13).f;
-var gOPN = __webpack_require__(58).f;
-var isRegExp = __webpack_require__(98);
+var gOPN = __webpack_require__(59).f;
+var isRegExp = __webpack_require__(96);
 var $flags = __webpack_require__(83);
 var $RegExp = global.RegExp;
 var Base = $RegExp;
@@ -49003,10 +45497,10 @@ if (__webpack_require__(11) && (!CORRECT_NEW || __webpack_require__(6)(function 
   for (var keys = gOPN(Base), i = 0; keys.length > i;) proxy(keys[i++]);
   proto.constructor = $RegExp;
   $RegExp.prototype = proto;
-  __webpack_require__(24)(global, 'RegExp', $RegExp);
+  __webpack_require__(25)(global, 'RegExp', $RegExp);
 }
 
-__webpack_require__(59)('RegExp');
+__webpack_require__(60)('RegExp');
 
 
 /***/ }),
@@ -49023,7 +45517,7 @@ var TO_STRING = 'toString';
 var $toString = /./[TO_STRING];
 
 var define = function (fn) {
-  __webpack_require__(24)(RegExp.prototype, TO_STRING, fn, true);
+  __webpack_require__(25)(RegExp.prototype, TO_STRING, fn, true);
 };
 
 // 21.2.5.14 RegExp.prototype.toString()
@@ -49051,10 +45545,10 @@ if (__webpack_require__(6)(function () { return $toString.call({ source: 'a', fl
 var anObject = __webpack_require__(2);
 var toLength = __webpack_require__(10);
 var advanceStringIndex = __webpack_require__(140);
-var regExpExec = __webpack_require__(100);
+var regExpExec = __webpack_require__(98);
 
 // @@match logic
-__webpack_require__(101)('match', 1, function (defined, MATCH, $match, maybeCallNative) {
+__webpack_require__(99)('match', 1, function (defined, MATCH, $match, maybeCallNative) {
   return [
     // `String.prototype.match` method
     // https://tc39.github.io/ecma262/#sec-string.prototype.match
@@ -49098,9 +45592,9 @@ __webpack_require__(101)('match', 1, function (defined, MATCH, $match, maybeCall
 var anObject = __webpack_require__(2);
 var toObject = __webpack_require__(15);
 var toLength = __webpack_require__(10);
-var toInteger = __webpack_require__(33);
+var toInteger = __webpack_require__(34);
 var advanceStringIndex = __webpack_require__(140);
-var regExpExec = __webpack_require__(100);
+var regExpExec = __webpack_require__(98);
 var max = Math.max;
 var min = Math.min;
 var floor = Math.floor;
@@ -49112,7 +45606,7 @@ var maybeToString = function (it) {
 };
 
 // @@replace logic
-__webpack_require__(101)('replace', 2, function (defined, REPLACE, $replace, maybeCallNative) {
+__webpack_require__(99)('replace', 2, function (defined, REPLACE, $replace, maybeCallNative) {
   return [
     // `String.prototype.replace` method
     // https://tc39.github.io/ecma262/#sec-string.prototype.replace
@@ -49222,10 +45716,10 @@ __webpack_require__(101)('replace', 2, function (defined, REPLACE, $replace, may
 
 var anObject = __webpack_require__(2);
 var sameValue = __webpack_require__(176);
-var regExpExec = __webpack_require__(100);
+var regExpExec = __webpack_require__(98);
 
 // @@search logic
-__webpack_require__(101)('search', 1, function (defined, SEARCH, $search, maybeCallNative) {
+__webpack_require__(99)('search', 1, function (defined, SEARCH, $search, maybeCallNative) {
   return [
     // `String.prototype.search` method
     // https://tc39.github.io/ecma262/#sec-string.prototype.search
@@ -49258,12 +45752,12 @@ __webpack_require__(101)('search', 1, function (defined, SEARCH, $search, maybeC
 "use strict";
 
 
-var isRegExp = __webpack_require__(98);
+var isRegExp = __webpack_require__(96);
 var anObject = __webpack_require__(2);
 var speciesConstructor = __webpack_require__(84);
 var advanceStringIndex = __webpack_require__(140);
 var toLength = __webpack_require__(10);
-var callRegExpExec = __webpack_require__(100);
+var callRegExpExec = __webpack_require__(98);
 var regexpExec = __webpack_require__(139);
 var fails = __webpack_require__(6);
 var $min = Math.min;
@@ -49277,7 +45771,7 @@ var MAX_UINT32 = 0xffffffff;
 var SUPPORTS_Y = !fails(function () { RegExp(MAX_UINT32, 'y'); });
 
 // @@split logic
-__webpack_require__(101)('split', 2, function (defined, SPLIT, $split, maybeCallNative) {
+__webpack_require__(99)('split', 2, function (defined, SPLIT, $split, maybeCallNative) {
   var internalSplit;
   if (
     'abbc'[$SPLIT](/(b)*/)[1] == 'c' ||
@@ -49398,21 +45892,21 @@ __webpack_require__(101)('split', 2, function (defined, SPLIT, $split, maybeCall
 
 "use strict";
 
-var LIBRARY = __webpack_require__(47);
+var LIBRARY = __webpack_require__(49);
 var global = __webpack_require__(4);
-var ctx = __webpack_require__(31);
+var ctx = __webpack_require__(32);
 var classof = __webpack_require__(71);
 var $export = __webpack_require__(0);
 var isObject = __webpack_require__(7);
-var aFunction = __webpack_require__(19);
-var anInstance = __webpack_require__(60);
-var forOf = __webpack_require__(61);
+var aFunction = __webpack_require__(20);
+var anInstance = __webpack_require__(61);
+var forOf = __webpack_require__(62);
 var speciesConstructor = __webpack_require__(84);
 var task = __webpack_require__(141).set;
 var microtask = __webpack_require__(142)();
 var newPromiseCapabilityModule = __webpack_require__(143);
 var perform = __webpack_require__(191);
-var userAgent = __webpack_require__(102);
+var userAgent = __webpack_require__(100);
 var promiseResolve = __webpack_require__(192);
 var PROMISE = 'Promise';
 var TypeError = global.TypeError;
@@ -49588,7 +46082,7 @@ if (!USE_NATIVE) {
     this._h = 0;              // <- rejection state, 0 - default, 1 - handled, 2 - unhandled
     this._n = false;          // <- notify
   };
-  Internal.prototype = __webpack_require__(62)($Promise.prototype, {
+  Internal.prototype = __webpack_require__(63)($Promise.prototype, {
     // 25.4.5.3 Promise.prototype.then(onFulfilled, onRejected)
     then: function then(onFulfilled, onRejected) {
       var reaction = newPromiseCapability(speciesConstructor(this, $Promise));
@@ -49620,8 +46114,8 @@ if (!USE_NATIVE) {
 
 $export($export.G + $export.W + $export.F * !USE_NATIVE, { Promise: $Promise });
 __webpack_require__(70)($Promise, PROMISE);
-__webpack_require__(59)(PROMISE);
-Wrapper = __webpack_require__(30)[PROMISE];
+__webpack_require__(60)(PROMISE);
+Wrapper = __webpack_require__(31)[PROMISE];
 
 // statics
 $export($export.S + $export.F * !USE_NATIVE, PROMISE, {
@@ -49639,7 +46133,7 @@ $export($export.S + $export.F * (LIBRARY || !USE_NATIVE), PROMISE, {
     return promiseResolve(LIBRARY && this === Wrapper ? $Promise : this, x);
   }
 });
-$export($export.S + $export.F * !(USE_NATIVE && __webpack_require__(99)(function (iter) {
+$export($export.S + $export.F * !(USE_NATIVE && __webpack_require__(97)(function (iter) {
   $Promise.all(iter)['catch'](empty);
 })), PROMISE, {
   // 25.4.4.1 Promise.all(iterable)
@@ -49692,11 +46186,11 @@ $export($export.S + $export.F * !(USE_NATIVE && __webpack_require__(99)(function
 "use strict";
 
 var weak = __webpack_require__(197);
-var validate = __webpack_require__(63);
+var validate = __webpack_require__(64);
 var WEAK_SET = 'WeakSet';
 
 // 23.4 WeakSet Objects
-__webpack_require__(103)(WEAK_SET, function (get) {
+__webpack_require__(101)(WEAK_SET, function (get) {
   return function WeakSet() { return get(this, arguments.length > 0 ? arguments[0] : undefined); };
 }, {
   // 23.4.3.1 WeakSet.prototype.add(value)
@@ -49713,10 +46207,10 @@ __webpack_require__(103)(WEAK_SET, function (get) {
 "use strict";
 
 var $export = __webpack_require__(0);
-var $typed = __webpack_require__(104);
+var $typed = __webpack_require__(102);
 var buffer = __webpack_require__(144);
 var anObject = __webpack_require__(2);
-var toAbsoluteIndex = __webpack_require__(56);
+var toAbsoluteIndex = __webpack_require__(57);
 var toLength = __webpack_require__(10);
 var isObject = __webpack_require__(7);
 var ArrayBuffer = __webpack_require__(4).ArrayBuffer;
@@ -49756,7 +46250,7 @@ $export($export.P + $export.U + $export.F * __webpack_require__(6)(function () {
   }
 });
 
-__webpack_require__(59)(ARRAY_BUFFER);
+__webpack_require__(60)(ARRAY_BUFFER);
 
 
 /***/ }),
@@ -49764,7 +46258,7 @@ __webpack_require__(59)(ARRAY_BUFFER);
 /***/ (function(module, exports, __webpack_require__) {
 
 var $export = __webpack_require__(0);
-$export($export.G + $export.W + $export.F * !__webpack_require__(104).ABV, {
+$export($export.G + $export.W + $export.F * !__webpack_require__(102).ABV, {
   DataView: __webpack_require__(144).DataView
 });
 
@@ -49773,7 +46267,7 @@ $export($export.G + $export.W + $export.F * !__webpack_require__(104).ABV, {
 /* 362 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Int8', 1, function (init) {
+__webpack_require__(44)('Int8', 1, function (init) {
   return function Int8Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49784,7 +46278,7 @@ __webpack_require__(42)('Int8', 1, function (init) {
 /* 363 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Uint8', 1, function (init) {
+__webpack_require__(44)('Uint8', 1, function (init) {
   return function Uint8Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49795,7 +46289,7 @@ __webpack_require__(42)('Uint8', 1, function (init) {
 /* 364 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Uint8', 1, function (init) {
+__webpack_require__(44)('Uint8', 1, function (init) {
   return function Uint8ClampedArray(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49806,7 +46300,7 @@ __webpack_require__(42)('Uint8', 1, function (init) {
 /* 365 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Int16', 2, function (init) {
+__webpack_require__(44)('Int16', 2, function (init) {
   return function Int16Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49817,7 +46311,7 @@ __webpack_require__(42)('Int16', 2, function (init) {
 /* 366 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Uint16', 2, function (init) {
+__webpack_require__(44)('Uint16', 2, function (init) {
   return function Uint16Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49828,7 +46322,7 @@ __webpack_require__(42)('Uint16', 2, function (init) {
 /* 367 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Int32', 4, function (init) {
+__webpack_require__(44)('Int32', 4, function (init) {
   return function Int32Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49839,7 +46333,7 @@ __webpack_require__(42)('Int32', 4, function (init) {
 /* 368 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Uint32', 4, function (init) {
+__webpack_require__(44)('Uint32', 4, function (init) {
   return function Uint32Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49850,7 +46344,7 @@ __webpack_require__(42)('Uint32', 4, function (init) {
 /* 369 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Float32', 4, function (init) {
+__webpack_require__(44)('Float32', 4, function (init) {
   return function Float32Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49861,7 +46355,7 @@ __webpack_require__(42)('Float32', 4, function (init) {
 /* 370 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(42)('Float64', 8, function (init) {
+__webpack_require__(44)('Float64', 8, function (init) {
   return function Float64Array(data, byteOffset, length) {
     return init(this, data, byteOffset, length);
   };
@@ -49874,7 +46368,7 @@ __webpack_require__(42)('Float64', 8, function (init) {
 
 // 26.1.1 Reflect.apply(target, thisArgument, argumentsList)
 var $export = __webpack_require__(0);
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var anObject = __webpack_require__(2);
 var rApply = (__webpack_require__(4).Reflect || {}).apply;
 var fApply = Function.apply;
@@ -49896,8 +46390,8 @@ $export($export.S + $export.F * !__webpack_require__(6)(function () {
 
 // 26.1.2 Reflect.construct(target, argumentsList [, newTarget])
 var $export = __webpack_require__(0);
-var create = __webpack_require__(57);
-var aFunction = __webpack_require__(19);
+var create = __webpack_require__(58);
+var aFunction = __webpack_require__(20);
 var anObject = __webpack_require__(2);
 var isObject = __webpack_require__(7);
 var fails = __webpack_require__(6);
@@ -49951,7 +46445,7 @@ $export($export.S + $export.F * (NEW_TARGET_BUG || ARGS_BUG), 'Reflect', {
 var dP = __webpack_require__(13);
 var $export = __webpack_require__(0);
 var anObject = __webpack_require__(2);
-var toPrimitive = __webpack_require__(36);
+var toPrimitive = __webpack_require__(37);
 
 // MS Edge has broken Reflect.defineProperty - throwing instead of returning false
 $export($export.S + $export.F * __webpack_require__(6)(function () {
@@ -49978,7 +46472,7 @@ $export($export.S + $export.F * __webpack_require__(6)(function () {
 
 // 26.1.4 Reflect.deleteProperty(target, propertyKey)
 var $export = __webpack_require__(0);
-var gOPD = __webpack_require__(28).f;
+var gOPD = __webpack_require__(29).f;
 var anObject = __webpack_require__(2);
 
 $export($export.S, 'Reflect', {
@@ -50027,9 +46521,9 @@ $export($export.S, 'Reflect', {
 /***/ (function(module, exports, __webpack_require__) {
 
 // 26.1.6 Reflect.get(target, propertyKey [, receiver])
-var gOPD = __webpack_require__(28);
-var getPrototypeOf = __webpack_require__(29);
-var has = __webpack_require__(26);
+var gOPD = __webpack_require__(29);
+var getPrototypeOf = __webpack_require__(30);
+var has = __webpack_require__(27);
 var $export = __webpack_require__(0);
 var isObject = __webpack_require__(7);
 var anObject = __webpack_require__(2);
@@ -50054,7 +46548,7 @@ $export($export.S, 'Reflect', { get: get });
 /***/ (function(module, exports, __webpack_require__) {
 
 // 26.1.7 Reflect.getOwnPropertyDescriptor(target, propertyKey)
-var gOPD = __webpack_require__(28);
+var gOPD = __webpack_require__(29);
 var $export = __webpack_require__(0);
 var anObject = __webpack_require__(2);
 
@@ -50071,7 +46565,7 @@ $export($export.S, 'Reflect', {
 
 // 26.1.8 Reflect.getPrototypeOf(target)
 var $export = __webpack_require__(0);
-var getProto = __webpack_require__(29);
+var getProto = __webpack_require__(30);
 var anObject = __webpack_require__(2);
 
 $export($export.S, 'Reflect', {
@@ -50150,11 +46644,11 @@ $export($export.S, 'Reflect', {
 
 // 26.1.13 Reflect.set(target, propertyKey, V [, receiver])
 var dP = __webpack_require__(13);
-var gOPD = __webpack_require__(28);
-var getPrototypeOf = __webpack_require__(29);
-var has = __webpack_require__(26);
+var gOPD = __webpack_require__(29);
+var getPrototypeOf = __webpack_require__(30);
+var has = __webpack_require__(27);
 var $export = __webpack_require__(0);
-var createDesc = __webpack_require__(53);
+var createDesc = __webpack_require__(54);
 var anObject = __webpack_require__(2);
 var isObject = __webpack_require__(7);
 
@@ -50212,7 +46706,7 @@ if (setProto) $export($export.S, 'Reflect', {
 
 // https://github.com/tc39/Array.prototype.includes
 var $export = __webpack_require__(0);
-var $includes = __webpack_require__(94)(true);
+var $includes = __webpack_require__(92)(true);
 
 $export($export.P, 'Array', {
   includes: function includes(el /* , fromIndex = 0 */) {
@@ -50220,7 +46714,7 @@ $export($export.P, 'Array', {
   }
 });
 
-__webpack_require__(49)('includes');
+__webpack_require__(51)('includes');
 
 
 /***/ }),
@@ -50234,7 +46728,7 @@ var $export = __webpack_require__(0);
 var flattenIntoArray = __webpack_require__(200);
 var toObject = __webpack_require__(15);
 var toLength = __webpack_require__(10);
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var arraySpeciesCreate = __webpack_require__(136);
 
 $export($export.P, 'Array', {
@@ -50249,7 +46743,7 @@ $export($export.P, 'Array', {
   }
 });
 
-__webpack_require__(49)('flatMap');
+__webpack_require__(51)('flatMap');
 
 
 /***/ }),
@@ -50263,7 +46757,7 @@ var $export = __webpack_require__(0);
 var flattenIntoArray = __webpack_require__(200);
 var toObject = __webpack_require__(15);
 var toLength = __webpack_require__(10);
-var toInteger = __webpack_require__(33);
+var toInteger = __webpack_require__(34);
 var arraySpeciesCreate = __webpack_require__(136);
 
 $export($export.P, 'Array', {
@@ -50277,7 +46771,7 @@ $export($export.P, 'Array', {
   }
 });
 
-__webpack_require__(49)('flatten');
+__webpack_require__(51)('flatten');
 
 
 /***/ }),
@@ -50288,7 +46782,7 @@ __webpack_require__(49)('flatten');
 
 // https://github.com/mathiasbynens/String.prototype.at
 var $export = __webpack_require__(0);
-var $at = __webpack_require__(97)(true);
+var $at = __webpack_require__(95)(true);
 
 $export($export.P, 'String', {
   at: function at(pos) {
@@ -50306,7 +46800,7 @@ $export($export.P, 'String', {
 // https://github.com/tc39/proposal-string-pad-start-end
 var $export = __webpack_require__(0);
 var $pad = __webpack_require__(201);
-var userAgent = __webpack_require__(102);
+var userAgent = __webpack_require__(100);
 
 // https://github.com/zloirock/core-js/issues/280
 var WEBKIT_BUG = /Version\/10\.\d+(\.\d+)?( Mobile\/\w+)? Safari\//.test(userAgent);
@@ -50327,7 +46821,7 @@ $export($export.P + $export.F * WEBKIT_BUG, 'String', {
 // https://github.com/tc39/proposal-string-pad-start-end
 var $export = __webpack_require__(0);
 var $pad = __webpack_require__(201);
-var userAgent = __webpack_require__(102);
+var userAgent = __webpack_require__(100);
 
 // https://github.com/zloirock/core-js/issues/280
 var WEBKIT_BUG = /Version\/10\.\d+(\.\d+)?( Mobile\/\w+)? Safari\//.test(userAgent);
@@ -50375,9 +46869,9 @@ __webpack_require__(72)('trimRight', function ($trim) {
 
 // https://tc39.github.io/String.prototype.matchAll/
 var $export = __webpack_require__(0);
-var defined = __webpack_require__(37);
+var defined = __webpack_require__(38);
 var toLength = __webpack_require__(10);
-var isRegExp = __webpack_require__(98);
+var isRegExp = __webpack_require__(96);
 var getFlags = __webpack_require__(83);
 var RegExpProto = RegExp.prototype;
 
@@ -50425,8 +46919,8 @@ __webpack_require__(119)('observable');
 // https://github.com/tc39/proposal-object-getownpropertydescriptors
 var $export = __webpack_require__(0);
 var ownKeys = __webpack_require__(199);
-var toIObject = __webpack_require__(27);
-var gOPD = __webpack_require__(28);
+var toIObject = __webpack_require__(28);
+var gOPD = __webpack_require__(29);
 var createProperty = __webpack_require__(134);
 
 $export($export.S, 'Object', {
@@ -50484,11 +46978,11 @@ $export($export.S, 'Object', {
 
 var $export = __webpack_require__(0);
 var toObject = __webpack_require__(15);
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var $defineProperty = __webpack_require__(13);
 
 // B.2.2.2 Object.prototype.__defineGetter__(P, getter)
-__webpack_require__(11) && $export($export.P + __webpack_require__(105), 'Object', {
+__webpack_require__(11) && $export($export.P + __webpack_require__(103), 'Object', {
   __defineGetter__: function __defineGetter__(P, getter) {
     $defineProperty.f(toObject(this), P, { get: aFunction(getter), enumerable: true, configurable: true });
   }
@@ -50503,11 +46997,11 @@ __webpack_require__(11) && $export($export.P + __webpack_require__(105), 'Object
 
 var $export = __webpack_require__(0);
 var toObject = __webpack_require__(15);
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var $defineProperty = __webpack_require__(13);
 
 // B.2.2.3 Object.prototype.__defineSetter__(P, setter)
-__webpack_require__(11) && $export($export.P + __webpack_require__(105), 'Object', {
+__webpack_require__(11) && $export($export.P + __webpack_require__(103), 'Object', {
   __defineSetter__: function __defineSetter__(P, setter) {
     $defineProperty.f(toObject(this), P, { set: aFunction(setter), enumerable: true, configurable: true });
   }
@@ -50522,12 +47016,12 @@ __webpack_require__(11) && $export($export.P + __webpack_require__(105), 'Object
 
 var $export = __webpack_require__(0);
 var toObject = __webpack_require__(15);
-var toPrimitive = __webpack_require__(36);
-var getPrototypeOf = __webpack_require__(29);
-var getOwnPropertyDescriptor = __webpack_require__(28).f;
+var toPrimitive = __webpack_require__(37);
+var getPrototypeOf = __webpack_require__(30);
+var getOwnPropertyDescriptor = __webpack_require__(29).f;
 
 // B.2.2.4 Object.prototype.__lookupGetter__(P)
-__webpack_require__(11) && $export($export.P + __webpack_require__(105), 'Object', {
+__webpack_require__(11) && $export($export.P + __webpack_require__(103), 'Object', {
   __lookupGetter__: function __lookupGetter__(P) {
     var O = toObject(this);
     var K = toPrimitive(P, true);
@@ -50547,12 +47041,12 @@ __webpack_require__(11) && $export($export.P + __webpack_require__(105), 'Object
 
 var $export = __webpack_require__(0);
 var toObject = __webpack_require__(15);
-var toPrimitive = __webpack_require__(36);
-var getPrototypeOf = __webpack_require__(29);
-var getOwnPropertyDescriptor = __webpack_require__(28).f;
+var toPrimitive = __webpack_require__(37);
+var getPrototypeOf = __webpack_require__(30);
+var getOwnPropertyDescriptor = __webpack_require__(29).f;
 
 // B.2.2.5 Object.prototype.__lookupSetter__(P)
-__webpack_require__(11) && $export($export.P + __webpack_require__(105), 'Object', {
+__webpack_require__(11) && $export($export.P + __webpack_require__(103), 'Object', {
   __lookupSetter__: function __lookupSetter__(P) {
     var O = toObject(this);
     var K = toPrimitive(P, true);
@@ -50589,7 +47083,7 @@ $export($export.P + $export.R, 'Set', { toJSON: __webpack_require__(203)('Set') 
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-map.of
-__webpack_require__(106)('Map');
+__webpack_require__(104)('Map');
 
 
 /***/ }),
@@ -50597,7 +47091,7 @@ __webpack_require__(106)('Map');
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-set.of
-__webpack_require__(106)('Set');
+__webpack_require__(104)('Set');
 
 
 /***/ }),
@@ -50605,7 +47099,7 @@ __webpack_require__(106)('Set');
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-weakmap.of
-__webpack_require__(106)('WeakMap');
+__webpack_require__(104)('WeakMap');
 
 
 /***/ }),
@@ -50613,7 +47107,7 @@ __webpack_require__(106)('WeakMap');
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-weakset.of
-__webpack_require__(106)('WeakSet');
+__webpack_require__(104)('WeakSet');
 
 
 /***/ }),
@@ -50621,7 +47115,7 @@ __webpack_require__(106)('WeakSet');
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-map.from
-__webpack_require__(107)('Map');
+__webpack_require__(105)('Map');
 
 
 /***/ }),
@@ -50629,7 +47123,7 @@ __webpack_require__(107)('Map');
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-set.from
-__webpack_require__(107)('Set');
+__webpack_require__(105)('Set');
 
 
 /***/ }),
@@ -50637,7 +47131,7 @@ __webpack_require__(107)('Set');
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-weakmap.from
-__webpack_require__(107)('WeakMap');
+__webpack_require__(105)('WeakMap');
 
 
 /***/ }),
@@ -50645,7 +47139,7 @@ __webpack_require__(107)('WeakMap');
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://tc39.github.io/proposal-setmap-offrom/#sec-weakset.from
-__webpack_require__(107)('WeakSet');
+__webpack_require__(105)('WeakSet');
 
 
 /***/ }),
@@ -50674,7 +47168,7 @@ $export($export.S, 'System', { global: __webpack_require__(4) });
 
 // https://github.com/ljharb/proposal-is-error
 var $export = __webpack_require__(0);
-var cof = __webpack_require__(32);
+var cof = __webpack_require__(33);
 
 $export($export.S, 'Error', {
   isError: function isError(it) {
@@ -50872,7 +47366,7 @@ $export($export.S, 'Math', { signbit: function signbit(x) {
 // https://github.com/tc39/proposal-promise-finally
 
 var $export = __webpack_require__(0);
-var core = __webpack_require__(30);
+var core = __webpack_require__(31);
 var global = __webpack_require__(4);
 var speciesConstructor = __webpack_require__(84);
 var promiseResolve = __webpack_require__(192);
@@ -50914,7 +47408,7 @@ $export($export.S, 'Promise', { 'try': function (callbackfn) {
 /* 430 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
 var toMetaKey = metadata.key;
 var ordinaryDefineOwnMetadata = metadata.set;
@@ -50928,7 +47422,7 @@ metadata.exp({ defineMetadata: function defineMetadata(metadataKey, metadataValu
 /* 431 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
 var toMetaKey = metadata.key;
 var getOrCreateMetadataMap = metadata.map;
@@ -50949,9 +47443,9 @@ metadata.exp({ deleteMetadata: function deleteMetadata(metadataKey, target /* , 
 /* 432 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
-var getPrototypeOf = __webpack_require__(29);
+var getPrototypeOf = __webpack_require__(30);
 var ordinaryHasOwnMetadata = metadata.has;
 var ordinaryGetOwnMetadata = metadata.get;
 var toMetaKey = metadata.key;
@@ -50974,9 +47468,9 @@ metadata.exp({ getMetadata: function getMetadata(metadataKey, target /* , target
 
 var Set = __webpack_require__(195);
 var from = __webpack_require__(204);
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
-var getPrototypeOf = __webpack_require__(29);
+var getPrototypeOf = __webpack_require__(30);
 var ordinaryOwnMetadataKeys = metadata.keys;
 var toMetaKey = metadata.key;
 
@@ -50997,7 +47491,7 @@ metadata.exp({ getMetadataKeys: function getMetadataKeys(target /* , targetKey *
 /* 434 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
 var ordinaryGetOwnMetadata = metadata.get;
 var toMetaKey = metadata.key;
@@ -51012,7 +47506,7 @@ metadata.exp({ getOwnMetadata: function getOwnMetadata(metadataKey, target /* , 
 /* 435 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
 var ordinaryOwnMetadataKeys = metadata.keys;
 var toMetaKey = metadata.key;
@@ -51026,9 +47520,9 @@ metadata.exp({ getOwnMetadataKeys: function getOwnMetadataKeys(target /* , targe
 /* 436 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
-var getPrototypeOf = __webpack_require__(29);
+var getPrototypeOf = __webpack_require__(30);
 var ordinaryHasOwnMetadata = metadata.has;
 var toMetaKey = metadata.key;
 
@@ -51048,7 +47542,7 @@ metadata.exp({ hasMetadata: function hasMetadata(metadataKey, target /* , target
 /* 437 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var metadata = __webpack_require__(43);
+var metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
 var ordinaryHasOwnMetadata = metadata.has;
 var toMetaKey = metadata.key;
@@ -51063,9 +47557,9 @@ metadata.exp({ hasOwnMetadata: function hasOwnMetadata(metadataKey, target /* , 
 /* 438 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var $metadata = __webpack_require__(43);
+var $metadata = __webpack_require__(45);
 var anObject = __webpack_require__(2);
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var toMetaKey = $metadata.key;
 var ordinaryDefineOwnMetadata = $metadata.set;
 
@@ -51088,7 +47582,7 @@ $metadata.exp({ metadata: function metadata(metadataKey, metadataValue) {
 var $export = __webpack_require__(0);
 var microtask = __webpack_require__(142)();
 var process = __webpack_require__(4).process;
-var isNode = __webpack_require__(32)(process) == 'process';
+var isNode = __webpack_require__(33)(process) == 'process';
 
 $export($export.G, {
   asap: function asap(fn) {
@@ -51107,15 +47601,15 @@ $export($export.G, {
 // https://github.com/zenparsing/es-observable
 var $export = __webpack_require__(0);
 var global = __webpack_require__(4);
-var core = __webpack_require__(30);
+var core = __webpack_require__(31);
 var microtask = __webpack_require__(142)();
 var OBSERVABLE = __webpack_require__(9)('observable');
-var aFunction = __webpack_require__(19);
+var aFunction = __webpack_require__(20);
 var anObject = __webpack_require__(2);
-var anInstance = __webpack_require__(60);
-var redefineAll = __webpack_require__(62);
-var hide = __webpack_require__(23);
-var forOf = __webpack_require__(61);
+var anInstance = __webpack_require__(61);
+var redefineAll = __webpack_require__(63);
+var hide = __webpack_require__(24);
+var forOf = __webpack_require__(62);
 var RETURN = forOf.RETURN;
 
 var getMethod = function (fn) {
@@ -51301,7 +47795,7 @@ hide($Observable.prototype, OBSERVABLE, function () { return this; });
 
 $export($export.G, { Observable: $Observable });
 
-__webpack_require__(59)('Observable');
+__webpack_require__(60)('Observable');
 
 
 /***/ }),
@@ -51311,7 +47805,7 @@ __webpack_require__(59)('Observable');
 // ie9- setTimeout & setInterval additional parameters fix
 var global = __webpack_require__(4);
 var $export = __webpack_require__(0);
-var userAgent = __webpack_require__(102);
+var userAgent = __webpack_require__(100);
 var slice = [].slice;
 var MSIE = /MSIE .\./.test(userAgent); // <- dirty ie9- check
 var wrap = function (set) {
@@ -51347,10 +47841,10 @@ $export($export.G + $export.B, {
 /***/ (function(module, exports, __webpack_require__) {
 
 var $iterators = __webpack_require__(138);
-var getKeys = __webpack_require__(55);
-var redefine = __webpack_require__(24);
+var getKeys = __webpack_require__(56);
+var redefine = __webpack_require__(25);
 var global = __webpack_require__(4);
-var hide = __webpack_require__(23);
+var hide = __webpack_require__(24);
 var Iterators = __webpack_require__(73);
 var wks = __webpack_require__(9);
 var ITERATOR = wks('iterator');
@@ -52147,14 +48641,14 @@ for (var collections = getKeys(DOMIterables), i = 0; i < collections.length; i++
   typeof self === "object" ? self : this
 );
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(93)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(91)))
 
 /***/ }),
 /* 445 */
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(446);
-module.exports = __webpack_require__(30).RegExp.escape;
+module.exports = __webpack_require__(31).RegExp.escape;
 
 
 /***/ }),
@@ -52198,67 +48692,6 @@ var OktaSignIn = function () {
       OAuth2Util = __webpack_require__(147);
 
   function getProperties(authClient, LoginRouter, Util, config) {
-
-    /**
-     * Check if a session exists
-     * @param callback - callback function invoked with 'true'/'false' as the argument.
-     */
-    function checkSession(callback) {
-      authClient.session.exists().then(callback);
-    }
-
-    /**
-     * Close the current session (sign-out). Callback is invoked with an error message
-     * if the operation was not successful.
-     * @param callback - function to invoke after closing the session.
-     */
-    function closeSession(callback) {
-      authClient.session.close().then(callback).fail(function () {
-        callback('There was a problem closing the session');
-      });
-    }
-
-    /**
-     * Keep-alive for the session. The callback is invoked with the object containing
-     * the session if successful and {status: 'INACTIVE'} if it is not successful.
-     * @param callback - function to invoke after refreshing the session.
-     */
-    function refreshSession(callback) {
-      authClient.session.refresh().then(callback).fail(function () {
-        callback({ status: 'INACTIVE' });
-      });
-    }
-
-    /**
-     * Refresh the idToken
-     * @param idToken - idToken generated from the OAUTH call
-     * @param callback - function to invoke after refreshing the idToken.
-     *        The callback will be passed a new idToken if successful and
-     *        an error message if not.
-     * @param opts - OAUTH options to refresh the idToken
-     */
-    function refreshIdToken(idToken, callback, opts) {
-      authClient.idToken.refresh(opts).then(callback).fail(function () {
-        callback('There was a problem refreshing the id_token');
-      });
-    }
-
-    /**
-     * Check if there is an active session. If there is one, the callback is invoked with
-     * the session and user information (similar to calling the global success callback)
-     * and if not, the callback is invoked with {status: 'INACTIVE'}, at which point,
-     * the widget can be rendered using renderEl().
-     * @param callback - function to invoke after checking if there is an active session.
-     */
-    function getSession(callback) {
-      authClient.session.get().then(function (res) {
-        if (res.status === 'ACTIVE' && res.user) {
-          // only include the attributes that are passed into the successFn on primary auth.
-          res.user = _.pick(res.user, 'id', 'profile', 'passwordChanged');
-        }
-        callback(res);
-      });
-    }
 
     /**
      * Render the sign in widget to an element.
@@ -52318,15 +48751,6 @@ var OktaSignIn = function () {
     }
 
     /**
-     * Parses tokens from the url.
-     * @param success - success callback function (usually the same as passed to render)
-     * @param error - error callback function (usually the same as passed to render)
-     */
-    function parseTokensFromUrl(success, error) {
-      authClient.token.parseFromUrl().then(success).fail(error);
-    }
-
-    /**
      * Renders the Widget with opinionated defaults for the full-page
      * redirect flow.
      * @param options - options for the signin widget
@@ -52336,39 +48760,12 @@ var OktaSignIn = function () {
       return render(renderOptions);
     }
 
-    /**
-     * Returns authentication transaction information given a stateToken.
-     * @param {String} stateToken - Ephemeral token that represents the current state of an authentication
-     *                              or recovery transaction
-     * @returns {Promise} - Returns a promise for an object containing the transaction information
-     */
-    function getTransaction(stateToken) {
-      if (!stateToken) {
-        throw new Error('A state token is required.');
-      }
-      return authClient.tx.resume({ stateToken: stateToken });
-    }
-
     // Properties exposed on OktaSignIn object.
     return {
       renderEl: render,
+      authClient: authClient,
       showSignInToGetTokens: showSignInToGetTokens,
-      signOut: closeSession,
-      idToken: {
-        refresh: refreshIdToken
-      },
-      session: {
-        close: closeSession,
-        exists: checkSession,
-        get: getSession,
-        refresh: refreshSession
-      },
-      token: {
-        hasTokensInUrl: hasTokensInUrl,
-        parseTokensFromUrl: parseTokensFromUrl
-      },
-      tokenManager: authClient.tokenManager,
-      getTransaction: getTransaction,
+      hasTokensInUrl: hasTokensInUrl,
       hide: hide,
       show: show,
       remove: remove
@@ -52379,8 +48776,8 @@ var OktaSignIn = function () {
     __webpack_require__(1);
 
     var OktaAuth = __webpack_require__(477);
-    var Util = __webpack_require__(68);
-    var LoginRouter = __webpack_require__(494);
+    var Util = __webpack_require__(17);
+    var LoginRouter = __webpack_require__(495);
 
     Util.debugMessage('\n        The Okta Sign-In Widget is running in development mode.\n        When you are ready to publish your app, embed the minified version to turn on production mode.\n        See: https://developer.okta.com/code/javascript/okta_sign-in_widget#cdn\n      ');
 
@@ -52430,8 +48827,8 @@ module.exports = { "default": __webpack_require__(451), __esModule: true };
 /* 451 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(108);
-__webpack_require__(115);
+__webpack_require__(107);
+__webpack_require__(114);
 module.exports = __webpack_require__(156).f('iterator');
 
 
@@ -52465,12 +48862,12 @@ module.exports = function (TO_STRING) {
 "use strict";
 
 var create = __webpack_require__(209);
-var descriptor = __webpack_require__(111);
-var setToStringTag = __webpack_require__(113);
+var descriptor = __webpack_require__(110);
+var setToStringTag = __webpack_require__(112);
 var IteratorPrototype = {};
 
 // 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-__webpack_require__(64)(IteratorPrototype, __webpack_require__(21)('iterator'), function () { return this; });
+__webpack_require__(65)(IteratorPrototype, __webpack_require__(22)('iterator'), function () { return this; });
 
 module.exports = function (Constructor, NAME, next) {
   Constructor.prototype = create(IteratorPrototype, { next: descriptor(1, next) });
@@ -52482,11 +48879,11 @@ module.exports = function (Constructor, NAME, next) {
 /* 454 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var dP = __webpack_require__(50);
-var anObject = __webpack_require__(45);
+var dP = __webpack_require__(52);
+var anObject = __webpack_require__(46);
 var getKeys = __webpack_require__(76);
 
-module.exports = __webpack_require__(40) ? Object.defineProperties : function defineProperties(O, Properties) {
+module.exports = __webpack_require__(42) ? Object.defineProperties : function defineProperties(O, Properties) {
   anObject(O);
   var keys = getKeys(Properties);
   var length = keys.length;
@@ -52503,7 +48900,7 @@ module.exports = __webpack_require__(40) ? Object.defineProperties : function de
 
 // false -> Array#indexOf
 // true  -> Array#includes
-var toIObject = __webpack_require__(66);
+var toIObject = __webpack_require__(67);
 var toLength = __webpack_require__(212);
 var toAbsoluteIndex = __webpack_require__(456);
 module.exports = function (IS_INCLUDES) {
@@ -52544,8 +48941,8 @@ module.exports = function (index, length) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
-var has = __webpack_require__(65);
-var toObject = __webpack_require__(114);
+var has = __webpack_require__(66);
+var toObject = __webpack_require__(113);
 var IE_PROTO = __webpack_require__(153)('IE_PROTO');
 var ObjectProto = Object.prototype;
 
@@ -52567,7 +48964,7 @@ module.exports = Object.getPrototypeOf || function (O) {
 var addToUnscopables = __webpack_require__(459);
 var step = __webpack_require__(460);
 var Iterators = __webpack_require__(75);
-var toIObject = __webpack_require__(66);
+var toIObject = __webpack_require__(67);
 
 // 22.1.3.4 Array.prototype.entries()
 // 22.1.3.13 Array.prototype.keys()
@@ -52639,32 +49036,32 @@ module.exports = __webpack_require__(16).Symbol;
 "use strict";
 
 // ECMAScript 6 symbols shim
-var global = __webpack_require__(20);
-var has = __webpack_require__(65);
-var DESCRIPTORS = __webpack_require__(40);
-var $export = __webpack_require__(44);
+var global = __webpack_require__(21);
+var has = __webpack_require__(66);
+var DESCRIPTORS = __webpack_require__(42);
+var $export = __webpack_require__(41);
 var redefine = __webpack_require__(208);
 var META = __webpack_require__(214).KEY;
 var $fails = __webpack_require__(74);
 var shared = __webpack_require__(154);
-var setToStringTag = __webpack_require__(113);
-var uid = __webpack_require__(112);
-var wks = __webpack_require__(21);
+var setToStringTag = __webpack_require__(112);
+var uid = __webpack_require__(111);
+var wks = __webpack_require__(22);
 var wksExt = __webpack_require__(156);
 var wksDefine = __webpack_require__(157);
 var enumKeys = __webpack_require__(464);
 var isArray = __webpack_require__(465);
-var anObject = __webpack_require__(45);
-var isObject = __webpack_require__(51);
-var toObject = __webpack_require__(114);
-var toIObject = __webpack_require__(66);
+var anObject = __webpack_require__(46);
+var isObject = __webpack_require__(47);
+var toObject = __webpack_require__(113);
+var toIObject = __webpack_require__(67);
 var toPrimitive = __webpack_require__(152);
-var createDesc = __webpack_require__(111);
+var createDesc = __webpack_require__(110);
 var _create = __webpack_require__(209);
 var gOPNExt = __webpack_require__(466);
 var $GOPD = __webpack_require__(467);
 var $GOPS = __webpack_require__(158);
-var $DP = __webpack_require__(50);
+var $DP = __webpack_require__(52);
 var $keys = __webpack_require__(76);
 var gOPD = $GOPD.f;
 var dP = $DP.f;
@@ -52789,10 +49186,10 @@ if (!USE_NATIVE) {
   $GOPD.f = $getOwnPropertyDescriptor;
   $DP.f = $defineProperty;
   __webpack_require__(215).f = gOPNExt.f = $getOwnPropertyNames;
-  __webpack_require__(88).f = $propertyIsEnumerable;
+  __webpack_require__(87).f = $propertyIsEnumerable;
   $GOPS.f = $getOwnPropertySymbols;
 
-  if (DESCRIPTORS && !__webpack_require__(86)) {
+  if (DESCRIPTORS && !__webpack_require__(85)) {
     redefine(ObjectProto, 'propertyIsEnumerable', $propertyIsEnumerable, true);
   }
 
@@ -52876,7 +49273,7 @@ $JSON && $export($export.S + $export.F * (!USE_NATIVE || $fails(function () {
 });
 
 // 19.4.3.4 Symbol.prototype[@@toPrimitive](hint)
-$Symbol[PROTOTYPE][TO_PRIMITIVE] || __webpack_require__(64)($Symbol[PROTOTYPE], TO_PRIMITIVE, $Symbol[PROTOTYPE].valueOf);
+$Symbol[PROTOTYPE][TO_PRIMITIVE] || __webpack_require__(65)($Symbol[PROTOTYPE], TO_PRIMITIVE, $Symbol[PROTOTYPE].valueOf);
 // 19.4.3.5 Symbol.prototype[@@toStringTag]
 setToStringTag($Symbol, 'Symbol');
 // 20.2.1.9 Math[@@toStringTag]
@@ -52892,7 +49289,7 @@ setToStringTag(global.JSON, 'JSON', true);
 // all enumerable object keys, includes symbols
 var getKeys = __webpack_require__(76);
 var gOPS = __webpack_require__(158);
-var pIE = __webpack_require__(88);
+var pIE = __webpack_require__(87);
 module.exports = function (it) {
   var result = getKeys(it);
   var getSymbols = gOPS.f;
@@ -52911,7 +49308,7 @@ module.exports = function (it) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // 7.2.2 IsArray(argument)
-var cof = __webpack_require__(87);
+var cof = __webpack_require__(86);
 module.exports = Array.isArray || function isArray(arg) {
   return cof(arg) == 'Array';
 };
@@ -52922,7 +49319,7 @@ module.exports = Array.isArray || function isArray(arg) {
 /***/ (function(module, exports, __webpack_require__) {
 
 // fallback for IE11 buggy Object.getOwnPropertyNames with iframe and window
-var toIObject = __webpack_require__(66);
+var toIObject = __webpack_require__(67);
 var gOPN = __webpack_require__(215).f;
 var toString = {}.toString;
 
@@ -52946,15 +49343,15 @@ module.exports.f = function getOwnPropertyNames(it) {
 /* 467 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var pIE = __webpack_require__(88);
-var createDesc = __webpack_require__(111);
-var toIObject = __webpack_require__(66);
+var pIE = __webpack_require__(87);
+var createDesc = __webpack_require__(110);
+var toIObject = __webpack_require__(67);
 var toPrimitive = __webpack_require__(152);
-var has = __webpack_require__(65);
+var has = __webpack_require__(66);
 var IE8_DOM_DEFINE = __webpack_require__(207);
 var gOPD = Object.getOwnPropertyDescriptor;
 
-exports.f = __webpack_require__(40) ? gOPD : function getOwnPropertyDescriptor(O, P) {
+exports.f = __webpack_require__(42) ? gOPD : function getOwnPropertyDescriptor(O, P) {
   O = toIObject(O);
   P = toPrimitive(P, true);
   if (IE8_DOM_DEFINE) try {
@@ -52993,9 +49390,9 @@ module.exports = function defineProperty(it, key, desc) {
 /* 471 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var $export = __webpack_require__(44);
+var $export = __webpack_require__(41);
 // 19.1.2.4 / 15.2.3.6 Object.defineProperty(O, P, Attributes)
-$export($export.S + $export.F * !__webpack_require__(40), 'Object', { defineProperty: __webpack_require__(50).f });
+$export($export.S + $export.F * !__webpack_require__(42), 'Object', { defineProperty: __webpack_require__(52).f });
 
 
 /***/ }),
@@ -53018,7 +49415,7 @@ $export($export.S + $export.F * !__webpack_require__(40), 'Object', { defineProp
 
   // Set up Backbone appropriately for the environment. Start with AMD.
   if (true) {
-    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(473), __webpack_require__(89), exports], __WEBPACK_AMD_DEFINE_RESULT__ = (function(_, $, exports) {
+    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(473), __webpack_require__(115), exports], __WEBPACK_AMD_DEFINE_RESULT__ = (function(_, $, exports) {
       // Export global even in AMD case in case this script is loaded with
       // others that may still expect a global Backbone.
       root.Backbone = factory(root, exports, _, $);
@@ -54877,7 +51274,7 @@ $export($export.S + $export.F * !__webpack_require__(40), 'Object', { defineProp
 
 }));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(93)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(91)))
 
 /***/ }),
 /* 473 */
@@ -56577,7 +52974,7 @@ $export($export.S + $export.F * !__webpack_require__(40), 'Object', { defineProp
   }
 }());
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(93), __webpack_require__(474)(module)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(91), __webpack_require__(474)(module)))
 
 /***/ }),
 /* 474 */
@@ -56611,13 +53008,13 @@ module.exports = function(module) {
 /* 475 */
 /***/ (function(module, exports) {
 
-module.exports = {"signout":"Sign Out","remember":"Remember me","rememberDevice":"Trust this device","rememberDevice.timebased":"Do not challenge me on this device for the next {0}","rememberDevice.devicebased":"Do not challenge me on this device again","autoPush":"Send push automatically","unlockaccount":"Unlock account?","needhelp":"Need help signing in?","goback":"Back to Sign In","forgotpassword":"Forgot password?","help":"Help","retry":"Retry","minutes.oneMinute":"minute","minutes":"{0} minutes","hours":"{0} hours","days":"{0} days","error.config":"There was a configuration error","error.required.authParams":"Missing parameters for the configured authentication scheme - \"OAUTH2\"","error.required.baseUrl":"\"baseUrl\" is a required widget parameter","error.required.success":"A success handler is required","error.required.el":"\"el\" is a required widget parameter","error.invalid.colors.brand":"\"colors.brand\" must be in six-digit hex format","error.unsupported.browser":"Unsupported browser","error.unsupported.cors":"Unsupported browser - missing CORS support","error.unsupported.localStorage":"Unsupported browser - missing localStorage support","error.enabled.cors":"There was an error sending the request - have you enabled CORS?","error.expired.session":"Your session has expired. Please try to log in again.","error.auth.lockedOut":"Your account is locked. Please contact your administrator.","error.oauth.idToken":"There was a problem generating the id_token for the user. Please try again.","error.network.connection":"Unable to connect to the server. Please check your network connection.","error.username.required":"Please enter a username","error.password.required":"Please enter a password","errors.E0000004":"Sign in failed!","errors.E0000069":"Your account was locked due to excessive MFA attempts.","errors.E0000047":"You exceeded the maximum number of requests. Try again in a while.","errors.E0000001":"Api validation failed: {0}","errors.E0000002":"The request was not valid: {0}","errors.E0000003":"The request body was not well-formed.","errors.E0000005":"Invalid session","errors.E0000006":"You do not have permission to perform the requested action","errors.E0000007":"Not found: {0}","errors.E0000008":"The requested path was not found","errors.E0000009":"Internal Server Error","errors.E0000010":"Service is in read only mode","errors.E0000011":"Invalid token provided","errors.E0000012":"Unsupported media type","errors.E0000013":"Invalid client app id","errors.E0000015":"You do not have permission to access the feature you are requesting","errors.E0000016":"Activation failed because the user is already active","errors.E0000017":"Password reset failed","errors.E0000018":"Bad request.  Accept and/or Content-Type headers are likely not set.","errors.E0000019":"Bad request.  Accept and/or Content-Type headers likely do not match supported values.","errors.E0000020":"Bad request.","errors.E0000021":"Bad request.  Accept and/or Content-Type headers likely do not match supported values.","errors.E0000022":"The endpoint does not support the provided HTTP method","errors.E0000023":"Operation failed because user profile is mastered under another system","errors.E0000024":"Bad request.  This operation on app metadata is not yet supported.","errors.E0000025":"App version assignment failed.","errors.E0000026":"This endpoint has been deprecated.","errors.E0000027":"Group push bad request : {0}","errors.E0000028":"The request is missing a required parameter.","errors.E0000029":"Invalid paging request.","errors.E0000030":"Bad request. Invalid date. Dates must be of the form yyyy-MM-dd''T''HH:mm:ss.SSSZZ, e.g. 2013-01-01T12:00:00.000-07:00.","errors.E0000031":"Invalid search criteria.","errors.E0000032":"Unlock is not allowed for this user.","errors.E0000033":"Bad request. Can't specify a search query and filter in the same request.","errors.E0000034":"Forgot password not allowed on specified user.","errors.E0000035":"Change password not allowed on specified user.","errors.E0000036":"Change recovery question not allowed on specified user.","errors.E0000037":"Type mismatch exception.","errors.E0000038":"This operation is not allowed in the user''s current status.","errors.E0000039":"Operation on application settings failed.","errors.E0000040":"Application label must not be the same as an existing application label.","errors.E0000041":"Credentials should not be set on this resource based on the scheme.","errors.E0000042":"Setting the error page redirect URL failed.","errors.E0000043":"Self service application assignment is not enabled.","errors.E0000044":"Self service application assignment is not supported.","errors.E0000045":"Field mapping bad request.","errors.E0000046":"Deactivate application for user forbidden.","errors.E0000048":"Entity not found exception.","errors.E0000049":"Invalid SCIM data from SCIM implementation.","errors.E0000050":"Invalid SCIM data from client.","errors.E0000051":"No response from SCIM implementation.","errors.E0000052":"Endpoint not implemented.","errors.E0000053":"Invalid SCIM filter.","errors.E0000054":"Invalid pagination properties.","errors.E0000055":"Duplicate group.","errors.E0000056":"Delete application forbidden.","errors.E0000057":"Access to this application is denied due to a policy.","errors.E0000058":"Access to this application requires MFA: {0}","errors.E0000059":"The connector configuration could not be tested. Make sure that the URL, Authentication Parameters are correct and that there is an implementation available at the URL provided.","errors.E0000060":"Unsupported operation.","errors.E0000061":"Tab error: {0}","errors.E0000062":"The specified user is already assigned to the application.","errors.E0000063":"Invalid combination of parameters specified.","errors.E0000064":"Password is expired and must be changed.","errors.E0000065":"Internal error processing app metadata.","errors.E0000066":"APNS is not configured, contact your admin","errors.E0000067":"Factors Service Error.","errors.E0000070":"Waiting for ACK","errors.E0000071":"Unsupported OS Version: {0}","errors.E0000072":"MIM policy settings have disallowed enrollment for this user","errors.E0000073":"User rejected authentication","errors.E0000074":"Factor Service Error","errors.E0000075":"Cannot modify the {0} attribute because it has a field mapping and profile push is enabled.","errors.E0000076":"Cannot modify the app user because it is mastered by an external app.","errors.E0000077":"Cannot modify the {0} attribute because it is read-only.","errors.E0000078":"Cannot modify the {0} attribute because it is immutable.","errors.E0000079":"This operation is not allowed in the current authentication state.","errors.E0000081":"Cannot modify the {0} attribute because it is a reserved attribute for this application.","errors.E0000082":"Each code can only be used once. Please wait for a new code and try again.","errors.E0000083":"PassCode is valid but exceeded time window.","errors.E0000084":"App evaluation error.","errors.E0000085":"You do not have permission to access your account at this time.","errors.E0000086":"This policy cannot be activated at this time.","errors.E0000087":"The recovery question answer did not match our records.","errors.E0000090":"The role specified is already assigned to the user.","errors.E0000091":"The provided role type was not the same as required role type.","errors.E0000092":"Access to this application requires re-authentication: {0}","errors.E0000093":"Target count limit exceeded","errors.E0000094":"The provided filter is unsupported.","errors.E0000095":"Recovery not allowed for unknown user.","errors.E0000096":"This certificate has already been uploaded with kid={0}.","errors.E0000097":"There is no verified phone number on file.","errors.E0000098":"This phone number is invalid.","errors.E0000099":"Only numbers located in US and Canada are allowed.  Contact your administrator if this is a problem.","errors.E0000100":"Unable to perform search query.","errors.E0000101":"Upload failed because of a problem with your ipa file, {0}","errors.E0000102":"YubiKey cannot be deleted while assigned to an user. Please deactivate YubiKey using reset MFA and try again","errors.E0000103":"Action on device already in queue or in progress","errors.E0000104":"Device is already locked and cannot be locked again","errors.E0000105":"You have accessed an account recovery link that has expired or been previously used.","errors.E0000106":"Wait for token to change, then enter the new tokencode.","errors.E0000107":"The entity is not in the expected state for the requested transition.","errors.E0000109":"An SMS message was recently sent. Please wait 30 seconds before trying again.","errors.E0000110":"You have accessed a link that has expired or has been previously used.","errors.E0000111":"Cannot modify the {0} object because it is read-only.","errors.E0000112":"Cannot update this user because they are still being activated. Please try again in a few minutes.","errors.E0000113":"{0}.","errors.E0000114":"A user with this login already exists in the current organization.","errors.E0000115":"Upload failed, {0}","errors.E0000116":"{0}","errors.E0000119":"Your account is locked. Please contact your administrator.","errors.E0000124":"Could not create user. To create a user and expire their password immediately, a password must be specified","errors.E0000125":"Could not create user. To create a user and expire their password immediately, \"activate\" must be true","errors.E0000133":"A phone call was recently made. Please wait 30 seconds before trying again.","oform.next":"Next","oform.verify":"Verify","oform.send":"Send","oform.back":"Back","oform.save":"Save","oform.cancel":"Cancel","oform.edit":"Edit","oform.previous":"Previous","oform.error.icon.ariaLabel":"Error","oform.errorbanner.title":"We found some errors. Please review the form and make corrections.","oform.errormsg.title":"Please review the form to correct the following errors:","oform.error.unexpected":"There was an unexpected internal error. Please try again.","model.validation.field.blank":"This field cannot be left blank","model.validation.field.wrong.type":"This field is of the wrong type","model.validation.field.invalid":"This field has an invalid value","model.validation.field.value.not.allowed":"This field value is not allowed","model.validation.field.array.minItems":"This array does not have enough items","model.validation.field.array.maxItems":"This array contains too many items","model.validation.field.array.unique":"This array can only have unique values","model.validation.field.string.minLength":"This field cannot be less than the minimum required characters","model.validation.field.string.maxLength":"This field cannot exceed the maximum allowed characters","model.validation.field.invalid.format.email":"This value is not a valid email address","model.validation.field.invalid.format.uri":"This value is not a valid URI","model.validation.field.invalid.format.ipv4":"This value is not a valid IPv4 address","model.validation.field.invalid.format.hostname":"This value is not a valid hostname","model.validation.field.username":"Please check your username","factor.totpSoft.oktaVerify":"Okta Verify","factor.totpSoft.googleAuthenticator":"Google Authenticator","factor.totpSoft.description":"Enter single-use code from the mobile app.","factor.totpHard.rsaSecurId":"RSA SecurID","factor.totpHard.symantecVip":"Symantec VIP","factor.totpHard.description":"Enter a single-use code from a hardware token.","factor.totpHard.yubikey":"YubiKey","factor.totpHard.yubikey.description":"Insert your YubiKey and tap it to get a verification code.","factor.totpHard.yubikey.placeholder":"Click here, then tap your YubiKey","factor.oktaVerifyPush":"Okta Verify","factor.push.description":"Use a push notification sent to the mobile app.","factor.duo":"Duo Security","factor.duo.description":"Use Push Notification, SMS, or Voice call to authenticate.","factor.sms":"SMS Authentication","factor.sms.description":"Enter a single-use code sent to your mobile phone.","factor.sms.time.warning":"Haven't received an SMS? To try again, click <span style=\"font-weight:bold\">Re-send code</span>.","factor.call":"Voice Call Authentication","factor.call.description":"Use a phone to authenticate by following voice instructions.","factor.call.time.warning":"Haven't received a voice call? To try again, click <span style=\"font-weight:bold\">Redial</span>.","factor.securityQuestion":"Security Question","factor.securityQuestion.description":"Use the answer to a security question to authenticate.","factor.windowsHello":"Windows Hello","factor.windowsHello.signin.description":"Sign in to Okta using Windows Hello.","factor.windowsHello.signin.description.generic":"Sign in using Windows Hello.","factor.windowsHello.signin.description.specific":"Sign in to {0} using Windows Hello.","factor.u2f":"Security Key (U2F)","factor.u2f.description":"Use a Universal 2nd Factor (U2F) security key to sign on to Okta.","factor.u2f.description.generic":"Use a Universal 2nd Factor (U2F) security key to sign in.","factor.u2f.description.specific":"Use a Universal 2nd Factor (U2F) security key to sign in to {0}.","factor.email":"Email Authentication","factor.password":"Password","factor.customFactor.description":"Redirect to a third party MFA provider to sign in to Okta.","factor.customFactor.description.generic":"Redirect to a third party MFA provider to sign in.","factor.customFactor.description.specific":"Redirect to a third party MFA provider to sign in to {0}.","factor.webauthn":"Security Key or Built-in Authenticator","factor.webauthn.description":"Use a security key (USB or bluetooth) or a built-in device authenticator (Windows Hello, macOS TouchID, etc.)","factor.hotp.description":"Enter a single-use code from an authenticator.","mfa.challenge.verify":"Verify","mfa.challenge.answer.placeholder":"Answer","mfa.challenge.answer.tooltip":"Answer","mfa.challenge.answer.showAnswer":"Show","mfa.challenge.answer.hideAnswer":"Hide","mfa.challenge.enterCode.placeholder":"Enter Code","mfa.challenge.enterCode.tooltip":"Enter Code","mfa.challenge.password.placeholder":"Password","mfa.backToFactors":"Back to factor list","mfa.phoneNumber.placeholder":"Phone number","mfa.phoneNumber.ext.placeholder":"Extension","mfa.sendCode":"Send code","mfa.sent":"Sent","mfa.resendCode":"Re-send code","mfa.call":"Call","mfa.calling":"Calling","mfa.redial":"Redial","mfa.sendEmail":"Send email","mfa.resendEmail":"Re-send email","mfa.scanBarcode":"Scan barcode","mfa.noAccessToEmail":"Can't access email","password.reset":"Reset Password","password.oldPassword.placeholder":"Old password","password.oldPassword.tooltip":"Old password","password.newPassword.placeholder":"New password","password.newPassword.tooltip":"New password","password.confirmPassword.placeholder":"Repeat password","password.confirmPassword.tooltip":"Repeat password","password.error.match":"New passwords must match","password.enroll.error.match":"Passwords must match","recovery.sms.hint":"SMS can only be used if a mobile phone number has been configured.","recovery.mobile.hint":"{0} can only be used if a mobile phone number has been configured.","recovery.sms":"SMS","recovery.call":"Voice Call","recovery.smsOrCall":"SMS or Voice Call","enroll.choices.title":"Set up multifactor authentication","enroll.choices.description":"Your company requires multifactor authentication to add an additional layer of security when signing in to your Okta account","enroll.choices.description.generic":"Your company requires multifactor authentication to add an additional layer of security when signing in to your account","enroll.choices.description.specific":"Your company requires multifactor authentication to add an additional layer of security when signing in to your {0} account","enroll.choices.optional":"You can configure any additional optional factor or click finish","enroll.choices.list.setup":"Setup required","enroll.choices.list.enrolled":"Enrolled factors","enroll.choices.list.optional":"Additional optional factors","enroll.choices.setup":"Setup","enroll.choices.setup.another":"Set up another","enroll.choices.submit.finish":"Finish","enroll.choices.submit.configure":"Configure factor","enroll.choices.submit.next":"Configure next factor","enroll.choices.cardinality.setup":"({0} set up)","enroll.choices.cardinality.setup.remaining":"({0} of {1} set up)","enroll.choices.setup.skip":"Skip set up","enroll.securityQuestion.setup":"Setup secret question authentication","security.disliked_food":"What is the food you least liked as a child?","security.name_of_first_plush_toy":"What is the name of your first stuffed animal?","security.first_award":"What did you earn your first medal or award for?","security.favorite_security_question":"What is your favorite security question?","security.favorite_toy":"What is the toy/stuffed animal you liked the most as a kid?","security.first_computer_game":"What was the first computer game you played?","security.favorite_movie_quote":"What is your favorite movie quote?","security.first_sports_team_mascot":"What was the mascot of the first sports team you played on?","security.first_music_purchase":"What music album or song did you first purchase?","security.favorite_art_piece":"What is your favorite piece of art?","security.grandmother_favorite_desert":"What was your grandmother's favorite dessert?","security.first_thing_cooked":"What was the first thing you learned to cook?","security.childhood_dream_job":"What was your dream job as a child?","security.first_kiss_location":"Where did you have your first kiss?","security.place_where_significant_other_was_met":"Where did you meet your spouse/significant other?","security.favorite_vacation_location":"Where did you go for your favorite vacation?","security.new_years_two_thousand":"Where were you on New Year's Eve in the year 2000?","security.favorite_speaker_actor":"Who is your favorite speaker/orator?","security.favorite_book_movie_character":"Who is your favorite book/movie character?","security.favorite_sports_player":"Who is your favorite sports player?","enroll.password.setup":"Select a password","enroll.sms.setup":"Receive a code via SMS to authenticate","enroll.sms.try_again":"The number you entered seems invalid. If the number is correct, please try again.","enroll.call.setup":"Follow phone call instructions to authenticate","enroll.onprem.username.placeholder":"Enter {0} username","enroll.onprem.username.tooltip":"Enter {0} username","enroll.onprem.passcode.placeholder":"Enter {0} passcode","enroll.onprem.passcode.tooltip":"Enter {0} passcode","enroll.symantecVip.subtitle":"Enter Credential ID and two consecutive generated codes","enroll.symantecVip.credentialId.placeholder":"Enter credential ID","enroll.symantecVip.credentialId.tooltip":"Enter credential ID","enroll.symantecVip.passcode1.placeholder":"Security code 1","enroll.symantecVip.passcode1.tooltip":"Security code 1","enroll.symantecVip.passcode2.placeholder":"Security code 2","enroll.symantecVip.passcode2.tooltip":"Security code 2","enroll.yubikey.title":"Setup YubiKey","enroll.yubikey.subtitle":"Insert your YubiKey into a USB port and tap it to generate a verification code","enroll.totp.title":"Setup {0}","enroll.totp.selectDevice":"Select your device type","enroll.totp.downloadApp":"Download <a href=\"{0}\" class=\"inline-link\">{1} from the {2}</a> onto your mobile device.","enroll.totp.installApp":"Install {0}","enroll.hotp.restricted":"Contact your administrator to continue enrollment.","enroll.duo.title":"Setup Duo Security","enroll.windowsHello.title":"Enroll Windows Hello","enroll.windowsHello.subtitle":"Click below to enroll Windows Hello as a second form of authentication","enroll.windowsHello.subtitle.loading":"Please wait while Windows Hello is loading...","enroll.windowsHello.save":"Enroll Windows Hello","enroll.windowsHello.error.notWindows":"Windows Hello can only be used on Windows Edge with Windows 10. Contact your admin for assistance.","enroll.windowsHello.error.notConfiguredHtml":"Windows Hello is not configured. Select the <b>Start</b> button, then select <b>Settings</b> &gt; <b>Accounts</b> &gt; <b>Sign-in</b> to configure Windows Hello.","verify.windowsHello.subtitle":"Verify your identity with Windows Hello","verify.windowsHello.subtitle.loading":"Please wait while Windows Hello is loading...","verify.windowsHello.subtitle.signingIn":"Signing in to Okta...","verify.windowsHello.subtitle.signingIn.generic":"Signing in...","verify.windowsHello.subtitle.signingIn.specific":"Signing in to {0}...","verify.windowsHello.save":"Verify with Windows Hello","verify.windowsHello.error.notFound":"Your Windows Hello enrollment does not match our records. Contact your administrator for assistance.","verify.windowsHello.error.notFound.selectAnother":"Your Windows Hello enrollment does not match our records. Select another factor or contact your administrator for assistance.","enroll.u2f.title":"Setup Security Key (U2F)","enroll.u2f.save":"Register Security Key","enroll.u2f.general2":"Make sure you have a Security Key. If already inserted, remove it now.<br>If you have a Bluetooth Security Key, turn on your computer's Bluetooth.","enroll.u2f.general3":"Click the button below to register","enroll.u2f.instructions":"Insert your Security Key into a USB port on this computer. If it has a button or gold disk, tap it.","enroll.u2f.instructionsBluetooth":"If you are using a Bluetooth Security Key, press the button.","u2f.error.factorNotSupported":"Security Key (U2F) is not supported on this browser. Select another factor or contact your admin for assistance.","u2f.error.factorNotSupported.oneFactor":"Security Key (U2F) is not supported on this browser. Contact your admin for assistance.","u2f.error.other":"An unknown error has occured. Try again or select another factor.","u2f.error.other.oneFactor":"An unknown error has occured. Try again or contact your admin for assistance.","u2f.error.badRequest":"There was an error with the U2F request. Try again or select another factor.","u2f.error.badRequest.oneFactor":"There was an error with the U2F request. Try again or contact your admin for assistance.","u2f.error.unsupported":"The security key is unsupported. Select another factor.","u2f.error.unsupported.oneFactor":"The security key is unsupported. Contact your admin for assistance.","u2f.error.timeout":"You have timed out of the authentication period. Please try again.","verify.u2f.instructions":"Insert your Security Key. If it has a button or gold disk, tap it.","verify.u2f.instructionsBluetooth":"If you are using a Bluetooth Security Key, turn on your computer's Bluetooth and press the button.","verify.u2f.retry":"Retry","enroll.customFactor.subtitle":"Clicking below will redirect to MFA enrollment with {0}","enroll.customFactor.save":"Enroll","verify.customFactor.subtitle":"Clicking below will redirect to verification with {0}","enroll.webauthn.title":"Set up security key or built-in authenticator","enroll.webauthn.save":"Enroll","enroll.webauthn.instructions":"Your browser or device will prompt you to register a security key or built-in authenticator. Follow the instructions to complete enrollment.","enroll.webauthn.instructions.edge":"Note: If you are enrolling a security key and Windows Hello or PIN is enabled, you will need to select '<b>Cancel</b>' before continuing.","verify.webauthn.instructions":"Your browser or device will prompt you to verify with a security key or built-in authenticator. Follow the instructions to complete authentication.","webauthn.error.factorNotSupported":"Security key or built-in authenticator is not supported on this browser. Select another factor or contact your admin for assistance.","webauthn.error.factorNotSupported.oneFactor":"Security key or built-in authenticator is not supported on this browser. Contact your admin for assistance.","enroll.totp.enterCode":"Enter code displayed from the application","enroll.totp.setupApp":"Launch {0} application on your mobile device and select Add an account.","enroll.totp.setupGoogleAuthApp":"Launch {0}, tap the \"+\" icon, then select \"Scan barcode\".","enroll.totp.cannotScan":"Can't scan?","enroll.totp.refreshBarcode":"Refresh code","enroll.totp.cannotScanBarcode":"Can't scan barcode?","enroll.totp.manualSetupInstructions":"To set up manually enter your Okta Account username and then input the following in the Secret Key Field","enroll.totp.manualSetupInstructions.generic":"To set up manually enter your Account username and then input the following in the Secret Key Field","enroll.totp.manualSetupInstructions.specific":"To set up manually enter your {0} Account username and then input the following in the Secret Key Field","enroll.totp.sharedSecretInstructions":"Enter your Okta Account username and enter the following in the Secret Key Field","enroll.totp.sharedSecretInstructions.generic":"Enter your Account username and enter the following in the Secret Key Field","enroll.totp.sharedSecretInstructions.specific":"Enter your {0} Account username and enter the following in the Secret Key Field","enroll.totp.sendSms":"Send activation link via SMS","enroll.totp.sendEmail":"Send activation link via email","enroll.totp.setupManually":"Setup manually without push notification","enroll.totp.enrollViaEmail.title":"Activation email sent!","enroll.totp.enrollViaEmail.msg":"Open the email from your mobile device.","enroll.totp.enrollViaSms.title":"SMS sent!","enroll.totp.enrollViaSms.msg":"View the SMS on your mobile device.","recoveryChallenge.sms.title":"Enter verification code sent via SMS","recoveryChallenge.call.title":"Enter verification code received via Voice Call","mfa.factors.dropdown.title":"Select an authentication factor","mfa.factors.dropdown.sr.text":"Select Authentication Factor - {0} Factor Selected","mfa.duoSecurity.push":"Push — {0}","mfa.duoSecurity.sms":"SMS — {0}","mfa.duoSecurity.call":"Call — {0}","mfa.challenge.title":"Enter your {0} passcode","mfa.challenge.orEnterCode":"Or enter code","mfa.challenge.totp.subtitle.multiple":"Enter code from any registered {0} device.","mfa.emailVerification.checkEmail":"To finish signing in, click the link in your email.","mfa.emailVerification.title":"Sign in using a link sent to your email.","mfa.emailVerification.subtitle":"Emails will be sent to {0}","mfa.emailVerification.otc.finish":"To finish signing in, enter the code which was emailed to you.","oktaverify.send":"Send Push","oktaverify.resend":"Re-send Push","oktaverify.sent":"Push sent!","oktaverify.rejected":"You have chosen to reject this login.","oktaverify.timeout":"Your push notification has expired.","oktaverify.warning":"Haven't received a push notification yet? Try opening the Okta Verify App on your phone.","primaryauth.title":"Sign In","primaryauth.username.placeholder":"Username","primaryauth.username.tooltip":"Username","primaryauth.password.placeholder":"Password","primaryauth.password.tooltip":"Password","primaryauth.submit":"Sign In","primaryauth.newUser.tooltip":"This is the first time you are connecting to {0} from this browser","primaryauth.newUser.tooltip.close":"Close","idpDiscovery.email.placeholder":"Email","password.forgot.email.or.username.placeholder":"Email or Username","password.forgot.email.or.username.tooltip":"Email or Username","password.forgot.sendText":"Reset via SMS","password.forgot.sendEmail":"Reset via Email","password.forgot.call":"Reset via Voice Call","password.forgot.emailSent.title":"Email sent!","password.forgot.emailSent.desc":"Email has been sent to {0} with instructions on resetting your password.","password.forgot.question.title":"Answer Forgotten Password Challenge","password.forgot.question.submit":"Reset Password","password.forgot.code.notReceived":"Didn't receive a code? Reset via email","password.forgot.noFactorsEnabled":"No password reset options available. Please contact your administrator.","password.reset.title":"Reset your Okta password","password.reset.title.generic":"Reset your password","password.reset.title.specific":"Reset your {0} password","password.complexity.requirements":"Password requirements: {0}.","password.complexity.history":"Your password cannot be any of your last {0} passwords.","password.complexity.minAgeMinutes":"At least {0} minute(s) must have elapsed since you last changed your password.","password.complexity.minAgeHours":"At least {0} hour(s) must have elapsed since you last changed your password.","password.complexity.minAgeDays":"At least {0} day(s) must have elapsed since you last changed your password.","password.complexity.length":"at least {0} characters","password.complexity.list.element":", {0}","password.complexity.lowercase":"a lowercase letter","password.complexity.uppercase":"an uppercase letter","password.complexity.number":"a number","password.complexity.symbol":"a symbol","password.complexity.no_username":"no parts of your username","password.complexity.no_first_name":"does not include your first name","password.complexity.no_last_name":"does not include your last name","password.expired.submit":"Change Password","password.expired.title":"Your Okta password has expired","password.expired.title.generic":"Your password has expired","password.expired.title.specific":"Your {0} password has expired","password.expiring.later":"Remind me later","password.expiring.title":"Your password will expire in {0} days","password.expiring.today":"Your password will expire later today","password.expiring.soon":"Your password is expiring soon","password.expiring.subtitle":"When password expires you may be locked out of Okta Mobile, mobile email, and other services.","password.expiring.subtitle.generic":"When password expires you will be locked out of your account.","password.expiring.subtitle.specific":"When password expires you will be locked out of your {0} account.","password.expired.custom.submit":"Go to {0}","password.expired.custom.subtitle":"This password is set on another website. Click the button below to go there and set a new password.","account.unlock.title":"Unlock account","account.unlock.email.or.username.placeholder":"Email or username","account.unlock.email.or.username.tooltip":"Email or username","account.unlock.sendText":"Send SMS","account.unlock.voiceCall":"Voice Call","account.unlock.sendEmail":"Send Email","account.unlock.emailSent.title":"Email sent!","account.unlock.emailSent.desc":"Email has been sent to {0} with instructions on unlocking your account.","account.unlock.question.title":"Answer Unlock Account Challenge","account.unlock.question.submit":"Unlock Account","account.unlock.unlocked.title":"Account successfully unlocked!","account.unlock.unlocked.desc":"You can log in using your existing username and password.","account.unlock.code.notReceived":"Didn't receive a code? Unlock via email","account.unlock.noFactorsEnabled":"No unlock options available. Please contact your administrator.","contact.support":"If you didn't provide a secondary email address or don't have access to email, please contact your administrator at {0}","socialauth.divider.text":"OR","socialauth.facebook.label":"Sign in with Facebook","socialauth.google.label":"Sign in with Google","socialauth.linkedin.label":"Sign in with LinkedIn","socialauth.microsoft.label":"Sign in with Microsoft","socialauth.popup.title":"External Identity Provider User Authentication","authbutton.divider.text":"or","registration.signup.label":"Don't have an account?","registration.signup.text":"Sign up","registration.complete.title":"Verification email sent","registration.complete.desc":"We just sent a verification email to {0}. Please check your email and verify your account to continue.","registration.form.title":"Create Account","registration.form.submit":"Register","registration.passwordComplexity.minLength":"At least {0} character(s)","registration.passwordComplexity.minLower":"At least {0} lowercase letter(s)","registration.passwordComplexity.minUpper":"At least {0} uppercase letter(s)","registration.passwordComplexity.minNumber":"At least {0} number(s)","registration.passwordComplexity.minSymbol":"At least {0} symbol(s)","registration.passwordComplexity.excludeUsername":"Does not contain part of username","registration.passwordComplexity.excludeAttribute":"Does not contain '{0}'","registration.required.fields.label":"* indicates required field","registration.default.callbackhook.error":"We could not process your registration at this time. Please try again later.","registration.error.userName.invalidEmail":"Invalid email address","registration.error.password.passwordRequirementsNotMet":"Password requirements were not met","registration.error.userName.notUniqueWithinOrg":"An account with that email already exists","piv.card":"PIV Card","piv.card.insert":"Please insert your PIV card and select the user certificate.","piv.card.error":"Certificate authentication failed. Contact your admin.","piv.card.error.empty":"No certificate selected. Choose a certificate and try again.","piv.card.error.invalid":"Certificate validation failed. Choose another certificate and try again.","unsupported.oneDrive.title":"Your OneDrive version is not supported","unsupported.oneDrive.desc":"Upgrade now by installing the OneDrive for Business Next Generation Sync Client to login to Okta","unsupported.oneDrive.action":"Learn how to upgrade","unsupported.cookies.title":"Cookies are required","unsupported.cookies.desc":"Cookies are disabled on your browser. Please enable Cookies and refresh this page.","unsupported.cookies.action":"Refresh","deviceTrust.sso.text":"Sign in to access company resources","deviceTrust.sso.subtitle.2":"Your company uses Okta Mobile to get you approved to access this app.","deviceTrust.sso.button":"Sign in with Okta Mobile","deviceTrust.sso.expire.title":"Oops let's get you back on track","deviceTrust.sso.expire.subtitle":"Unfortunately the steps required to sign in took longer than expected and your attempt timed out.","deviceTrust.sso.expire.button":"Sign in using Okta Mobile","deviceTrust.universalLink.fallback.getOktaMobile.title":"Get Okta Mobile","deviceTrust.universalLink.fallback.getOktaMobile.subtitle":"Go to the {0}AppStore{1}, {0}search{1} for {0}Okta Mobile{1} and tap on {0}GET{1} Okta Mobile. Once installed, sign in to Okta Mobile and follow the instructions to secure your device.","consent.required.text":"<b>{0}</b> would like to do the following on your behalf, <b>{1}</b>:","consent.required.headline":"<b>{0}</b> is requesting permissions to:","consent.required.description":"By clicking Allow Access, you allow this app access to the actions listed above.","consent.required.termsOfService":"Terms of Service","consent.required.privacyPolicy":"Privacy Policy","consent.required.consentButton":"Allow Access","consent.required.cancelButton":"Don't Allow","cert.authentication.title":"Certificate authentication","u2f.error.notSupportedBrowser":"The Security Key is only supported for Chrome or Firefox browsers. Select another factor or contact your admin for assistance.","u2f.error.notSupportedBrowser.oneFactor":"The Security Key is only supported for Chrome or Firefox browsers. Contact your admin for assistance.","u2f.error.notSupportedMobileDevice":"Security Key (U2F) is not supported on mobile devices. Select another 2FA method to sign in.","u2f.error.notSupportedMobileDevice.oneFactor":"Security Key (U2F) is not supported on mobile devices.","error.invalid.identifierFirst":"\"identifierFirst\" can only be enabled if \"idpDiscovery\" is enabled as well","deviceTrust.sso.subtitle":"Okta Mobile will check that your device is secure and make it easy to sign in.","enroll.u2f.general1":"If using Firefox download and install the U2F browser extension.","u2f.error.noFirefoxExtension":"<a target=\"_blank\" href=\"https://addons.mozilla.org/en-US/firefox/addon/u2f-support-add-on/\">Download</a> and install the Firefox U2F browser extension before proceeding. You may be required to restart your browser after installation.","model.validation.field.ascii":"The field cannot contain Non-ASCII characters","model.validation.field.too.long":"The field cannot exceed {0} characters","model.validation.field.too.small":"The field cannot be less than {0} characters","enroll.choices.step":"{0} of {1}"}
+module.exports = {"signout":"Sign Out","remember":"Remember me","rememberDevice":"Trust this device","rememberDevice.timebased":"Do not challenge me on this device for the next {0}","rememberDevice.devicebased":"Do not challenge me on this device again","autoPush":"Send push automatically","unlockaccount":"Unlock account?","needhelp":"Need help signing in?","goback":"Back to Sign In","forgotpassword":"Forgot password?","help":"Help","retry":"Retry","minutes.oneMinute":"minute","minutes":"{0} minutes","hours":"{0} hours","days":"{0} days","error.config":"There was a configuration error","error.required.authParams":"Missing parameters for the configured authentication scheme - \"OAUTH2\"","error.required.baseUrl":"\"baseUrl\" is a required widget parameter","error.required.success":"A success handler is required","error.required.el":"\"el\" is a required widget parameter","error.invalid.colors.brand":"\"colors.brand\" must be in six-digit hex format","error.unsupported.browser":"Unsupported browser","error.unsupported.cors":"Unsupported browser - missing CORS support","error.unsupported.localStorage":"Unsupported browser - missing localStorage support","error.enabled.cors":"There was an error sending the request - have you enabled CORS?","error.expired.session":"Your session has expired. Please try to log in again.","error.auth.lockedOut":"Your account is locked. Please contact your administrator.","error.oauth.idToken":"There was a problem generating the id_token for the user. Please try again.","error.network.connection":"Unable to connect to the server. Please check your network connection.","error.username.required":"Please enter a username","error.password.required":"Please enter a password","errors.E0000004":"Sign in failed!","errors.E0000069":"Your account was locked due to excessive MFA attempts.","errors.E0000047":"You exceeded the maximum number of requests. Try again in a while.","errors.E0000001":"Api validation failed: {0}","errors.E0000002":"The request was not valid: {0}","errors.E0000003":"The request body was not well-formed.","errors.E0000005":"Invalid session","errors.E0000006":"You do not have permission to perform the requested action","errors.E0000007":"Not found: {0}","errors.E0000008":"The requested path was not found","errors.E0000009":"Internal Server Error","errors.E0000010":"Service is in read only mode","errors.E0000011":"Invalid token provided","errors.E0000012":"Unsupported media type","errors.E0000013":"Invalid client app id","errors.E0000015":"You do not have permission to access the feature you are requesting","errors.E0000016":"Activation failed because the user is already active","errors.E0000017":"Password reset failed","errors.E0000018":"Bad request.  Accept and/or Content-Type headers are likely not set.","errors.E0000019":"Bad request.  Accept and/or Content-Type headers likely do not match supported values.","errors.E0000020":"Bad request.","errors.E0000021":"Bad request.  Accept and/or Content-Type headers likely do not match supported values.","errors.E0000022":"The endpoint does not support the provided HTTP method","errors.E0000023":"Operation failed because user profile is mastered under another system","errors.E0000024":"Bad request.  This operation on app metadata is not yet supported.","errors.E0000025":"App version assignment failed.","errors.E0000026":"This endpoint has been deprecated.","errors.E0000027":"Group push bad request : {0}","errors.E0000028":"The request is missing a required parameter.","errors.E0000029":"Invalid paging request.","errors.E0000030":"Bad request. Invalid date. Dates must be of the form yyyy-MM-dd''T''HH:mm:ss.SSSZZ, e.g. 2013-01-01T12:00:00.000-07:00.","errors.E0000031":"Invalid search criteria.","errors.E0000032":"Unlock is not allowed for this user.","errors.E0000033":"Bad request. Can't specify a search query and filter in the same request.","errors.E0000034":"Forgot password not allowed on specified user.","errors.E0000035":"Change password not allowed on specified user.","errors.E0000036":"Change recovery question not allowed on specified user.","errors.E0000037":"Type mismatch exception.","errors.E0000038":"This operation is not allowed in the user''s current status.","errors.E0000039":"Operation on application settings failed.","errors.E0000040":"Application label must not be the same as an existing application label.","errors.E0000041":"Credentials should not be set on this resource based on the scheme.","errors.E0000042":"Setting the error page redirect URL failed.","errors.E0000043":"Self service application assignment is not enabled.","errors.E0000044":"Self service application assignment is not supported.","errors.E0000045":"Field mapping bad request.","errors.E0000046":"Deactivate application for user forbidden.","errors.E0000048":"Entity not found exception.","errors.E0000049":"Invalid SCIM data from SCIM implementation.","errors.E0000050":"Invalid SCIM data from client.","errors.E0000051":"No response from SCIM implementation.","errors.E0000052":"Endpoint not implemented.","errors.E0000053":"Invalid SCIM filter.","errors.E0000054":"Invalid pagination properties.","errors.E0000055":"Duplicate group.","errors.E0000056":"Delete application forbidden.","errors.E0000057":"Access to this application is denied due to a policy.","errors.E0000058":"Access to this application requires MFA: {0}","errors.E0000059":"The connector configuration could not be tested. Make sure that the URL, Authentication Parameters are correct and that there is an implementation available at the URL provided.","errors.E0000060":"Unsupported operation.","errors.E0000061":"Tab error: {0}","errors.E0000062":"The specified user is already assigned to the application.","errors.E0000063":"Invalid combination of parameters specified.","errors.E0000064":"Password is expired and must be changed.","errors.E0000065":"Internal error processing app metadata.","errors.E0000066":"APNS is not configured, contact your admin","errors.E0000067":"Factors Service Error.","errors.E0000070":"Waiting for ACK","errors.E0000071":"Unsupported OS Version: {0}","errors.E0000072":"MIM policy settings have disallowed enrollment for this user","errors.E0000073":"User rejected authentication","errors.E0000074":"Factor Service Error","errors.E0000075":"Cannot modify the {0} attribute because it has a field mapping and profile push is enabled.","errors.E0000076":"Cannot modify the app user because it is mastered by an external app.","errors.E0000077":"Cannot modify the {0} attribute because it is read-only.","errors.E0000078":"Cannot modify the {0} attribute because it is immutable.","errors.E0000079":"This operation is not allowed in the current authentication state.","errors.E0000081":"Cannot modify the {0} attribute because it is a reserved attribute for this application.","errors.E0000082":"Each code can only be used once. Please wait for a new code and try again.","errors.E0000083":"PassCode is valid but exceeded time window.","errors.E0000084":"App evaluation error.","errors.E0000085":"You do not have permission to access your account at this time.","errors.E0000086":"This policy cannot be activated at this time.","errors.E0000087":"The recovery question answer did not match our records.","errors.E0000090":"The role specified is already assigned to the user.","errors.E0000091":"The provided role type was not the same as required role type.","errors.E0000092":"Access to this application requires re-authentication: {0}","errors.E0000093":"Target count limit exceeded","errors.E0000094":"The provided filter is unsupported.","errors.E0000095":"Recovery not allowed for unknown user.","errors.E0000096":"This certificate has already been uploaded with kid={0}.","errors.E0000097":"There is no verified phone number on file.","errors.E0000098":"This phone number is invalid.","errors.E0000099":"Only numbers located in US and Canada are allowed.  Contact your administrator if this is a problem.","errors.E0000100":"Unable to perform search query.","errors.E0000101":"Upload failed because of a problem with your ipa file, {0}","errors.E0000102":"YubiKey cannot be deleted while assigned to an user. Please deactivate YubiKey using reset MFA and try again","errors.E0000103":"Action on device already in queue or in progress","errors.E0000104":"Device is already locked and cannot be locked again","errors.E0000105":"You have accessed an account recovery link that has expired or been previously used.","errors.E0000106":"Wait for token to change, then enter the new tokencode.","errors.E0000107":"The entity is not in the expected state for the requested transition.","errors.E0000109":"An SMS message was recently sent. Please wait 30 seconds before trying again.","errors.E0000110":"You have accessed a link that has expired or has been previously used.","errors.E0000111":"Cannot modify the {0} object because it is read-only.","errors.E0000112":"Cannot update this user because they are still being activated. Please try again in a few minutes.","errors.E0000113":"{0}.","errors.E0000114":"A user with this login already exists in the current organization.","errors.E0000115":"Upload failed, {0}","errors.E0000116":"{0}","errors.E0000119":"Your account is locked. Please contact your administrator.","errors.E0000124":"Could not create user. To create a user and expire their password immediately, a password must be specified","errors.E0000125":"Could not create user. To create a user and expire their password immediately, \"activate\" must be true","errors.E0000133":"A phone call was recently made. Please wait 30 seconds before trying again.","oform.next":"Next","oform.verify":"Verify","oform.send":"Send","oform.back":"Back","oform.save":"Save","oform.cancel":"Cancel","oform.edit":"Edit","oform.previous":"Previous","oform.error.icon.ariaLabel":"Error","oform.errorbanner.title":"We found some errors. Please review the form and make corrections.","oform.errormsg.title":"Please review the form to correct the following errors:","oform.error.unexpected":"There was an unexpected internal error. Please try again.","model.validation.field.blank":"This field cannot be left blank","model.validation.field.wrong.type":"This field is of the wrong type","model.validation.field.invalid":"This field has an invalid value","model.validation.field.value.not.allowed":"This field value is not allowed","model.validation.field.array.minItems":"This array does not have enough items","model.validation.field.array.maxItems":"This array contains too many items","model.validation.field.array.unique":"This array can only have unique values","model.validation.field.string.minLength":"This field cannot be less than the minimum required characters","model.validation.field.string.maxLength":"This field cannot exceed the maximum allowed characters","model.validation.field.invalid.format.email":"This value is not a valid email address","model.validation.field.invalid.format.uri":"This value is not a valid URI","model.validation.field.invalid.format.ipv4":"This value is not a valid IPv4 address","model.validation.field.invalid.format.hostname":"This value is not a valid hostname","model.validation.field.username":"Please check your username","factor.totpSoft.oktaVerify":"Okta Verify","factor.totpSoft.googleAuthenticator":"Google Authenticator","factor.totpSoft.description":"Enter single-use code from the mobile app.","factor.totpHard.rsaSecurId":"RSA SecurID","factor.totpHard.symantecVip":"Symantec VIP","factor.totpHard.description":"Enter a single-use code from a hardware token.","factor.totpHard.yubikey":"YubiKey","factor.totpHard.yubikey.description":"Insert your YubiKey and tap it to get a verification code.","factor.totpHard.yubikey.placeholder":"Click here, then tap your YubiKey","factor.oktaVerifyPush":"Okta Verify","factor.push.description":"Use a push notification sent to the mobile app.","factor.duo":"Duo Security","factor.duo.description":"Use Push Notification, SMS, or Voice call to authenticate.","factor.sms":"SMS Authentication","factor.sms.description":"Enter a single-use code sent to your mobile phone.","factor.sms.time.warning":"Haven't received an SMS? To try again, click <span style=\"font-weight:bold\">Re-send code</span>.","factor.call":"Voice Call Authentication","factor.call.description":"Use a phone to authenticate by following voice instructions.","factor.call.time.warning":"Haven't received a voice call? To try again, click <span style=\"font-weight:bold\">Redial</span>.","factor.securityQuestion":"Security Question","factor.securityQuestion.description":"Use the answer to a security question to authenticate.","factor.windowsHello":"Windows Hello","factor.windowsHello.signin.description":"Sign in to Okta using Windows Hello.","factor.windowsHello.signin.description.generic":"Sign in using Windows Hello.","factor.windowsHello.signin.description.specific":"Sign in to {0} using Windows Hello.","factor.u2f":"Security Key (U2F)","factor.u2f.description":"Use a Universal 2nd Factor (U2F) security key to sign on to Okta.","factor.u2f.description.generic":"Use a Universal 2nd Factor (U2F) security key to sign in.","factor.u2f.description.specific":"Use a Universal 2nd Factor (U2F) security key to sign in to {0}.","factor.email":"Email Authentication","factor.password":"Password","factor.customFactor.description":"Redirect to a third party MFA provider to sign in to Okta.","factor.customFactor.description.generic":"Redirect to a third party MFA provider to sign in.","factor.customFactor.description.specific":"Redirect to a third party MFA provider to sign in to {0}.","factor.webauthn":"Security Key or Built-in Authenticator","factor.webauthn.description":"Use a security key (USB or bluetooth) or a built-in device authenticator (Windows Hello, macOS TouchID, etc.)","factor.hotp.description":"Enter a single-use code from an authenticator.","mfa.challenge.verify":"Verify","mfa.challenge.answer.placeholder":"Answer","mfa.challenge.answer.tooltip":"Answer","mfa.challenge.answer.showAnswer":"Show","mfa.challenge.answer.hideAnswer":"Hide","mfa.challenge.enterCode.placeholder":"Enter Code","mfa.challenge.enterCode.tooltip":"Enter Code","mfa.challenge.password.placeholder":"Password","mfa.backToFactors":"Back to factor list","mfa.phoneNumber.placeholder":"Phone number","mfa.phoneNumber.ext.placeholder":"Extension","mfa.sendCode":"Send code","mfa.sent":"Sent","mfa.resendCode":"Re-send code","mfa.call":"Call","mfa.calling":"Calling","mfa.redial":"Redial","mfa.sendEmail":"Send email","mfa.resendEmail":"Re-send email","mfa.scanBarcode":"Scan barcode","mfa.noAccessToEmail":"Can't access email","password.reset":"Reset Password","password.oldPassword.placeholder":"Old password","password.oldPassword.tooltip":"Old password","password.newPassword.placeholder":"New password","password.newPassword.tooltip":"New password","password.confirmPassword.placeholder":"Repeat password","password.confirmPassword.tooltip":"Repeat password","password.error.match":"New passwords must match","password.enroll.error.match":"Passwords must match","recovery.sms.hint":"SMS can only be used if a mobile phone number has been configured.","recovery.mobile.hint":"{0} can only be used if a mobile phone number has been configured.","recovery.sms":"SMS","recovery.call":"Voice Call","recovery.smsOrCall":"SMS or Voice Call","enroll.choices.title":"Set up multifactor authentication","enroll.choices.description":"Your company requires multifactor authentication to add an additional layer of security when signing in to your Okta account","enroll.choices.description.generic":"Your company requires multifactor authentication to add an additional layer of security when signing in to your account","enroll.choices.description.specific":"Your company requires multifactor authentication to add an additional layer of security when signing in to your {0} account","enroll.choices.description.gracePeriod":"Your company recommends setting up additional factors for authentication. Set up will be required in: {0} day(s).","enroll.choices.description.gracePeriod.oneDay":"Your company recommends setting up additional factors for authentication. Set up will be required in: less than 1 day.","enroll.choices.optional":"You can configure any additional optional factor or click finish","enroll.choices.list.setup":"Setup required","enroll.choices.list.enrolled":"Enrolled factors","enroll.choices.list.optional":"Additional optional factors","enroll.choices.setup":"Setup","enroll.choices.setup.another":"Set up another","enroll.choices.submit.finish":"Finish","enroll.choices.submit.configure":"Configure factor","enroll.choices.submit.next":"Configure next factor","enroll.choices.cardinality.setup":"({0} set up)","enroll.choices.cardinality.setup.remaining":"({0} of {1} set up)","enroll.choices.setup.skip":"Skip set up","enroll.securityQuestion.setup":"Setup secret question authentication","security.disliked_food":"What is the food you least liked as a child?","security.name_of_first_plush_toy":"What is the name of your first stuffed animal?","security.first_award":"What did you earn your first medal or award for?","security.favorite_security_question":"What is your favorite security question?","security.favorite_toy":"What is the toy/stuffed animal you liked the most as a kid?","security.first_computer_game":"What was the first computer game you played?","security.favorite_movie_quote":"What is your favorite movie quote?","security.first_sports_team_mascot":"What was the mascot of the first sports team you played on?","security.first_music_purchase":"What music album or song did you first purchase?","security.favorite_art_piece":"What is your favorite piece of art?","security.grandmother_favorite_desert":"What was your grandmother's favorite dessert?","security.first_thing_cooked":"What was the first thing you learned to cook?","security.childhood_dream_job":"What was your dream job as a child?","security.first_kiss_location":"Where did you have your first kiss?","security.place_where_significant_other_was_met":"Where did you meet your spouse/significant other?","security.favorite_vacation_location":"Where did you go for your favorite vacation?","security.new_years_two_thousand":"Where were you on New Year's Eve in the year 2000?","security.favorite_speaker_actor":"Who is your favorite speaker/orator?","security.favorite_book_movie_character":"Who is your favorite book/movie character?","security.favorite_sports_player":"Who is your favorite sports player?","enroll.password.setup":"Select a password","enroll.sms.setup":"Receive a code via SMS to authenticate","enroll.sms.try_again":"The number you entered seems invalid. If the number is correct, please try again.","enroll.call.setup":"Follow phone call instructions to authenticate","enroll.onprem.username.placeholder":"Enter {0} username","enroll.onprem.username.tooltip":"Enter {0} username","enroll.onprem.passcode.placeholder":"Enter {0} passcode","enroll.onprem.passcode.tooltip":"Enter {0} passcode","enroll.symantecVip.subtitle":"Enter Credential ID and two consecutive generated codes","enroll.symantecVip.credentialId.placeholder":"Enter credential ID","enroll.symantecVip.credentialId.tooltip":"Enter credential ID","enroll.symantecVip.passcode1.placeholder":"Security code 1","enroll.symantecVip.passcode1.tooltip":"Security code 1","enroll.symantecVip.passcode2.placeholder":"Security code 2","enroll.symantecVip.passcode2.tooltip":"Security code 2","enroll.yubikey.title":"Setup YubiKey","enroll.yubikey.subtitle":"Insert your YubiKey into a USB port and tap it to generate a verification code","enroll.totp.title":"Setup {0}","enroll.totp.selectDevice":"Select your device type","enroll.totp.downloadApp":"Download <a href=\"{0}\" class=\"inline-link\">{1} from the {2}</a> onto your mobile device.","enroll.totp.installApp":"Install {0}","enroll.hotp.restricted":"Contact your administrator to continue enrollment.","enroll.duo.title":"Setup Duo Security","enroll.windowsHello.title":"Enroll Windows Hello","enroll.windowsHello.subtitle":"Click below to enroll Windows Hello as a second form of authentication","enroll.windowsHello.subtitle.loading":"Please wait while Windows Hello is loading...","enroll.windowsHello.save":"Enroll Windows Hello","enroll.windowsHello.error.notWindows":"Windows Hello can only be used on Windows Edge with Windows 10. Contact your admin for assistance.","enroll.windowsHello.error.notConfiguredHtml":"Windows Hello is not configured. Select the <b>Start</b> button, then select <b>Settings</b> &gt; <b>Accounts</b> &gt; <b>Sign-in</b> to configure Windows Hello.","verify.windowsHello.subtitle":"Verify your identity with Windows Hello","verify.windowsHello.subtitle.loading":"Please wait while Windows Hello is loading...","verify.windowsHello.subtitle.signingIn":"Signing in to Okta...","verify.windowsHello.subtitle.signingIn.generic":"Signing in...","verify.windowsHello.subtitle.signingIn.specific":"Signing in to {0}...","verify.windowsHello.save":"Verify with Windows Hello","verify.windowsHello.error.notFound":"Your Windows Hello enrollment does not match our records. Contact your administrator for assistance.","verify.windowsHello.error.notFound.selectAnother":"Your Windows Hello enrollment does not match our records. Select another factor or contact your administrator for assistance.","enroll.u2f.title":"Setup Security Key (U2F)","enroll.u2f.save":"Register Security Key","enroll.u2f.general2":"Make sure you have a Security Key. If already inserted, remove it now.<br>If you have a Bluetooth Security Key, turn on your computer's Bluetooth.","enroll.u2f.general3":"Click the button below to register","enroll.u2f.instructions":"Insert your Security Key into a USB port on this computer. If it has a button or gold disk, tap it.","enroll.u2f.instructionsBluetooth":"If you are using a Bluetooth Security Key, press the button.","u2f.error.factorNotSupported":"Security Key (U2F) is not supported on this browser. Select another factor or contact your admin for assistance.","u2f.error.factorNotSupported.oneFactor":"Security Key (U2F) is not supported on this browser. Contact your admin for assistance.","u2f.error.other":"An unknown error has occured. Try again or select another factor.","u2f.error.other.oneFactor":"An unknown error has occured. Try again or contact your admin for assistance.","u2f.error.badRequest":"There was an error with the U2F request. Try again or select another factor.","u2f.error.badRequest.oneFactor":"There was an error with the U2F request. Try again or contact your admin for assistance.","u2f.error.unsupported":"The security key is unsupported. Select another factor.","u2f.error.unsupported.oneFactor":"The security key is unsupported. Contact your admin for assistance.","u2f.error.timeout":"You have timed out of the authentication period. Please try again.","verify.u2f.instructions":"Insert your Security Key. If it has a button or gold disk, tap it.","verify.u2f.instructionsBluetooth":"If you are using a Bluetooth Security Key, turn on your computer's Bluetooth and press the button.","verify.u2f.retry":"Retry","enroll.customFactor.subtitle":"Clicking below will redirect to MFA enrollment with {0}","enroll.customFactor.save":"Enroll","verify.customFactor.subtitle":"Clicking below will redirect to verification with {0}","enroll.webauthn.title":"Set up security key or built-in authenticator","enroll.webauthn.save":"Enroll","enroll.webauthn.instructions":"Your browser or device will prompt you to register a security key or built-in authenticator. Follow the instructions to complete enrollment.","enroll.webauthn.instructions.edge":"Note: If you are enrolling a security key and Windows Hello or PIN is enabled, you will need to select '<b>Cancel</b>' before continuing.","verify.webauthn.instructions":"Your browser or device will prompt you to verify with a security key or built-in authenticator. Follow the instructions to complete authentication.","webauthn.error.factorNotSupported":"Security key or built-in authenticator is not supported on this browser. Select another factor or contact your admin for assistance.","webauthn.error.factorNotSupported.oneFactor":"Security key or built-in authenticator is not supported on this browser. Contact your admin for assistance.","enroll.totp.enterCode":"Enter code displayed from the application","enroll.totp.setupApp":"Launch {0} application on your mobile device and select Add an account.","enroll.totp.setupGoogleAuthApp":"Launch {0}, tap the \"+\" icon, then select \"Scan barcode\".","enroll.totp.cannotScan":"Can't scan?","enroll.totp.refreshBarcode":"Refresh code","enroll.totp.cannotScanBarcode":"Can't scan barcode?","enroll.totp.manualSetupInstructions":"To set up manually enter your Okta Account username and then input the following in the Secret Key Field","enroll.totp.manualSetupInstructions.generic":"To set up manually enter your Account username and then input the following in the Secret Key Field","enroll.totp.manualSetupInstructions.specific":"To set up manually enter your {0} Account username and then input the following in the Secret Key Field","enroll.totp.sharedSecretInstructions":"Enter your Okta Account username and enter the following in the Secret Key Field","enroll.totp.sharedSecretInstructions.generic":"Enter your Account username and enter the following in the Secret Key Field","enroll.totp.sharedSecretInstructions.specific":"Enter your {0} Account username and enter the following in the Secret Key Field","enroll.totp.sendSms":"Send activation link via SMS","enroll.totp.sendEmail":"Send activation link via email","enroll.totp.setupManually":"Setup manually without push notification","enroll.totp.enrollViaEmail.title":"Activation email sent!","enroll.totp.enrollViaEmail.msg":"Open the email from your mobile device.","enroll.totp.enrollViaSms.title":"SMS sent!","enroll.totp.enrollViaSms.msg":"View the SMS on your mobile device.","recoveryChallenge.sms.title":"Enter verification code sent via SMS","recoveryChallenge.call.title":"Enter verification code received via Voice Call","mfa.factors.dropdown.title":"Select an authentication factor","mfa.factors.dropdown.sr.text":"Select Authentication Factor - {0} Factor Selected","mfa.duoSecurity.push":"Push — {0}","mfa.duoSecurity.sms":"SMS — {0}","mfa.duoSecurity.call":"Call — {0}","mfa.challenge.title":"Enter your {0} passcode","mfa.challenge.orEnterCode":"Or enter code","mfa.challenge.totp.subtitle.multiple":"Enter code from any registered {0} device.","mfa.emailVerification.checkEmail":"To finish signing in, click the link in your email.","mfa.emailVerification.title":"Sign in using a link sent to your email.","mfa.emailVerification.subtitle":"Emails will be sent to {0}","mfa.emailVerification.otc.finish":"To finish signing in, enter the code which was emailed to you.","oktaverify.send":"Send Push","oktaverify.resend":"Re-send Push","oktaverify.sent":"Push sent!","oktaverify.rejected":"You have chosen to reject this login.","oktaverify.timeout":"Your push notification has expired.","oktaverify.warning":"Haven't received a push notification yet? Try opening the Okta Verify App on your phone.","primaryauth.title":"Sign In","primaryauth.username.placeholder":"Username","primaryauth.username.tooltip":"Username","primaryauth.password.placeholder":"Password","primaryauth.password.tooltip":"Password","primaryauth.submit":"Sign In","primaryauth.newUser.tooltip":"This is the first time you are connecting to {0} from this browser","primaryauth.newUser.tooltip.close":"Close","idpDiscovery.email.placeholder":"Email","password.forgot.email.or.username.placeholder":"Email or Username","password.forgot.email.or.username.tooltip":"Email or Username","password.forgot.sendText":"Reset via SMS","password.forgot.sendEmail":"Reset via Email","password.forgot.call":"Reset via Voice Call","password.forgot.emailSent.title":"Email sent!","password.forgot.emailSent.desc":"Email has been sent to {0} with instructions on resetting your password.","password.forgot.question.title":"Answer Forgotten Password Challenge","password.forgot.question.submit":"Reset Password","password.forgot.code.notReceived":"Didn't receive a code? Reset via email","password.forgot.noFactorsEnabled":"No password reset options available. Please contact your administrator.","password.reset.title":"Reset your Okta password","password.reset.title.generic":"Reset your password","password.reset.title.specific":"Reset your {0} password","password.complexity.requirements":"Password requirements: {0}.","password.complexity.history":"Your password cannot be any of your last {0} passwords.","password.complexity.minAgeMinutes":"At least {0} minute(s) must have elapsed since you last changed your password.","password.complexity.minAgeHours":"At least {0} hour(s) must have elapsed since you last changed your password.","password.complexity.minAgeDays":"At least {0} day(s) must have elapsed since you last changed your password.","password.complexity.length":"at least {0} characters","password.complexity.list.element":", {0}","password.complexity.lowercase":"a lowercase letter","password.complexity.uppercase":"an uppercase letter","password.complexity.number":"a number","password.complexity.symbol":"a symbol","password.complexity.no_username":"no parts of your username","password.complexity.no_first_name":"does not include your first name","password.complexity.no_last_name":"does not include your last name","password.expired.submit":"Change Password","password.expired.title":"Your Okta password has expired","password.expired.title.generic":"Your password has expired","password.expired.title.specific":"Your {0} password has expired","password.expiring.later":"Remind me later","password.expiring.title":"Your password will expire in {0} days","password.expiring.today":"Your password will expire later today","password.expiring.soon":"Your password is expiring soon","password.expiring.subtitle":"When password expires you may be locked out of Okta Mobile, mobile email, and other services.","password.expiring.subtitle.generic":"When password expires you will be locked out of your account.","password.expiring.subtitle.specific":"When password expires you will be locked out of your {0} account.","password.expired.custom.submit":"Go to {0}","password.expired.custom.subtitle":"This password is set on another website. Click the button below to go there and set a new password.","account.unlock.title":"Unlock account","account.unlock.email.or.username.placeholder":"Email or username","account.unlock.email.or.username.tooltip":"Email or username","account.unlock.sendText":"Send SMS","account.unlock.voiceCall":"Voice Call","account.unlock.sendEmail":"Send Email","account.unlock.emailSent.title":"Email sent!","account.unlock.emailSent.desc":"Email has been sent to {0} with instructions on unlocking your account.","account.unlock.question.title":"Answer Unlock Account Challenge","account.unlock.question.submit":"Unlock Account","account.unlock.unlocked.title":"Account successfully unlocked!","account.unlock.unlocked.desc":"You can log in using your existing username and password.","account.unlock.code.notReceived":"Didn't receive a code? Unlock via email","account.unlock.noFactorsEnabled":"No unlock options available. Please contact your administrator.","contact.support":"If you didn't provide a secondary email address or don't have access to email, please contact your administrator at {0}","socialauth.divider.text":"OR","socialauth.facebook.label":"Sign in with Facebook","socialauth.google.label":"Sign in with Google","socialauth.linkedin.label":"Sign in with LinkedIn","socialauth.microsoft.label":"Sign in with Microsoft","socialauth.popup.title":"External Identity Provider User Authentication","authbutton.divider.text":"or","registration.signup.label":"Don't have an account?","registration.signup.text":"Sign up","registration.complete.title":"Verification email sent","registration.complete.desc":"We just sent a verification email to {0}. Please check your email and verify your account to continue.","registration.form.title":"Create Account","registration.form.submit":"Register","registration.passwordComplexity.minLength":"At least {0} character(s)","registration.passwordComplexity.minLower":"At least {0} lowercase letter(s)","registration.passwordComplexity.minUpper":"At least {0} uppercase letter(s)","registration.passwordComplexity.minNumber":"At least {0} number(s)","registration.passwordComplexity.minSymbol":"At least {0} symbol(s)","registration.passwordComplexity.excludeUsername":"Does not contain part of username","registration.passwordComplexity.excludeAttribute":"Does not contain '{0}'","registration.required.fields.label":"* indicates required field","registration.default.callbackhook.error":"We could not process your registration at this time. Please try again later.","registration.error.userName.invalidEmail":"Invalid email address","registration.error.password.passwordRequirementsNotMet":"Password requirements were not met","registration.error.userName.notUniqueWithinOrg":"An account with that email already exists","piv.card":"PIV Card","piv.card.insert":"Please insert your PIV card and select the user certificate.","piv.card.error":"Certificate authentication failed. Contact your admin.","piv.card.error.empty":"No certificate selected. Choose a certificate and try again.","piv.card.error.invalid":"Certificate validation failed. Choose another certificate and try again.","unsupported.oneDrive.title":"Your OneDrive version is not supported","unsupported.oneDrive.desc":"Upgrade now by installing the OneDrive for Business Next Generation Sync Client to login to Okta","unsupported.oneDrive.action":"Learn how to upgrade","unsupported.cookies.title":"Cookies are required","unsupported.cookies.desc":"Cookies are disabled on your browser. Please enable Cookies and refresh this page.","unsupported.cookies.action":"Refresh","deviceTrust.sso.text":"Sign in to access company resources","deviceTrust.sso.subtitle.2":"Your company uses Okta Mobile to get you approved to access this app.","deviceTrust.sso.button":"Sign in with Okta Mobile","deviceTrust.sso.expire.title":"Oops let's get you back on track","deviceTrust.sso.expire.subtitle":"Unfortunately the steps required to sign in took longer than expected and your attempt timed out.","deviceTrust.sso.expire.button":"Sign in using Okta Mobile","deviceTrust.universalLink.fallback.getOktaMobile.title":"Get Okta Mobile","deviceTrust.universalLink.fallback.getOktaMobile.subtitle":"Go to the {0}AppStore{1}, {0}search{1} for {0}Okta Mobile{1} and tap on {0}GET{1} Okta Mobile. Once installed, sign in to Okta Mobile and follow the instructions to secure your device.","consent.required.text":"<b>{0}</b> would like to do the following on your behalf, <b>{1}</b>:","consent.required.headline":"<b>{0}</b> is requesting permissions to:","consent.required.description":"By clicking Allow Access, you allow this app access to the actions listed above.","consent.required.termsOfService":"Terms of Service","consent.required.privacyPolicy":"Privacy Policy","consent.required.consentButton":"Allow Access","consent.required.cancelButton":"Don't Allow","cert.authentication.title":"Certificate authentication","u2f.error.notSupportedBrowser":"The Security Key is only supported for Chrome or Firefox browsers. Select another factor or contact your admin for assistance.","u2f.error.notSupportedBrowser.oneFactor":"The Security Key is only supported for Chrome or Firefox browsers. Contact your admin for assistance.","u2f.error.notSupportedMobileDevice":"Security Key (U2F) is not supported on mobile devices. Select another 2FA method to sign in.","u2f.error.notSupportedMobileDevice.oneFactor":"Security Key (U2F) is not supported on mobile devices.","error.invalid.identifierFirst":"\"identifierFirst\" can only be enabled if \"idpDiscovery\" is enabled as well","deviceTrust.sso.subtitle":"Okta Mobile will check that your device is secure and make it easy to sign in.","enroll.u2f.general1":"If using Firefox download and install the U2F browser extension.","u2f.error.noFirefoxExtension":"<a target=\"_blank\" href=\"https://addons.mozilla.org/en-US/firefox/addon/u2f-support-add-on/\">Download</a> and install the Firefox U2F browser extension before proceeding. You may be required to restart your browser after installation.","model.validation.field.ascii":"The field cannot contain Non-ASCII characters","model.validation.field.too.long":"The field cannot exceed {0} characters","model.validation.field.too.small":"The field cannot be less than {0} characters","enroll.choices.step":"{0} of {1}"}
 
 /***/ }),
 /* 476 */
 /***/ (function(module, exports) {
 
-module.exports = {"AF":"Afghanistan","AX":"Åland Islands","AL":"Albania","DZ":"Algeria","AS":"American Samoa","AD":"Andorra","AO":"Angola","AI":"Anguilla","AQ":"Antarctica","AG":"Antigua and Barbuda","AR":"Argentina","AM":"Armenia","AW":"Aruba","AU":"Australia","AT":"Austria","AZ":"Azerbaijan","BS":"Bahamas","BH":"Bahrain","BD":"Bangladesh","BB":"Barbados","BY":"Belarus","BE":"Belgium","BZ":"Belize","BJ":"Benin","BM":"Bermuda","BT":"Bhutan","BO":"Bolivia, Plurinational State of","BA":"Bosnia and Herzegovina","BW":"Botswana","BV":"Bouvet Island","BR":"Brazil","IO":"British Indian Ocean Territory","VG":"Virgin Islands, British","BN":"Brunei Darussalam","BG":"Bulgaria","BF":"Burkina Faso","BI":"Burundi","KH":"Cambodia","CM":"Cameroon","CA":"Canada","CV":"Cape Verde","KY":"Cayman Islands","CF":"Central African Republic","TD":"Chad","CL":"Chile","CN":"China","CX":"Christmas Island","CO":"Colombia","KM":"Comoros","CG":"Congo","CK":"Cook Islands","CR":"Costa Rica","CI":"Côte d'Ivoire","HR":"Croatia","CU":"Cuba","CY":"Cyprus","CZ":"Czech Republic","CD":"Congo, the Democratic Republic of the","DK":"Denmark","DJ":"Djibouti","DM":"Dominica","DO":"Dominican Republic","TL":"Timor-Leste","EC":"Ecuador","EG":"Egypt","SV":"El Salvador","GQ":"Equatorial Guinea","ER":"Eritrea","EE":"Estonia","ET":"Ethiopia","FK":"Falkland Islands (Malvinas)","FO":"Faroe Islands","FJ":"Fiji","FI":"Finland","FR":"France","GF":"French Guiana","PF":"French Polynesia","TF":"French Southern Territories","GA":"Gabon","GM":"Gambia","GE":"Georgia","DE":"Germany","GH":"Ghana","GI":"Gibraltar","GR":"Greece","GL":"Greenland","GD":"Grenada","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernsey","GN":"Guinea","GW":"Guinea-Bissau","GY":"Guyana","HT":"Haiti","HM":"Heard Island and McDonald Islands","HN":"Honduras","HK":"Hong Kong","HU":"Hungary","IS":"Iceland","IN":"India","ID":"Indonesia","IR":"Iran, Islamic Republic of","IQ":"Iraq","IE":"Ireland","IL":"Israel","IT":"Italy","JM":"Jamaica","JP":"Japan","JE":"Jersey","JO":"Jordan","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KR":"Korea, Republic of","XK":"Kosovo, Republic of","KW":"Kuwait","KG":"Kyrgyzstan","LA":"Lao People's Democratic Republic","LV":"Latvia","LB":"Lebanon","LS":"Lesotho","LR":"Liberia","LY":"Libya","LI":"Liechtenstein","LT":"Lithuania","LU":"Luxembourg","MO":"Macao","MK":"Macedonia, the former Yugoslav Republic of","MG":"Madagascar","MW":"Malawi","MY":"Malaysia","MV":"Maldives","ML":"Mali","MT":"Malta","MH":"Marshall Islands","MQ":"Martinique","MR":"Mauritania","MU":"Mauritius","YT":"Mayotte","MX":"Mexico","FM":"Micronesia, Federated States of","MD":"Moldova, Republic of","MC":"Monaco","MN":"Mongolia","ME":"Montenegro","MS":"Montserrat","MA":"Morocco","MZ":"Mozambique","MM":"Myanmar","NA":"Namibia","NR":"Nauru","NP":"Nepal","NL":"Netherlands","AN":"Netherlands Antilles","NC":"New Caledonia","NZ":"New Zealand","NI":"Nicaragua","NE":"Niger","NG":"Nigeria","NU":"Niue","NF":"Norfolk Island","KP":"Korea, Democratic People's Republic of","MP":"Northern Mariana Islands","NO":"Norway","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"Palestine, State of","PA":"Panama","PG":"Papua New Guinea","PY":"Paraguay","PE":"Peru","PH":"Philippines","PN":"Pitcairn","PL":"Poland","PT":"Portugal","PR":"Puerto Rico","QA":"Qatar","RE":"Réunion","RO":"Romania","RU":"Russian Federation","RW":"Rwanda","SH":"Saint Helena, Ascension and Tristan da Cunha","KN":"Saint Kitts and Nevis","LC":"Saint Lucia","PM":"Saint Pierre and Miquelon","VC":"Saint Vincent and the Grenadines","WS":"Samoa","SM":"San Marino","ST":"São Tomé and Príncipe","SA":"Saudi Arabia","SN":"Senegal","RS":"Serbia","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapore","SK":"Slovakia","SI":"Slovenia","SB":"Solomon Islands","SO":"Somalia","ZA":"South Africa","GS":"South Georgia and the South Sandwich Islands","SS":"South Sudan","ES":"Spain","LK":"Sri Lanka","SD":"Sudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen","SZ":"Swaziland","SE":"Sweden","CH":"Switzerland","SY":"Syrian Arab Republic","TW":"Taiwan","TJ":"Tajikistan","TZ":"Tanzania, United Republic of","TH":"Thailand","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinidad and Tobago","TN":"Tunisia","TR":"Turkey","TM":"Turkmenistan","TC":"Turks and Caicos Islands","TV":"Tuvalu","VI":"Virgin Islands, U.S.","UG":"Uganda","UA":"Ukraine","AE":"United Arab Emirates","GB":"United Kingdom","US":"United States","UM":"United States Minor Outlying Islands","UY":"Uruguay","UZ":"Uzbekistan","VU":"Vanuatu","VA":"Holy See (Vatican City State)","VE":"Venezuela, Bolivarian Republic of","VN":"Viet Nam","WF":"Wallis and Futuna","EH":"Western Sahara","YE":"Yemen","ZM":"Zambia","ZW":"Zimbabwe"}
+module.exports = {"AF":"Afghanistan","AX":"Åland Islands blah","AL":"Albania","DZ":"Algeria","AS":"American Samoa","AD":"Andorra","AO":"Angola","AI":"Anguilla","AQ":"Antarctica","AG":"Antigua and Barbuda","AR":"Argentina","AM":"Armenia","AW":"Aruba","AU":"Australia","AT":"Austria","AZ":"Azerbaijan","BS":"Bahamas","BH":"Bahrain","BD":"Bangladesh","BB":"Barbados","BY":"Belarus","BE":"Belgium","BZ":"Belize","BJ":"Benin","BM":"Bermuda","BT":"Bhutan","BO":"Bolivia, Plurinational State of","BA":"Bosnia and Herzegovina","BW":"Botswana","BV":"Bouvet Island","BR":"Brazil","IO":"British Indian Ocean Territory","VG":"Virgin Islands, British","BN":"Brunei Darussalam","BG":"Bulgaria","BF":"Burkina Faso","BI":"Burundi","KH":"Cambodia","CM":"Cameroon","CA":"Canada","CV":"Cape Verde","KY":"Cayman Islands","CF":"Central African Republic","TD":"Chad","CL":"Chile","CN":"China","CX":"Christmas Island","CO":"Colombia","KM":"Comoros","CG":"Congo","CK":"Cook Islands","CR":"Costa Rica","CI":"Côte d'Ivoire","HR":"Croatia","CU":"Cuba","CY":"Cyprus","CZ":"Czech Republic","CD":"Congo, the Democratic Republic of the","DK":"Denmark","DJ":"Djibouti","DM":"Dominica","DO":"Dominican Republic","TL":"Timor-Leste","EC":"Ecuador","EG":"Egypt","SV":"El Salvador","GQ":"Equatorial Guinea","ER":"Eritrea","EE":"Estonia","ET":"Ethiopia","FK":"Falkland Islands (Malvinas)","FO":"Faroe Islands","FJ":"Fiji","FI":"Finland","FR":"France","GF":"French Guiana","PF":"French Polynesia","TF":"French Southern Territories","GA":"Gabon","GM":"Gambia","GE":"Georgia","DE":"Germany","GH":"Ghana","GI":"Gibraltar","GR":"Greece","GL":"Greenland","GD":"Grenada","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernsey","GN":"Guinea","GW":"Guinea-Bissau","GY":"Guyana","HT":"Haiti","HM":"Heard Island and McDonald Islands","HN":"Honduras","HK":"Hong Kong","HU":"Hungary","IS":"Iceland","IN":"India","ID":"Indonesia","IR":"Iran, Islamic Republic of","IQ":"Iraq","IE":"Ireland","IL":"Israel","IT":"Italy","JM":"Jamaica","JP":"Japan","JE":"Jersey","JO":"Jordan","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KR":"Korea, Republic of","XK":"Kosovo, Republic of","KW":"Kuwait","KG":"Kyrgyzstan","LA":"Lao People's Democratic Republic","LV":"Latvia","LB":"Lebanon","LS":"Lesotho","LR":"Liberia","LY":"Libya","LI":"Liechtenstein","LT":"Lithuania","LU":"Luxembourg","MO":"Macao","MK":"Macedonia, the former Yugoslav Republic of","MG":"Madagascar","MW":"Malawi","MY":"Malaysia","MV":"Maldives","ML":"Mali","MT":"Malta","MH":"Marshall Islands","MQ":"Martinique","MR":"Mauritania","MU":"Mauritius","YT":"Mayotte","MX":"Mexico","FM":"Micronesia, Federated States of","MD":"Moldova, Republic of","MC":"Monaco","MN":"Mongolia","ME":"Montenegro","MS":"Montserrat","MA":"Morocco","MZ":"Mozambique","MM":"Myanmar","NA":"Namibia","NR":"Nauru","NP":"Nepal","NL":"Netherlands","AN":"Netherlands Antilles","NC":"New Caledonia","NZ":"New Zealand","NI":"Nicaragua","NE":"Niger","NG":"Nigeria","NU":"Niue","NF":"Norfolk Island","KP":"Korea, Democratic People's Republic of","MP":"Northern Mariana Islands","NO":"Norway","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"Palestine, State of","PA":"Panama","PG":"Papua New Guinea","PY":"Paraguay","PE":"Peru","PH":"Philippines","PN":"Pitcairn","PL":"Poland","PT":"Portugal","PR":"Puerto Rico","QA":"Qatar","RE":"Réunion","RO":"Romania","RU":"Russian Federation","RW":"Rwanda","SH":"Saint Helena, Ascension and Tristan da Cunha","KN":"Saint Kitts and Nevis","LC":"Saint Lucia","PM":"Saint Pierre and Miquelon","VC":"Saint Vincent and the Grenadines","WS":"Samoa","SM":"San Marino","ST":"São Tomé and Príncipe","SA":"Saudi Arabia","SN":"Senegal","RS":"Serbia","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapore","SK":"Slovakia","SI":"Slovenia","SB":"Solomon Islands","SO":"Somalia","ZA":"South Africa","GS":"South Georgia and the South Sandwich Islands","SS":"South Sudan","ES":"Spain","LK":"Sri Lanka","SD":"Sudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen","SZ":"Swaziland","SE":"Sweden","CH":"Switzerland","SY":"Syrian Arab Republic","TW":"Taiwan","TJ":"Tajikistan","TZ":"Tanzania, United Republic of","TH":"Thailand","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinidad and Tobago","TN":"Tunisia","TR":"Turkey","TM":"Turkmenistan","TC":"Turks and Caicos Islands","TV":"Tuvalu","VI":"Virgin Islands, U.S.","UG":"Uganda","UA":"Ukraine","AE":"United Arab Emirates","GB":"United Kingdom","US":"United States","UM":"United States Minor Outlying Islands","UY":"Uruguay","UZ":"Uzbekistan","VU":"Vanuatu","VA":"Holy See (Vatican City State)","VE":"Venezuela, Bolivarian Republic of","VN":"Viet Nam","WF":"Wallis and Futuna","EH":"Western Sahara","YE":"Yemen","ZM":"Zambia","ZW":"Zimbabwe"}
 
 /***/ }),
 /* 477 */
@@ -56636,10 +53033,10 @@ module.exports = {"AF":"Afghanistan","AX":"Åland Islands","AL":"Albania","DZ":"
  *
  */
 
-var jqueryRequest = __webpack_require__(478);
-var storageUtil = __webpack_require__(90);
+var fetchRequest = __webpack_require__(478);
+var storageUtil = __webpack_require__(88);
 
-module.exports = __webpack_require__(480)(storageUtil, jqueryRequest);
+module.exports = __webpack_require__(481)(storageUtil, fetchRequest);
 
 
 /***/ }),
@@ -56647,7 +53044,7 @@ module.exports = __webpack_require__(480)(storageUtil, jqueryRequest);
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
- * Copyright (c) 2015-present, Okta, Inc. and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018-present, Okta, Inc. and/or its affiliates. All rights reserved.
  * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
  *
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
@@ -56658,35 +53055,605 @@ module.exports = __webpack_require__(480)(storageUtil, jqueryRequest);
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-var $ = __webpack_require__(89);
+var fetch = __webpack_require__(479);
 
-function jqueryRequest(method, url, args) {
-  // TODO: support content-type
-  var deferred = $.Deferred();
-  $.ajax({
-    type: method,
-    url: url,
+/* eslint-disable complexity */
+function fetchRequest(method, url, args) {
+  var body = args.data;
+  var headers = args.headers || {};
+  var contentType = (headers['Content-Type'] || headers['content-type'] || '');
+
+  // JSON encode body (if appropriate)
+  if (contentType === 'application/json' && body && typeof body !== 'string') {
+    body = JSON.stringify(body);
+  }
+
+  var fetchPromise = fetch(url, {
+    method: method,
     headers: args.headers,
-    data: JSON.stringify(args.data),
-    xhrFields: {
-      withCredentials: args.withCredentials
-    }
+    body: body,
+    credentials: args.withCredentials === false ? 'omit' : 'include'
   })
-  .then(function(data, textStatus, jqXHR) {
-    delete jqXHR.then;
-    deferred.resolve(jqXHR);
-  }, function(jqXHR) {
-    delete jqXHR.then;
-    deferred.reject(jqXHR);
+  .then(function(response) {
+    var error = !response.ok;
+    var status = response.status;
+    var respHandler = function(resp) {
+      var result = {
+        responseText: resp,
+        status: status
+      };
+      if (error) {
+        // Throwing response object since error handling is done in http.js
+        throw result;
+      }
+      return result;
+    };
+    if (response.headers.get('Content-Type') &&
+        response.headers.get('Content-Type').toLowerCase().indexOf('application/json') >= 0) {
+      return response.json().then(respHandler);
+    } else {
+      return response.text().then(respHandler);
+    }
   });
-  return deferred;
+  return fetchPromise;
 }
 
-module.exports = jqueryRequest;
+module.exports = fetchRequest;
 
 
 /***/ }),
 /* 479 */
+/***/ (function(module, exports) {
+
+var __self__ = (function (root) {
+function F() {
+this.fetch = false;
+this.DOMException = root.DOMException
+}
+F.prototype = root;
+return new F();
+})(typeof self !== 'undefined' ? self : this);
+(function(self) {
+
+var irrelevant = (function (exports) {
+  var support = {
+    searchParams: 'URLSearchParams' in self,
+    iterable: 'Symbol' in self && 'iterator' in Symbol,
+    blob:
+      'FileReader' in self &&
+      'Blob' in self &&
+      (function() {
+        try {
+          new Blob();
+          return true
+        } catch (e) {
+          return false
+        }
+      })(),
+    formData: 'FormData' in self,
+    arrayBuffer: 'ArrayBuffer' in self
+  };
+
+  function isDataView(obj) {
+    return obj && DataView.prototype.isPrototypeOf(obj)
+  }
+
+  if (support.arrayBuffer) {
+    var viewClasses = [
+      '[object Int8Array]',
+      '[object Uint8Array]',
+      '[object Uint8ClampedArray]',
+      '[object Int16Array]',
+      '[object Uint16Array]',
+      '[object Int32Array]',
+      '[object Uint32Array]',
+      '[object Float32Array]',
+      '[object Float64Array]'
+    ];
+
+    var isArrayBufferView =
+      ArrayBuffer.isView ||
+      function(obj) {
+        return obj && viewClasses.indexOf(Object.prototype.toString.call(obj)) > -1
+      };
+  }
+
+  function normalizeName(name) {
+    if (typeof name !== 'string') {
+      name = String(name);
+    }
+    if (/[^a-z0-9\-#$%&'*+.^_`|~]/i.test(name)) {
+      throw new TypeError('Invalid character in header field name')
+    }
+    return name.toLowerCase()
+  }
+
+  function normalizeValue(value) {
+    if (typeof value !== 'string') {
+      value = String(value);
+    }
+    return value
+  }
+
+  // Build a destructive iterator for the value list
+  function iteratorFor(items) {
+    var iterator = {
+      next: function() {
+        var value = items.shift();
+        return {done: value === undefined, value: value}
+      }
+    };
+
+    if (support.iterable) {
+      iterator[Symbol.iterator] = function() {
+        return iterator
+      };
+    }
+
+    return iterator
+  }
+
+  function Headers(headers) {
+    this.map = {};
+
+    if (headers instanceof Headers) {
+      headers.forEach(function(value, name) {
+        this.append(name, value);
+      }, this);
+    } else if (Array.isArray(headers)) {
+      headers.forEach(function(header) {
+        this.append(header[0], header[1]);
+      }, this);
+    } else if (headers) {
+      Object.getOwnPropertyNames(headers).forEach(function(name) {
+        this.append(name, headers[name]);
+      }, this);
+    }
+  }
+
+  Headers.prototype.append = function(name, value) {
+    name = normalizeName(name);
+    value = normalizeValue(value);
+    var oldValue = this.map[name];
+    this.map[name] = oldValue ? oldValue + ', ' + value : value;
+  };
+
+  Headers.prototype['delete'] = function(name) {
+    delete this.map[normalizeName(name)];
+  };
+
+  Headers.prototype.get = function(name) {
+    name = normalizeName(name);
+    return this.has(name) ? this.map[name] : null
+  };
+
+  Headers.prototype.has = function(name) {
+    return this.map.hasOwnProperty(normalizeName(name))
+  };
+
+  Headers.prototype.set = function(name, value) {
+    this.map[normalizeName(name)] = normalizeValue(value);
+  };
+
+  Headers.prototype.forEach = function(callback, thisArg) {
+    for (var name in this.map) {
+      if (this.map.hasOwnProperty(name)) {
+        callback.call(thisArg, this.map[name], name, this);
+      }
+    }
+  };
+
+  Headers.prototype.keys = function() {
+    var items = [];
+    this.forEach(function(value, name) {
+      items.push(name);
+    });
+    return iteratorFor(items)
+  };
+
+  Headers.prototype.values = function() {
+    var items = [];
+    this.forEach(function(value) {
+      items.push(value);
+    });
+    return iteratorFor(items)
+  };
+
+  Headers.prototype.entries = function() {
+    var items = [];
+    this.forEach(function(value, name) {
+      items.push([name, value]);
+    });
+    return iteratorFor(items)
+  };
+
+  if (support.iterable) {
+    Headers.prototype[Symbol.iterator] = Headers.prototype.entries;
+  }
+
+  function consumed(body) {
+    if (body.bodyUsed) {
+      return Promise.reject(new TypeError('Already read'))
+    }
+    body.bodyUsed = true;
+  }
+
+  function fileReaderReady(reader) {
+    return new Promise(function(resolve, reject) {
+      reader.onload = function() {
+        resolve(reader.result);
+      };
+      reader.onerror = function() {
+        reject(reader.error);
+      };
+    })
+  }
+
+  function readBlobAsArrayBuffer(blob) {
+    var reader = new FileReader();
+    var promise = fileReaderReady(reader);
+    reader.readAsArrayBuffer(blob);
+    return promise
+  }
+
+  function readBlobAsText(blob) {
+    var reader = new FileReader();
+    var promise = fileReaderReady(reader);
+    reader.readAsText(blob);
+    return promise
+  }
+
+  function readArrayBufferAsText(buf) {
+    var view = new Uint8Array(buf);
+    var chars = new Array(view.length);
+
+    for (var i = 0; i < view.length; i++) {
+      chars[i] = String.fromCharCode(view[i]);
+    }
+    return chars.join('')
+  }
+
+  function bufferClone(buf) {
+    if (buf.slice) {
+      return buf.slice(0)
+    } else {
+      var view = new Uint8Array(buf.byteLength);
+      view.set(new Uint8Array(buf));
+      return view.buffer
+    }
+  }
+
+  function Body() {
+    this.bodyUsed = false;
+
+    this._initBody = function(body) {
+      this._bodyInit = body;
+      if (!body) {
+        this._bodyText = '';
+      } else if (typeof body === 'string') {
+        this._bodyText = body;
+      } else if (support.blob && Blob.prototype.isPrototypeOf(body)) {
+        this._bodyBlob = body;
+      } else if (support.formData && FormData.prototype.isPrototypeOf(body)) {
+        this._bodyFormData = body;
+      } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+        this._bodyText = body.toString();
+      } else if (support.arrayBuffer && support.blob && isDataView(body)) {
+        this._bodyArrayBuffer = bufferClone(body.buffer);
+        // IE 10-11 can't handle a DataView body.
+        this._bodyInit = new Blob([this._bodyArrayBuffer]);
+      } else if (support.arrayBuffer && (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body))) {
+        this._bodyArrayBuffer = bufferClone(body);
+      } else {
+        this._bodyText = body = Object.prototype.toString.call(body);
+      }
+
+      if (!this.headers.get('content-type')) {
+        if (typeof body === 'string') {
+          this.headers.set('content-type', 'text/plain;charset=UTF-8');
+        } else if (this._bodyBlob && this._bodyBlob.type) {
+          this.headers.set('content-type', this._bodyBlob.type);
+        } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+          this.headers.set('content-type', 'application/x-www-form-urlencoded;charset=UTF-8');
+        }
+      }
+    };
+
+    if (support.blob) {
+      this.blob = function() {
+        var rejected = consumed(this);
+        if (rejected) {
+          return rejected
+        }
+
+        if (this._bodyBlob) {
+          return Promise.resolve(this._bodyBlob)
+        } else if (this._bodyArrayBuffer) {
+          return Promise.resolve(new Blob([this._bodyArrayBuffer]))
+        } else if (this._bodyFormData) {
+          throw new Error('could not read FormData body as blob')
+        } else {
+          return Promise.resolve(new Blob([this._bodyText]))
+        }
+      };
+
+      this.arrayBuffer = function() {
+        if (this._bodyArrayBuffer) {
+          return consumed(this) || Promise.resolve(this._bodyArrayBuffer)
+        } else {
+          return this.blob().then(readBlobAsArrayBuffer)
+        }
+      };
+    }
+
+    this.text = function() {
+      var rejected = consumed(this);
+      if (rejected) {
+        return rejected
+      }
+
+      if (this._bodyBlob) {
+        return readBlobAsText(this._bodyBlob)
+      } else if (this._bodyArrayBuffer) {
+        return Promise.resolve(readArrayBufferAsText(this._bodyArrayBuffer))
+      } else if (this._bodyFormData) {
+        throw new Error('could not read FormData body as text')
+      } else {
+        return Promise.resolve(this._bodyText)
+      }
+    };
+
+    if (support.formData) {
+      this.formData = function() {
+        return this.text().then(decode)
+      };
+    }
+
+    this.json = function() {
+      return this.text().then(JSON.parse)
+    };
+
+    return this
+  }
+
+  // HTTP methods whose capitalization should be normalized
+  var methods = ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'];
+
+  function normalizeMethod(method) {
+    var upcased = method.toUpperCase();
+    return methods.indexOf(upcased) > -1 ? upcased : method
+  }
+
+  function Request(input, options) {
+    options = options || {};
+    var body = options.body;
+
+    if (input instanceof Request) {
+      if (input.bodyUsed) {
+        throw new TypeError('Already read')
+      }
+      this.url = input.url;
+      this.credentials = input.credentials;
+      if (!options.headers) {
+        this.headers = new Headers(input.headers);
+      }
+      this.method = input.method;
+      this.mode = input.mode;
+      this.signal = input.signal;
+      if (!body && input._bodyInit != null) {
+        body = input._bodyInit;
+        input.bodyUsed = true;
+      }
+    } else {
+      this.url = String(input);
+    }
+
+    this.credentials = options.credentials || this.credentials || 'same-origin';
+    if (options.headers || !this.headers) {
+      this.headers = new Headers(options.headers);
+    }
+    this.method = normalizeMethod(options.method || this.method || 'GET');
+    this.mode = options.mode || this.mode || null;
+    this.signal = options.signal || this.signal;
+    this.referrer = null;
+
+    if ((this.method === 'GET' || this.method === 'HEAD') && body) {
+      throw new TypeError('Body not allowed for GET or HEAD requests')
+    }
+    this._initBody(body);
+  }
+
+  Request.prototype.clone = function() {
+    return new Request(this, {body: this._bodyInit})
+  };
+
+  function decode(body) {
+    var form = new FormData();
+    body
+      .trim()
+      .split('&')
+      .forEach(function(bytes) {
+        if (bytes) {
+          var split = bytes.split('=');
+          var name = split.shift().replace(/\+/g, ' ');
+          var value = split.join('=').replace(/\+/g, ' ');
+          form.append(decodeURIComponent(name), decodeURIComponent(value));
+        }
+      });
+    return form
+  }
+
+  function parseHeaders(rawHeaders) {
+    var headers = new Headers();
+    // Replace instances of \r\n and \n followed by at least one space or horizontal tab with a space
+    // https://tools.ietf.org/html/rfc7230#section-3.2
+    var preProcessedHeaders = rawHeaders.replace(/\r?\n[\t ]+/g, ' ');
+    preProcessedHeaders.split(/\r?\n/).forEach(function(line) {
+      var parts = line.split(':');
+      var key = parts.shift().trim();
+      if (key) {
+        var value = parts.join(':').trim();
+        headers.append(key, value);
+      }
+    });
+    return headers
+  }
+
+  Body.call(Request.prototype);
+
+  function Response(bodyInit, options) {
+    if (!options) {
+      options = {};
+    }
+
+    this.type = 'default';
+    this.status = options.status === undefined ? 200 : options.status;
+    this.ok = this.status >= 200 && this.status < 300;
+    this.statusText = 'statusText' in options ? options.statusText : 'OK';
+    this.headers = new Headers(options.headers);
+    this.url = options.url || '';
+    this._initBody(bodyInit);
+  }
+
+  Body.call(Response.prototype);
+
+  Response.prototype.clone = function() {
+    return new Response(this._bodyInit, {
+      status: this.status,
+      statusText: this.statusText,
+      headers: new Headers(this.headers),
+      url: this.url
+    })
+  };
+
+  Response.error = function() {
+    var response = new Response(null, {status: 0, statusText: ''});
+    response.type = 'error';
+    return response
+  };
+
+  var redirectStatuses = [301, 302, 303, 307, 308];
+
+  Response.redirect = function(url, status) {
+    if (redirectStatuses.indexOf(status) === -1) {
+      throw new RangeError('Invalid status code')
+    }
+
+    return new Response(null, {status: status, headers: {location: url}})
+  };
+
+  exports.DOMException = self.DOMException;
+  try {
+    new exports.DOMException();
+  } catch (err) {
+    exports.DOMException = function(message, name) {
+      this.message = message;
+      this.name = name;
+      var error = Error(message);
+      this.stack = error.stack;
+    };
+    exports.DOMException.prototype = Object.create(Error.prototype);
+    exports.DOMException.prototype.constructor = exports.DOMException;
+  }
+
+  function fetch(input, init) {
+    return new Promise(function(resolve, reject) {
+      var request = new Request(input, init);
+
+      if (request.signal && request.signal.aborted) {
+        return reject(new exports.DOMException('Aborted', 'AbortError'))
+      }
+
+      var xhr = new XMLHttpRequest();
+
+      function abortXhr() {
+        xhr.abort();
+      }
+
+      xhr.onload = function() {
+        var options = {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers: parseHeaders(xhr.getAllResponseHeaders() || '')
+        };
+        options.url = 'responseURL' in xhr ? xhr.responseURL : options.headers.get('X-Request-URL');
+        var body = 'response' in xhr ? xhr.response : xhr.responseText;
+        resolve(new Response(body, options));
+      };
+
+      xhr.onerror = function() {
+        reject(new TypeError('Network request failed'));
+      };
+
+      xhr.ontimeout = function() {
+        reject(new TypeError('Network request failed'));
+      };
+
+      xhr.onabort = function() {
+        reject(new exports.DOMException('Aborted', 'AbortError'));
+      };
+
+      xhr.open(request.method, request.url, true);
+
+      if (request.credentials === 'include') {
+        xhr.withCredentials = true;
+      } else if (request.credentials === 'omit') {
+        xhr.withCredentials = false;
+      }
+
+      if ('responseType' in xhr && support.blob) {
+        xhr.responseType = 'blob';
+      }
+
+      request.headers.forEach(function(value, name) {
+        xhr.setRequestHeader(name, value);
+      });
+
+      if (request.signal) {
+        request.signal.addEventListener('abort', abortXhr);
+
+        xhr.onreadystatechange = function() {
+          // DONE (success or failure)
+          if (xhr.readyState === 4) {
+            request.signal.removeEventListener('abort', abortXhr);
+          }
+        };
+      }
+
+      xhr.send(typeof request._bodyInit === 'undefined' ? null : request._bodyInit);
+    })
+  }
+
+  fetch.polyfill = true;
+
+  if (!self.fetch) {
+    self.fetch = fetch;
+    self.Headers = Headers;
+    self.Request = Request;
+    self.Response = Response;
+  }
+
+  exports.Headers = Headers;
+  exports.Request = Request;
+  exports.Response = Response;
+  exports.fetch = fetch;
+
+  return exports;
+
+}({}));
+})(__self__);
+delete __self__.fetch.polyfill
+exports = __self__.fetch // To enable: import fetch from 'cross-fetch'
+exports.default = __self__.fetch // For TypeScript consumers without esModuleInterop.
+exports.fetch = __self__.fetch // To enable: import {fetch} from 'cross-fetch'
+exports.Headers = __self__.Headers
+exports.Request = __self__.Request
+exports.Response = __self__.Response
+module.exports = exports
+
+
+/***/ }),
+/* 480 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -56861,7 +53828,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 
 /***/ }),
-/* 480 */
+/* 481 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -56878,21 +53845,21 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 /* eslint-disable complexity */
 /* eslint-disable max-statements */
 
-__webpack_require__(481);
+__webpack_require__(482);
 
-var AuthSdkError      = __webpack_require__(52);
-var builderUtil       = __webpack_require__(483);
+var AuthSdkError      = __webpack_require__(53);
+var builderUtil       = __webpack_require__(484);
 var config            = __webpack_require__(77);
-var cookies           = __webpack_require__(90).storage;
+var cookies           = __webpack_require__(88).storage;
 var http              = __webpack_require__(78);
 var oauthUtil         = __webpack_require__(221);
 var Q                 = __webpack_require__(12);
-var session           = __webpack_require__(486);
-var token             = __webpack_require__(487);
-var TokenManager      = __webpack_require__(491);
+var session           = __webpack_require__(487);
+var token             = __webpack_require__(488);
+var TokenManager      = __webpack_require__(492);
 var tx                = __webpack_require__(220);
-var clock             = __webpack_require__(493);
-var util              = __webpack_require__(41);
+var clock             = __webpack_require__(494);
+var util              = __webpack_require__(43);
 
 function OktaAuthBuilder(args) {
   var sdk = this;
@@ -57128,7 +54095,7 @@ module.exports = builderUtil.buildOktaAuth(OktaAuthBuilder);
 
 
 /***/ }),
-/* 481 */
+/* 482 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -57143,7 +54110,7 @@ module.exports = builderUtil.buildOktaAuth(OktaAuthBuilder);
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-__webpack_require__(482);
+__webpack_require__(483);
 
 // Production steps of ECMA-262, Edition 5, 15.4.4.14
 // Reference: http://es5.github.io/#x15.4.4.14
@@ -57220,7 +54187,7 @@ if (!Array.isArray) {
 
 
 /***/ }),
-/* 482 */
+/* 483 */
 /***/ (function(module, exports, __webpack_require__) {
 
 ;(function () {
@@ -57287,7 +54254,7 @@ if (!Array.isArray) {
 
 
 /***/ }),
-/* 483 */
+/* 484 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -57302,9 +54269,9 @@ if (!Array.isArray) {
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-var AuthSdkError = __webpack_require__(52);
+var AuthSdkError = __webpack_require__(53);
 var tx = __webpack_require__(220);
-var util = __webpack_require__(41);
+var util = __webpack_require__(43);
 
 function getValidUrl(args) {
   if (!args) {
@@ -57387,7 +54354,7 @@ module.exports = {
 
 
 /***/ }),
-/* 484 */
+/* 485 */
 /***/ (function(module, exports) {
 
 /*!
@@ -57421,7 +54388,7 @@ module.exports = AuthApiError;
 
 
 /***/ }),
-/* 485 */
+/* 486 */
 /***/ (function(module, exports) {
 
 /*!
@@ -57446,7 +54413,7 @@ module.exports = AuthPollStopError;
 
 
 /***/ }),
-/* 486 */
+/* 487 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -57462,7 +54429,7 @@ module.exports = AuthPollStopError;
  *
  */
 
-var util = __webpack_require__(41);
+var util = __webpack_require__(43);
 var http = __webpack_require__(78);
 
 function sessionExists(sdk) {
@@ -57530,7 +54497,7 @@ module.exports = {
 
 
 /***/ }),
-/* 487 */
+/* 488 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -57548,15 +54515,15 @@ module.exports = {
 
 /* eslint-disable complexity, max-statements */
 var http          = __webpack_require__(78);
-var util          = __webpack_require__(41);
+var util          = __webpack_require__(43);
 var oauthUtil     = __webpack_require__(221);
 var Q             = __webpack_require__(12);
-var sdkCrypto     = __webpack_require__(488);
-var AuthSdkError  = __webpack_require__(52);
-var OAuthError    = __webpack_require__(489);
+var sdkCrypto     = __webpack_require__(489);
+var AuthSdkError  = __webpack_require__(53);
+var OAuthError    = __webpack_require__(490);
 var config        = __webpack_require__(77);
-var cookies       = __webpack_require__(90).storage;
-var pkce          = __webpack_require__(490);
+var cookies       = __webpack_require__(88).storage;
+var pkce          = __webpack_require__(491);
 
 function decodeToken(token) {
   var jwt = token.split('.');
@@ -58260,7 +55227,7 @@ module.exports = {
 
 
 /***/ }),
-/* 488 */
+/* 489 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -58275,7 +55242,7 @@ module.exports = {
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-var util = __webpack_require__(41);
+var util = __webpack_require__(43);
 
 function verifyToken(idToken, key) {
   key = util.clone(key);
@@ -58321,7 +55288,7 @@ module.exports = {
 
 
 /***/ }),
-/* 489 */
+/* 490 */
 /***/ (function(module, exports) {
 
 /*!
@@ -58349,7 +55316,7 @@ module.exports = OAuthError;
 
 
 /***/ }),
-/* 490 */
+/* 491 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -58366,9 +55333,9 @@ module.exports = OAuthError;
  */
 
  /* eslint-disable complexity, max-statements */
-var AuthSdkError  = __webpack_require__(52);
+var AuthSdkError  = __webpack_require__(53);
 var http          = __webpack_require__(78);
-var util          = __webpack_require__(41);
+var util          = __webpack_require__(43);
 
 // Code verifier: Random URL-safe string with a minimum length of 43 characters.
 // Code challenge: Base64 URL-encoded SHA-256 hash of the code verifier.
@@ -58486,7 +55453,7 @@ module.exports = {
 
 
 /***/ }),
-/* 491 */
+/* 492 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -58503,11 +55470,11 @@ module.exports = {
  */
 
 /* eslint complexity:[0,8] max-statements:[0,21] */
-var util = __webpack_require__(41);
-var AuthSdkError = __webpack_require__(52);
-var storageUtil = __webpack_require__(90);
+var util = __webpack_require__(43);
+var AuthSdkError = __webpack_require__(53);
+var storageUtil = __webpack_require__(88);
 var Q = __webpack_require__(12);
-var Emitter = __webpack_require__(492);
+var Emitter = __webpack_require__(493);
 var config = __webpack_require__(77);
 var storageBuilder = __webpack_require__(219);
 
@@ -58723,7 +55690,7 @@ module.exports = TokenManager;
 
 
 /***/ }),
-/* 492 */
+/* 493 */
 /***/ (function(module, exports) {
 
 function E () {
@@ -58795,7 +55762,7 @@ module.exports = E;
 
 
 /***/ }),
-/* 493 */
+/* 494 */
 /***/ (function(module, exports) {
 
 function getLocalAdjustedTime(sdk) {
@@ -58810,7 +55777,7 @@ module.exports = {
 
 
 /***/ }),
-/* 494 */
+/* 495 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -58829,7 +55796,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint max-params: [2, 50] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(495), __webpack_require__(543), __webpack_require__(230), __webpack_require__(549), __webpack_require__(550), __webpack_require__(559), __webpack_require__(563), __webpack_require__(564), __webpack_require__(565), __webpack_require__(566), __webpack_require__(569), __webpack_require__(570), __webpack_require__(571), __webpack_require__(572), __webpack_require__(573), __webpack_require__(575), __webpack_require__(576), __webpack_require__(577), __webpack_require__(578), __webpack_require__(580), __webpack_require__(581), __webpack_require__(582), __webpack_require__(583), __webpack_require__(584), __webpack_require__(585), __webpack_require__(586), __webpack_require__(587), __webpack_require__(589), __webpack_require__(591), __webpack_require__(592), __webpack_require__(593), __webpack_require__(594), __webpack_require__(595), __webpack_require__(596), __webpack_require__(597), __webpack_require__(598), __webpack_require__(599), __webpack_require__(600), __webpack_require__(601), __webpack_require__(602), __webpack_require__(603), __webpack_require__(604), __webpack_require__(605), __webpack_require__(609), __webpack_require__(610), __webpack_require__(613), __webpack_require__(222), __webpack_require__(618), __webpack_require__(621)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (BaseLoginRouter, IDPDiscoveryController, PrimaryAuthController, VerifyDuoController, MfaVerifyController, VerifyWindowsHelloController, VerifyU2FController, VerifyWebauthnController, VerifyCustomFactorController, EnrollChoicesController, EnrollDuoController, EnrollQuestionController, EnrollPasswordController, EnrollWindowsHelloController, EnrollCallAndSmsController, EnrollOnPremController, EnrollSymantecVipController, EnrollYubikeyController, EnrollTotpController, EnrollU2FController, EnrollWebauthnController, EnrollCustomFactorController, EnrollHotpController, BarcodeTotpController, BarcodePushController, ActivateTotpController, ManualSetupTotpController, ManualSetupPushController, EnrollmentLinkSentController, EnterPasscodePushFlowController, PasswordExpiredController, CustomPasswordExpiredController, ForgotPasswordController, RecoveryChallengeController, PwdResetEmailSentController, RecoveryQuestionController, PasswordResetController, RecoveryLoadingController, UnlockAccountController, AccountUnlockedController, UnlockEmailSentController, RefreshAuthStateController, RegistrationController, RegistrationCompleteController, ConsentRequiredController, EnrollUserController, SecurityBeacon, FactorBeacon, ConsentBeacon) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(564), __webpack_require__(496), __webpack_require__(222), __webpack_require__(508), __webpack_require__(524), __webpack_require__(533), __webpack_require__(537), __webpack_require__(538), __webpack_require__(539), __webpack_require__(540), __webpack_require__(548), __webpack_require__(549), __webpack_require__(550), __webpack_require__(551), __webpack_require__(552), __webpack_require__(554), __webpack_require__(555), __webpack_require__(556), __webpack_require__(557), __webpack_require__(559), __webpack_require__(560), __webpack_require__(561), __webpack_require__(562), __webpack_require__(563), __webpack_require__(626), __webpack_require__(590), __webpack_require__(591), __webpack_require__(593), __webpack_require__(595), __webpack_require__(596), __webpack_require__(597), __webpack_require__(598), __webpack_require__(599), __webpack_require__(600), __webpack_require__(601), __webpack_require__(602), __webpack_require__(603), __webpack_require__(604), __webpack_require__(605), __webpack_require__(606), __webpack_require__(607), __webpack_require__(608), __webpack_require__(609), __webpack_require__(613), __webpack_require__(614), __webpack_require__(617), __webpack_require__(236), __webpack_require__(622), __webpack_require__(625)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (BaseLoginRouter, IDPDiscoveryController, PrimaryAuthController, VerifyDuoController, MfaVerifyController, VerifyWindowsHelloController, VerifyU2FController, VerifyWebauthnController, VerifyCustomFactorController, EnrollChoicesController, EnrollDuoController, EnrollQuestionController, EnrollPasswordController, EnrollWindowsHelloController, EnrollCallAndSmsController, EnrollOnPremController, EnrollSymantecVipController, EnrollYubikeyController, EnrollTotpController, EnrollU2FController, EnrollWebauthnController, EnrollCustomFactorController, EnrollHotpController, BarcodeTotpController, BarcodePushController, ActivateTotpController, ManualSetupTotpController, ManualSetupPushController, EnrollmentLinkSentController, EnterPasscodePushFlowController, PasswordExpiredController, CustomPasswordExpiredController, ForgotPasswordController, RecoveryChallengeController, PwdResetEmailSentController, RecoveryQuestionController, PasswordResetController, RecoveryLoadingController, UnlockAccountController, AccountUnlockedController, UnlockEmailSentController, RefreshAuthStateController, RegistrationController, RegistrationCompleteController, ConsentRequiredController, EnrollUserController, SecurityBeacon, FactorBeacon, ConsentBeacon) {
   return BaseLoginRouter.extend({
 
     routes: {
@@ -58842,6 +55809,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       'signin/verify/u2f': 'verifyU2F',
       'signin/verify/generic_saml/assertion:saml2': 'verifySAMLFactor',
       'signin/verify/generic_oidc/assertion:oidc': 'verifyOIDCFactor',
+      'signin/verify/custom/claims_provider': 'verifyClaimsFactor',
       'signin/verify/:factorType': 'verifyNoProvider',
       'signin/verify/:provider/:factorType(/:factorIndex)': 'verify',
       'signin/enroll': 'enrollChoices',
@@ -58859,6 +55827,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       'signin/enroll/fido/u2f': 'enrollU2F',
       'signin/enroll/generic_saml/assertion:saml2': 'enrollSAMLFactor',
       'signin/enroll/generic_oidc/assertion:oidc': 'enrollOIDCFactor',
+      'signin/enroll/custom/claims_provider': 'enrollClaimsFactor',
       'signin/enroll/custom/token:hotp': 'enrollHotpFactor',
       'signin/enroll/:provider/:factorType': 'enrollTotpFactor',
       'signin/enroll-activate/okta/push': 'scanBarcodePushFactor',
@@ -58953,6 +55922,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       this.render(VerifyCustomFactorController, {
         provider: 'GENERIC_OIDC',
         factorType: 'assertion:oidc',
+        Beacon: FactorBeacon
+      });
+    },
+
+    verifyClaimsFactor: function verifyClaimsFactor() {
+      this.render(VerifyCustomFactorController, {
+        provider: 'CUSTOM',
+        factorType: 'claims_provider',
         Beacon: FactorBeacon
       });
     },
@@ -59065,6 +56042,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       });
     },
 
+    enrollClaimsFactor: function enrollClaimsFactor() {
+      this.render(EnrollCustomFactorController, {
+        provider: 'CUSTOM',
+        factorType: 'claims_provider',
+        Beacon: FactorBeacon
+      });
+    },
+
     enrollTotpFactor: function enrollTotpFactor(provider, factorType) {
       this.render(EnrollTotpController, {
         provider: provider.toUpperCase(),
@@ -59073,10 +56058,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       });
     },
 
-    enrollHotpFactor: function enrollHotpFactor(provider, factorType) {
+    enrollHotpFactor: function enrollHotpFactor() {
       this.render(EnrollHotpController, {
-        provider: provider.toUpperCase(),
-        factorType: factorType,
+        provider: 'CUSTOM',
+        factorType: 'token:hotp',
         Beacon: FactorBeacon
       });
     },
@@ -59236,3668 +56221,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 495 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-/* eslint max-params: [2, 15], max-statements: [2, 18] */
-// BaseLoginRouter contains the more complicated router logic - rendering/
-// transition, etc. Most router changes should happen in LoginRouter (which is
-// responsible for adding new routes)
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(67), __webpack_require__(496), __webpack_require__(497), __webpack_require__(222), __webpack_require__(518), __webpack_require__(519), __webpack_require__(541), __webpack_require__(22), __webpack_require__(161), __webpack_require__(35), __webpack_require__(68), __webpack_require__(8), __webpack_require__(160), __webpack_require__(116)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BrowserFeatures, Settings, Header, SecurityBeacon, AuthContainer, AppState, ColorsUtil, RouterUtil, Animations, Errors, Util, Enums, Bundles, Logger) {
-  var _ = Okta._,
-      $ = Okta.$,
-      Backbone = Okta.Backbone;
-
-
-  function isStateLessRouteHandler(router, fn) {
-    return _.find(router.stateLessRouteHandlers, function (routeName) {
-      return fn === router[routeName];
-    });
-  }
-
-  function beaconIsAvailable(Beacon, settings) {
-    if (!Beacon) {
-      return false;
-    }
-    if (Beacon === SecurityBeacon) {
-      return settings.get('features.securityImage');
-    }
-    return true;
-  }
-
-  function loadLanguage(appState, i18n, assetBaseUrl, assetRewrite) {
-    var timeout = setTimeout(function () {
-      // Trigger a spinner if we're waiting on a request for a new language.
-      appState.trigger('loading', true);
-    }, 200);
-    return Bundles.loadLanguage(appState.get('languageCode'), i18n, {
-      baseUrl: assetBaseUrl,
-      rewrite: assetRewrite
-    }).then(function () {
-      clearTimeout(timeout);
-      appState.trigger('loading', false);
-    });
-  }
-
-  return Okta.Router.extend({
-    Events: Backbone.Events,
-
-    initialize: function initialize(options) {
-      // Create a default success and/or error handler if
-      // one is not provided.
-      if (!options.globalSuccessFn) {
-        options.globalSuccessFn = function () {};
-      }
-      if (!options.globalErrorFn) {
-        options.globalErrorFn = function (err) {
-          Logger.error(err);
-        };
-      }
-      this.settings = new Settings(_.omit(options, 'el', 'authClient'), { parse: true });
-      this.settings.setAuthClient(options.authClient);
-
-      if (!options.el) {
-        this.settings.callGlobalError(new Errors.ConfigError(Okta.loc('error.required.el')));
-      }
-
-      $('body > div').on('click', function () {
-        // OKTA-69769 Tooltip wont close on iPhone/iPad
-        // Registering a click handler on the first div
-        // allows a tap that falls outside the tooltip
-        // to be registered as a tap by iOS
-        // and then the open tooltip will lose focus and close.
-      });
-
-      this.appState = new AppState({
-        baseUrl: this.settings.get('baseUrl'),
-        settings: this.settings
-      }, { parse: true });
-
-      var wrapper = new AuthContainer({ appState: this.appState });
-      Okta.$(options.el).append(wrapper.render().$el);
-      this.el = '#' + Enums.WIDGET_CONTAINER_ID;
-
-      this.header = new Header({
-        el: this.el,
-        appState: this.appState,
-        settings: this.settings
-      });
-
-      this.listenTo(this.appState, 'change:transactionError', function (appState, err) {
-        RouterUtil.routeAfterAuthStatusChangeError(this, err);
-      });
-
-      this.listenTo(this.appState, 'change:transaction', function (appState, trans) {
-        RouterUtil.routeAfterAuthStatusChange(this, trans.data);
-      });
-
-      this.listenTo(this.appState, 'navigate', function (url) {
-        this.navigate(url, { trigger: true });
-      });
-    },
-
-    execute: function execute(cb, args) {
-      // Recovery flow with a token passed through widget settings
-      var recoveryToken = this.settings.get('recoveryToken');
-      if (recoveryToken) {
-        this.settings.unset('recoveryToken');
-        this.navigate(RouterUtil.createRecoveryUrl(recoveryToken), { trigger: true });
-        return;
-      }
-
-      // Refresh flow with a stateToken passed through widget settings
-      var stateToken = this.settings.get('stateToken');
-      if (stateToken) {
-        this.settings.unset('stateToken');
-        this.navigate(RouterUtil.createRefreshUrl(stateToken), { trigger: true });
-        return;
-      }
-
-      // Normal flow - we've either navigated to a stateless page, or are
-      // in the middle of an auth flow
-      var trans = this.appState.get('transaction');
-      if (trans && trans.data || isStateLessRouteHandler(this, cb)) {
-        cb.apply(this, args);
-        return;
-      }
-
-      // StateToken cookie exists on page load, and we are on a stateful url
-      if (this.settings.getAuthClient().tx.exists()) {
-        this.navigate(RouterUtil.createRefreshUrl(), { trigger: true });
-        return;
-      }
-
-      // We've hit a page that requires state, but have no stateToken - redirect
-      // back to primary auth
-      this.navigate('', { trigger: true });
-    },
-
-    // Overriding the default navigate method to allow the widget consumer
-    // to "turn off" routing - if features.router is false, the browser
-    // location bar will not update when the router navigates
-    navigate: function navigate(fragment, options) {
-      if (this.settings.get('features.router')) {
-        return Okta.Router.prototype.navigate.apply(this, arguments);
-      }
-      if (options && options.trigger) {
-        return Backbone.history.loadUrl(fragment);
-      }
-    },
-
-    render: function render(Controller, options) {
-      options || (options = {});
-
-      var Beacon = options.Beacon;
-      var controllerOptions = _.extend({ settings: this.settings, appState: this.appState }, _.omit(options, 'Beacon'));
-
-      // Since we have a wrapper view, render our wrapper and use its content
-      // element as our new el.
-      // Note: Render it here because we know dom is ready at this point
-      if (!this.header.rendered()) {
-        this.el = this.header.render().getContentEl();
-      }
-
-      // If we need to load a language (or apply custom i18n overrides), do
-      // this now and re-run render after it's finished.
-      if (!Bundles.isLoaded(this.appState.get('languageCode'))) {
-        return loadLanguage(this.appState, this.settings.get('i18n'), this.settings.get('assets.baseUrl'), this.settings.get('assets.rewrite')).then(_.bind(this.render, this, Controller, options)).done();
-      }
-
-      // Load the custom colors only on the first render
-      if (this.settings.get('colors.brand') && !ColorsUtil.isLoaded()) {
-        var colors = {
-          brand: this.settings.get('colors.brand')
-        };
-        ColorsUtil.addStyle(colors);
-      }
-
-      var oldController = this.controller;
-      this.controller = new Controller(controllerOptions);
-
-      // Bubble up all controller events
-      this.listenTo(this.controller, 'all', this.trigger);
-
-      // First run fetchInitialData, in case the next controller needs data
-      // before it's initial render. This will leave the current page in a
-      // loading state.
-      this.controller.fetchInitialData().then(_.bind(function () {
-
-        // Beacon transition occurs in parallel to page swap
-        if (!beaconIsAvailable(Beacon, this.settings)) {
-          Beacon = null;
-        }
-        this.header.setBeacon(Beacon, controllerOptions);
-
-        this.controller.render();
-
-        if (!oldController) {
-          this.el.append(this.controller.el);
-          this.controller.postRenderAnimation();
-          return;
-        }
-
-        return Animations.swapPages({
-          $parent: this.el,
-          $oldRoot: oldController.$el,
-          $newRoot: this.controller.$el,
-          dir: oldController.state.get('navigateDir'),
-          ctx: this,
-          success: function success() {
-            var flashError = this.appState.get('flashError'),
-                model = this.controller.model;
-            oldController.remove();
-            oldController.$el.remove();
-            this.controller.postRenderAnimation();
-            if (flashError) {
-              model.trigger('error', model, {
-                responseJSON: {
-                  errorSummary: Okta.loc('error.expired.session')
-                }
-              });
-              this.appState.unset('flashError');
-              Util.triggerAfterError(this.controller, flashError);
-            }
-          }
-        });
-      }, this)).fail(function () {
-        // OKTA-69665 - if an error occurs in fetchInitialData, we're left in
-        // a state with two active controllers. Therefore, we clean up the
-        // old one. Note: This explicitly handles the invalid token case -
-        // if we get some other type of error which doesn't force a redirect,
-        // we will probably be left in a bad state. I.e. old controller is
-        // dropped and new controller is not rendered.
-        if (oldController) {
-          oldController.remove();
-          oldController.$el.remove();
-        }
-      }).done();
-    },
-
-    start: function start() {
-      var pushState = false;
-      // Support for browser's back button.
-      if (window.addEventListener && this.settings.get('features.router')) {
-        window.addEventListener('popstate', _.bind(function (e) {
-          if (this.controller.back) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            this.controller.back();
-          }
-        }, this));
-        pushState = BrowserFeatures.supportsPushState();
-      }
-      Okta.Router.prototype.start.call(this, { pushState: pushState });
-    },
-
-    hide: function hide() {
-      this.header.$el.hide();
-    },
-
-    show: function show() {
-      this.header.$el.show();
-    },
-
-    remove: function remove() {
-      this.controller.remove();
-      this.header.$el.remove();
-      Bundles.remove();
-      Backbone.history.stop();
-    }
-
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
 /* 496 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(35), __webpack_require__(67), __webpack_require__(68), __webpack_require__(116), __webpack_require__(146)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, Errors, BrowserFeatures, Util, Logger, config) {
-
-  var SharedUtil = Okta.internal.util.Util;
-
-  var DEFAULT_LANGUAGE = 'en';
-
-  var supportedIdps = ['facebook', 'google', 'linkedin', 'microsoft'],
-      supportedResponseTypes = ['token', 'id_token', 'code'],
-      oauthRedirectTpl = Okta.tpl('{{origin}}');
-
-  var _ = Okta._,
-      ConfigError = Errors.ConfigError,
-      UnsupportedBrowserError = Errors.UnsupportedBrowserError;
-
-  var assetBaseUrlTpl = Okta.tpl('https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/{{version}}');
-
-  return Okta.Model.extend({
-
-    flat: true,
-    authClient: undefined,
-
-    local: {
-      'baseUrl': ['string', true],
-      'recoveryToken': ['string', false, undefined],
-      'stateToken': ['string', false, undefined],
-      'username': ['string', false],
-      'signOutLink': ['string', false],
-      'relayState': ['string', false],
-
-      // Function to transform the username before passing it to the API
-      // for Primary Auth, Forgot Password and Unlock Account.
-      'transformUsername': ['function', false],
-
-      // CALLBACKS
-      'globalSuccessFn': 'function',
-      'globalErrorFn': 'function',
-      'processCreds': 'function',
-
-      // IMAGES
-      'logo': 'string',
-      'logoText': ['string', false],
-      'helpSupportNumber': 'string',
-
-      // FEATURES
-      'features.router': ['boolean', true, false],
-      'features.securityImage': ['boolean', true, false],
-      'features.rememberMe': ['boolean', true, true],
-      'features.autoPush': ['boolean', true, false],
-      'features.smsRecovery': ['boolean', true, false],
-      'features.callRecovery': ['boolean', true, false],
-      'features.emailRecovery': ['boolean', false, true],
-      'features.windowsVerify': ['boolean', true, false],
-      'features.webauthn': ['boolean', true, false],
-      'features.selfServiceUnlock': ['boolean', true, false],
-      'features.multiOptionalFactorEnroll': ['boolean', true, false],
-      'features.preventBrowserFromSavingOktaPassword': ['boolean', true, true],
-      'features.deviceFingerprinting': ['boolean', false, false],
-      'features.hideSignOutLinkInMFA': ['boolean', false, false],
-      'features.hideBackToSignInForReset': ['boolean', false, false],
-      'features.customExpiredPassword': ['boolean', true, false],
-      'features.registration': ['boolean', false, false],
-      'features.consent': ['boolean', false, false],
-      'features.idpDiscovery': ['boolean', false, false],
-      'features.passwordlessAuth': ['boolean', false, false],
-      'features.showPasswordToggleOnSignInPage': ['boolean', false, false],
-      'features.trackTypingPattern': ['boolean', false, false],
-      'features.redirectByFormSubmit': ['boolean', false, false],
-      'features.useDeviceFingerprintForSecurityImage': ['boolean', false, true],
-
-      // I18N
-      'language': ['any', false], // Can be a string or a function
-      'i18n': ['object', false],
-
-      // ASSETS
-      'assets.baseUrl': ['string', false],
-      'assets.rewrite': {
-        type: 'function',
-        value: _.identity
-      },
-
-      // OAUTH2
-      'authScheme': ['string', false, 'OAUTH2'],
-      'authParams.display': {
-        type: 'string',
-        values: ['none', 'popup', 'page']
-      },
-
-      // Note: It shouldn't be necessary to override/pass in this property -
-      // it will be set correctly depending on what the value of display is
-      // and whether we are using Okta or a social IDP.
-      'authParams.responseMode': {
-        type: 'string',
-        values: ['query', 'fragment', 'form_post', 'okta_post_message']
-      },
-
-      // Can either be a string or an array, i.e.
-      // - Single value: 'id_token', 'token', or 'code'
-      // - Multiple values: ['id_token', 'token']
-      'authParams.responseType': ['any', false, 'id_token'],
-      'authParams.scopes': ['array', false],
-
-      'authParams.issuer': ['string', false],
-      'authParams.authorizeUrl': ['string', false],
-      'authParams.state': ['string', false],
-      'authParams.nonce': ['string', false],
-
-      'policyId': 'string',
-      'clientId': 'string',
-      'redirectUri': 'string',
-      'idps': ['array', false, []],
-      'idpDisplay': {
-        type: 'string',
-        values: ['PRIMARY', 'SECONDARY'],
-        value: 'SECONDARY'
-      },
-      'oAuthTimeout': ['number', false],
-
-      // HELP LINKS
-      'helpLinks.help': 'string',
-      'helpLinks.forgotPassword': 'string',
-      'helpLinks.unlock': 'string',
-      'helpLinks.custom': 'array',
-
-      //Custom Buttons
-      'customButtons': ['array', false, []],
-
-      //Registration
-      'registration.click': 'function',
-      'registration.parseSchema': 'function',
-      'registration.preSubmit': 'function',
-      'registration.postSubmit': 'function',
-
-      //Consent
-      'consent.cancel': 'function',
-
-      //IDP Discovery
-      'idpDiscovery.requestContext': 'string',
-
-      //Colors
-      'colors.brand': 'string'
-    },
-
-    derived: {
-      redirectUtilFn: {
-        deps: ['features.redirectByFormSubmit'],
-        fn: function fn(redirectByFormSubmit) {
-          return redirectByFormSubmit ? Util.redirectWithFormGet.bind(Util) : SharedUtil.redirect.bind(SharedUtil);
-        },
-        cache: true
-      },
-      supportedLanguages: {
-        deps: ['i18n'],
-        fn: function fn(i18n) {
-          // Developers can pass in their own languages
-          return _.union(config.supportedLanguages, _.keys(i18n));
-        },
-        cache: true
-      },
-      languageCode: {
-        deps: ['language', 'supportedLanguages'],
-        fn: function fn(language, supportedLanguages) {
-          var userLanguages = BrowserFeatures.getUserLanguages(),
-              preferred = _.clone(userLanguages),
-              supportedLowerCase = Util.toLower(supportedLanguages),
-              expanded;
-
-          // Any developer defined "language" takes highest priority:
-          // As a string, i.e. 'en', 'ja', 'zh-CN'
-          if (_.isString(language)) {
-            preferred.unshift(language);
-          }
-          // As a callback function, which is passed the list of supported
-          // languages and detected user languages. This function must return
-          // a languageCode, i.e. 'en', 'ja', 'zh-CN'
-          else if (_.isFunction(language)) {
-              preferred.unshift(language(supportedLanguages, userLanguages));
-            }
-
-          // Add english as the default, and expand to include any language
-          // codes that do not include region, dialect, etc.
-          preferred.push(DEFAULT_LANGUAGE);
-          expanded = Util.toLower(Util.expandLanguages(preferred));
-
-          // Perform a case insensitive search - this is necessary in the case
-          // of browsers like Safari
-          var i, supportedPos;
-          for (i = 0; i < expanded.length; i++) {
-            supportedPos = supportedLowerCase.indexOf(expanded[i]);
-            if (supportedPos > -1) {
-              return supportedLanguages[supportedPos];
-            }
-          }
-        }
-      },
-      oauth2Enabled: {
-        deps: ['clientId', 'authScheme', 'authParams.responseType'],
-        fn: function fn(clientId, authScheme, responseType) {
-          if (!clientId) {
-            return false;
-          }
-          if (authScheme.toLowerCase() !== 'oauth2') {
-            return false;
-          }
-          var responseTypes = _.isArray(responseType) ? responseType : [responseType];
-          return _.intersection(responseTypes, supportedResponseTypes).length > 0;
-        },
-        cache: true
-      },
-      // Redirect Uri to provide in the oauth API
-      oauthRedirectUri: {
-        deps: ['redirectUri'],
-        fn: function fn(redirectUri) {
-          if (redirectUri) {
-            return redirectUri;
-          }
-
-          var origin = window.location.origin;
-          // IE8
-          if (!origin) {
-            var href = window.location.href;
-            var path = window.location.pathname;
-            if (path !== '') {
-              origin = href.substring(0, href.lastIndexOf(path));
-            }
-          }
-
-          return oauthRedirectTpl({
-            origin: origin
-          });
-        }
-      },
-      // Adjusts the idps passed into the widget based on if they get explicit support
-      configuredSocialIdps: {
-        deps: ['idps'],
-        fn: function fn(idps) {
-          return _.map(idps, function (idp) {
-            var type = idp.type && idp.type.toLowerCase();
-            if (!(type && _.contains(supportedIdps, type))) {
-              type = 'general-idp';
-              idp.text = idp.text || '{ Please provide a text value }';
-            }
-
-            idp.className = ['social-auth-button', 'social-auth-' + type + '-button ', idp.className ? idp.className : ''].join(' ');
-            idp.dataAttr = 'social-auth-' + type + '-button';
-            idp.i18nKey = 'socialauth.' + type + '.label';
-            return idp;
-          });
-        },
-        cache: true
-      },
-      // social auth buttons order - 'above'/'below' the primary auth form (boolean)
-      socialAuthPositionTop: {
-        deps: ['configuredSocialIdps', 'idpDisplay'],
-        fn: function fn(configuredSocialIdps, idpDisplay) {
-          return !_.isEmpty(configuredSocialIdps) && idpDisplay.toUpperCase() === 'PRIMARY';
-        },
-        cache: true
-      },
-      hasConfiguredButtons: {
-        deps: ['configuredSocialIdps', 'customButtons'],
-        fn: function fn(configuredSocialIdps, customButtons) {
-          return !_.isEmpty(configuredSocialIdps) || !_.isEmpty(customButtons);
-        },
-        cache: true
-      }
-    },
-
-    initialize: function initialize(options) {
-      if (!options.baseUrl) {
-        this.callGlobalError(new ConfigError(Okta.loc('error.required.baseUrl')));
-      } else if (options.colors && _.isString(options.colors.brand) && !options.colors.brand.match(/^#[0-9A-Fa-f]{6}$/)) {
-        this.callGlobalError(new ConfigError(Okta.loc('error.invalid.colors.brand')));
-      } else if (BrowserFeatures.corsIsNotSupported()) {
-        this.callGlobalError(new UnsupportedBrowserError(Okta.loc('error.unsupported.cors')));
-      }
-    },
-
-    setAcceptLanguageHeader: function setAcceptLanguageHeader(authClient) {
-      if (authClient && authClient.options && authClient.options.headers) {
-        authClient.options.headers['Accept-Language'] = this.get('languageCode');
-      }
-    },
-
-    setAuthClient: function setAuthClient(authClient) {
-      this.setAcceptLanguageHeader(authClient);
-      this.authClient = authClient;
-    },
-
-    getAuthClient: function getAuthClient() {
-      return this.authClient;
-    },
-
-    set: function set() {
-      try {
-        return Okta.Model.prototype.set.apply(this, arguments);
-      } catch (e) {
-        var message = e.message ? e.message : e;
-        this.callGlobalError(new ConfigError(message));
-      }
-    },
-
-    // Invokes the global success function. This should only be called on a
-    // terminal part of the code (i.e. authStatus SUCCESS or after sending
-    // a recovery email)
-    callGlobalSuccess: function callGlobalSuccess(status, data) {
-      // Defer this to ensure that our functions have rendered completely
-      // before invoking their function
-      var res = _.extend(data, { status: status });
-      _.defer(_.partial(this.get('globalSuccessFn'), res));
-    },
-
-    // Invokes the global error function. This should only be called on non
-    // recoverable errors (i.e. configuration errors, browser unsupported
-    // errors, etc)
-    callGlobalError: function callGlobalError(err) {
-      // Note: Must use "this.options.globalErrorFn" when they've passed invalid
-      // arguments - globalErrorFn will not have been set yet
-      var globalErrorFn = this.get('globalErrorFn') || this.options.globalErrorFn;
-      if (globalErrorFn) {
-        globalErrorFn(err);
-      } else {
-        // Only throw the error if they have not registered a globalErrorFn
-        throw err;
-      }
-    },
-
-    // Get the username by applying the transform function if it exists.
-    transformUsername: function transformUsername(username, operation) {
-      var transformFn = this.get('transformUsername');
-      if (transformFn && _.isFunction(transformFn)) {
-        return transformFn(username, operation);
-      }
-      return username;
-    },
-
-    processCreds: function processCreds(creds) {
-      var processCreds = this.get('processCreds');
-      return Q.Promise(function (resolve) {
-        if (!_.isFunction(processCreds)) {
-          resolve();
-        } else if (processCreds.length === 2) {
-          processCreds(creds, resolve);
-        } else {
-          processCreds(creds);
-          resolve();
-        }
-      });
-    },
-
-    parseSchema: function parseSchema(schema, onSuccess, onFailure) {
-      var parseSchema = this.get('registration.parseSchema');
-      //check for parseSchema callback
-      if (_.isFunction(parseSchema)) {
-        parseSchema(schema, function (schema) {
-          onSuccess(schema);
-        }, function (error) {
-          error = error || { 'errorSummary': Okta.loc('registration.default.callbackhook.error') };
-          error['callback'] = 'parseSchema';
-          onFailure(error);
-        });
-      } else {
-        //no callback
-        onSuccess(schema);
-      }
-    },
-
-    preSubmit: function preSubmit(postData, onSuccess, onFailure) {
-      var preSubmit = this.get('registration.preSubmit');
-      //check for preSubmit callback
-      if (_.isFunction(preSubmit)) {
-        preSubmit(postData, function (postData) {
-          onSuccess(postData);
-        }, function (error) {
-          error = error || { 'errorSummary': Okta.loc('registration.default.callbackhook.error') };
-          error['callback'] = 'preSubmit';
-          onFailure(error);
-        });
-      } else {
-        //no callback
-        onSuccess(postData);
-      }
-    },
-
-    postSubmit: function postSubmit(response, onSuccess, onFailure) {
-      var postSubmit = this.get('registration.postSubmit');
-      //check for postSubmit callback
-      if (_.isFunction(postSubmit)) {
-        postSubmit(response, function (response) {
-          onSuccess(response);
-        }, function (error) {
-          error = error || { 'errorSummary': Okta.loc('registration.default.callbackhook.error') };
-          error['callback'] = 'postSubmit';
-          onFailure(error);
-        });
-      } else {
-        //no callback
-        onSuccess(response);
-      }
-    },
-
-    // Use the parse function to transform config options to the standard
-    // settings we currently support. This is a good place to deprecate old
-    // option formats.
-    parse: function parse(options) {
-      if (options.authParams && options.authParams.scope) {
-        Logger.deprecate('Use "scopes" instead of "scope"');
-        options.authParams.scopes = options.authParams.scope;
-        delete options.authParams.scope;
-      }
-
-      if (options.labels || options.country) {
-        Logger.deprecate('Use "i18n" instead of "labels" and "country"');
-        var overrides = options.labels || {};
-        _.each(options.country, function (val, key) {
-          overrides['country.' + key] = val;
-        });
-        // Old behavior is to treat the override as a global override, so we
-        // need to add these overrides to each language
-        options.i18n = {};
-        _.each(config.supportedLanguages, function (language) {
-          options.i18n[language] = overrides;
-        });
-        delete options.labels;
-        delete options.country;
-      }
-
-      // Default the assets.baseUrl to the cdn, or remove any trailing slashes
-      if (!options.assets) {
-        options.assets = {};
-      }
-      var abu = options.assets.baseUrl;
-      if (!abu) {
-        options.assets.baseUrl = assetBaseUrlTpl({ version: config.version });
-      } else if (abu[abu.length - 1] === '/') {
-        options.assets.baseUrl = abu.substring(0, abu.length - 1);
-      }
-
-      return options;
-    }
-
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 497 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(161), __webpack_require__(498)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Animations, LoadingBeacon) {
-
-  var NO_BEACON_CLS = 'no-beacon';
-  var LOADING_BEACON_CLS = 'beacon-small beacon-loading';
-
-  function isLoadingBeacon(beacon) {
-    return beacon && beacon.equals(LoadingBeacon);
-  }
-
-  function removeBeacon(view) {
-    // There are some timing issues with removing beacons (i.e. the case of
-    // transitioning from loadingBeacon -> loadingBeacon)
-    if (!view.currentBeacon) {
-      return;
-    }
-    view.currentBeacon.remove();
-    view.currentBeacon = null;
-  }
-
-  function addBeacon(view, NextBeacon, selector, options) {
-    view.add(NextBeacon, {
-      selector: selector,
-      options: options
-    });
-    view.currentBeacon = view.first();
-  }
-
-  function typeOfTransition(currentBeacon, NextBeacon, options) {
-    if (!currentBeacon && !NextBeacon) {
-      return 'none';
-    }
-    // Show Loading beacon
-    if (!currentBeacon && options.loading) {
-      return 'load';
-    }
-    // Swap/Hide Loading beacon
-    if (currentBeacon && isLoadingBeacon(currentBeacon)) {
-      return NextBeacon ? 'swap' : 'unload';
-    }
-    if (currentBeacon && currentBeacon.equals(NextBeacon, options)) {
-      return 'same';
-    }
-    if (!currentBeacon && NextBeacon) {
-      return 'add';
-    }
-    if (currentBeacon && !NextBeacon) {
-      return 'remove';
-    }
-    if (currentBeacon instanceof NextBeacon) {
-      return 'fade';
-    }
-    // If none of the above
-    // then we are changing the type of beacon
-    // ex. from SecurityBeacon to FactorBeacon
-    return 'swap';
-  }
-
-  return Okta.View.extend({
-
-    currentBeacon: null,
-
-    template: '\
-      <div class="okta-sign-in-header auth-header">\
-        {{#if logo}}\
-        <img src="{{logo}}" class="auth-org-logo" alt="{{logoText}}"/>\
-        {{/if}}\
-        <div data-type="beacon-container" class="beacon-container"></div>\
-      </div>\
-      <div class="auth-content"><div class="auth-content-inner"></div></div>\
-    ',
-
-    // Attach a 'no-beacon' class if the security image feature
-    // is not passed in to prevent the beacon from jumping.
-    initialize: function initialize(options) {
-      if (!options.settings.get('features.securityImage')) {
-        this.$el.addClass(NO_BEACON_CLS);
-        // To show/hide the spinner when there is no security image,
-        // listen to the appState's loading/removeLoading events.
-        this.listenTo(options.appState, 'loading', this.setLoadingBeacon);
-        this.listenTo(options.appState, 'removeLoading', this.removeLoadingBeacon);
-      }
-    },
-
-    /* eslint complexity: 0 */
-    setBeacon: function setBeacon(NextBeacon, options) {
-      var selector = '[data-type="beacon-container"]',
-          container = this.$(selector),
-          transition = typeOfTransition(this.currentBeacon, NextBeacon, options),
-          self = this;
-
-      switch (transition) {
-        case 'none':
-          this.$el.addClass(NO_BEACON_CLS);
-          return;
-        case 'same':
-          return;
-        case 'add':
-          this.$el.removeClass(NO_BEACON_CLS);
-          addBeacon(this, NextBeacon, selector, options);
-          return Animations.explode(container);
-        case 'remove':
-          this.$el.addClass(NO_BEACON_CLS);
-          return Animations.implode(container).then(function () {
-            removeBeacon(self);
-          }).done();
-        case 'fade':
-          // Other transitions are performed on the beacon container,
-          // but this transition is on the content inside the beacon.
-          // For a SecurityBeacon the username change will update the
-          // AppState and trigger an transition to a new Becon
-          // Since there is no url change this method is not called.
-          // For a FactorBeacon a page refresh has occurred
-          // so we execute the beacon's own transition method.
-          if (!this.currentBeacon.fadeOut) {
-            throw new Error('The current beacon is missing the "fadeOut" method');
-          }
-          options.animate = true;
-          return this.currentBeacon.fadeOut().then(function () {
-            removeBeacon(self);
-            addBeacon(self, NextBeacon, selector, options);
-          }).done();
-        case 'swap':
-          return Animations.swapBeacons({
-            $el: container,
-            swap: function swap() {
-              var isLoading = isLoadingBeacon(self.currentBeacon);
-              // Order of these calls is important for -
-              // loader --> security/factor beacon swap.
-              removeBeacon(self);
-              if (isLoading) {
-                container.removeClass(LOADING_BEACON_CLS);
-                self.$el.removeClass(NO_BEACON_CLS);
-              }
-              addBeacon(self, NextBeacon, selector, options);
-            }
-          }).done();
-        case 'load':
-          // Show the loading beacon. Add a couple of classes
-          // before triggering the add beacon code.
-          container.addClass(LOADING_BEACON_CLS);
-          addBeacon(self, NextBeacon, selector, options);
-          return Animations.explode(container);
-        case 'unload':
-          // Hide the loading beacon.
-          return this.removeLoadingBeacon();
-        default:
-          throw new Error('the "' + transition + '" is not recognized');
-      }
-    },
-
-    // Show the loading beacon when the security image feature is not enabled.
-    setLoadingBeacon: function setLoadingBeacon(isLoading) {
-      if (!isLoading || isLoadingBeacon(this.currentBeacon)) {
-        return;
-      }
-      this.setBeacon(LoadingBeacon, { loading: true });
-    },
-
-    // Hide the beacon on primary auth failure. On primary auth success, setBeacon does this job.
-    removeLoadingBeacon: function removeLoadingBeacon() {
-      var self = this,
-          container = this.$('[data-type="beacon-container"]');
-
-      return Animations.implode(container).then(function () {
-        removeBeacon(self);
-        container.removeClass(LOADING_BEACON_CLS);
-      }).done();
-    },
-
-    getTemplateData: function getTemplateData() {
-      return this.settings.toJSON({ verbose: true });
-    },
-
-    getContentEl: function getContentEl() {
-      return this.$('.auth-content-inner');
-    }
-
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 498 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
-
-  return Okta.View.extend({
-
-    template: '\
-      <div class="beacon-blank"/>\
-      <div class="bg-helper auth-beacon auth-beacon-security" data-se="loading-beacon">\
-      <div class="okta-sign-in-beacon-border auth-beacon-border js-auth-beacon-border"/>\
-      </div>\
-    ',
-
-    equals: function equals(Beacon) {
-      return Beacon && this instanceof Beacon;
-    }
-
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 499 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = __webpack_require__(500);
-
-
-/***/ }),
-/* 500 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/**
- * Copyright (c) 2014-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-// This method of obtaining a reference to the global object needs to be
-// kept identical to the way it is obtained in runtime.js
-var g = (function() { return this })() || Function("return this")();
-
-// Use `getOwnPropertyNames` because not all browsers support calling
-// `hasOwnProperty` on the global `self` object in a worker. See #183.
-var hadRuntime = g.regeneratorRuntime &&
-  Object.getOwnPropertyNames(g).indexOf("regeneratorRuntime") >= 0;
-
-// Save the old regeneratorRuntime in case it needs to be restored later.
-var oldRuntime = hadRuntime && g.regeneratorRuntime;
-
-// Force reevalutation of runtime.js.
-g.regeneratorRuntime = undefined;
-
-module.exports = __webpack_require__(501);
-
-if (hadRuntime) {
-  // Restore the original runtime.
-  g.regeneratorRuntime = oldRuntime;
-} else {
-  // Remove the global property added by runtime.js.
-  try {
-    delete g.regeneratorRuntime;
-  } catch(e) {
-    g.regeneratorRuntime = undefined;
-  }
-}
-
-
-/***/ }),
-/* 501 */
-/***/ (function(module, exports) {
-
-/**
- * Copyright (c) 2014-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-!(function(global) {
-  "use strict";
-
-  var Op = Object.prototype;
-  var hasOwn = Op.hasOwnProperty;
-  var undefined; // More compressible than void 0.
-  var $Symbol = typeof Symbol === "function" ? Symbol : {};
-  var iteratorSymbol = $Symbol.iterator || "@@iterator";
-  var asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator";
-  var toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag";
-
-  var inModule = typeof module === "object";
-  var runtime = global.regeneratorRuntime;
-  if (runtime) {
-    if (inModule) {
-      // If regeneratorRuntime is defined globally and we're in a module,
-      // make the exports object identical to regeneratorRuntime.
-      module.exports = runtime;
-    }
-    // Don't bother evaluating the rest of this file if the runtime was
-    // already defined globally.
-    return;
-  }
-
-  // Define the runtime globally (as expected by generated code) as either
-  // module.exports (if we're in a module) or a new, empty object.
-  runtime = global.regeneratorRuntime = inModule ? module.exports : {};
-
-  function wrap(innerFn, outerFn, self, tryLocsList) {
-    // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
-    var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
-    var generator = Object.create(protoGenerator.prototype);
-    var context = new Context(tryLocsList || []);
-
-    // The ._invoke method unifies the implementations of the .next,
-    // .throw, and .return methods.
-    generator._invoke = makeInvokeMethod(innerFn, self, context);
-
-    return generator;
-  }
-  runtime.wrap = wrap;
-
-  // Try/catch helper to minimize deoptimizations. Returns a completion
-  // record like context.tryEntries[i].completion. This interface could
-  // have been (and was previously) designed to take a closure to be
-  // invoked without arguments, but in all the cases we care about we
-  // already have an existing method we want to call, so there's no need
-  // to create a new function object. We can even get away with assuming
-  // the method takes exactly one argument, since that happens to be true
-  // in every case, so we don't have to touch the arguments object. The
-  // only additional allocation required is the completion record, which
-  // has a stable shape and so hopefully should be cheap to allocate.
-  function tryCatch(fn, obj, arg) {
-    try {
-      return { type: "normal", arg: fn.call(obj, arg) };
-    } catch (err) {
-      return { type: "throw", arg: err };
-    }
-  }
-
-  var GenStateSuspendedStart = "suspendedStart";
-  var GenStateSuspendedYield = "suspendedYield";
-  var GenStateExecuting = "executing";
-  var GenStateCompleted = "completed";
-
-  // Returning this object from the innerFn has the same effect as
-  // breaking out of the dispatch switch statement.
-  var ContinueSentinel = {};
-
-  // Dummy constructor functions that we use as the .constructor and
-  // .constructor.prototype properties for functions that return Generator
-  // objects. For full spec compliance, you may wish to configure your
-  // minifier not to mangle the names of these two functions.
-  function Generator() {}
-  function GeneratorFunction() {}
-  function GeneratorFunctionPrototype() {}
-
-  // This is a polyfill for %IteratorPrototype% for environments that
-  // don't natively support it.
-  var IteratorPrototype = {};
-  IteratorPrototype[iteratorSymbol] = function () {
-    return this;
-  };
-
-  var getProto = Object.getPrototypeOf;
-  var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
-  if (NativeIteratorPrototype &&
-      NativeIteratorPrototype !== Op &&
-      hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) {
-    // This environment has a native %IteratorPrototype%; use it instead
-    // of the polyfill.
-    IteratorPrototype = NativeIteratorPrototype;
-  }
-
-  var Gp = GeneratorFunctionPrototype.prototype =
-    Generator.prototype = Object.create(IteratorPrototype);
-  GeneratorFunction.prototype = Gp.constructor = GeneratorFunctionPrototype;
-  GeneratorFunctionPrototype.constructor = GeneratorFunction;
-  GeneratorFunctionPrototype[toStringTagSymbol] =
-    GeneratorFunction.displayName = "GeneratorFunction";
-
-  // Helper for defining the .next, .throw, and .return methods of the
-  // Iterator interface in terms of a single ._invoke method.
-  function defineIteratorMethods(prototype) {
-    ["next", "throw", "return"].forEach(function(method) {
-      prototype[method] = function(arg) {
-        return this._invoke(method, arg);
-      };
-    });
-  }
-
-  runtime.isGeneratorFunction = function(genFun) {
-    var ctor = typeof genFun === "function" && genFun.constructor;
-    return ctor
-      ? ctor === GeneratorFunction ||
-        // For the native GeneratorFunction constructor, the best we can
-        // do is to check its .name property.
-        (ctor.displayName || ctor.name) === "GeneratorFunction"
-      : false;
-  };
-
-  runtime.mark = function(genFun) {
-    if (Object.setPrototypeOf) {
-      Object.setPrototypeOf(genFun, GeneratorFunctionPrototype);
-    } else {
-      genFun.__proto__ = GeneratorFunctionPrototype;
-      if (!(toStringTagSymbol in genFun)) {
-        genFun[toStringTagSymbol] = "GeneratorFunction";
-      }
-    }
-    genFun.prototype = Object.create(Gp);
-    return genFun;
-  };
-
-  // Within the body of any async function, `await x` is transformed to
-  // `yield regeneratorRuntime.awrap(x)`, so that the runtime can test
-  // `hasOwn.call(value, "__await")` to determine if the yielded value is
-  // meant to be awaited.
-  runtime.awrap = function(arg) {
-    return { __await: arg };
-  };
-
-  function AsyncIterator(generator) {
-    function invoke(method, arg, resolve, reject) {
-      var record = tryCatch(generator[method], generator, arg);
-      if (record.type === "throw") {
-        reject(record.arg);
-      } else {
-        var result = record.arg;
-        var value = result.value;
-        if (value &&
-            typeof value === "object" &&
-            hasOwn.call(value, "__await")) {
-          return Promise.resolve(value.__await).then(function(value) {
-            invoke("next", value, resolve, reject);
-          }, function(err) {
-            invoke("throw", err, resolve, reject);
-          });
-        }
-
-        return Promise.resolve(value).then(function(unwrapped) {
-          // When a yielded Promise is resolved, its final value becomes
-          // the .value of the Promise<{value,done}> result for the
-          // current iteration. If the Promise is rejected, however, the
-          // result for this iteration will be rejected with the same
-          // reason. Note that rejections of yielded Promises are not
-          // thrown back into the generator function, as is the case
-          // when an awaited Promise is rejected. This difference in
-          // behavior between yield and await is important, because it
-          // allows the consumer to decide what to do with the yielded
-          // rejection (swallow it and continue, manually .throw it back
-          // into the generator, abandon iteration, whatever). With
-          // await, by contrast, there is no opportunity to examine the
-          // rejection reason outside the generator function, so the
-          // only option is to throw it from the await expression, and
-          // let the generator function handle the exception.
-          result.value = unwrapped;
-          resolve(result);
-        }, reject);
-      }
-    }
-
-    var previousPromise;
-
-    function enqueue(method, arg) {
-      function callInvokeWithMethodAndArg() {
-        return new Promise(function(resolve, reject) {
-          invoke(method, arg, resolve, reject);
-        });
-      }
-
-      return previousPromise =
-        // If enqueue has been called before, then we want to wait until
-        // all previous Promises have been resolved before calling invoke,
-        // so that results are always delivered in the correct order. If
-        // enqueue has not been called before, then it is important to
-        // call invoke immediately, without waiting on a callback to fire,
-        // so that the async generator function has the opportunity to do
-        // any necessary setup in a predictable way. This predictability
-        // is why the Promise constructor synchronously invokes its
-        // executor callback, and why async functions synchronously
-        // execute code before the first await. Since we implement simple
-        // async functions in terms of async generators, it is especially
-        // important to get this right, even though it requires care.
-        previousPromise ? previousPromise.then(
-          callInvokeWithMethodAndArg,
-          // Avoid propagating failures to Promises returned by later
-          // invocations of the iterator.
-          callInvokeWithMethodAndArg
-        ) : callInvokeWithMethodAndArg();
-    }
-
-    // Define the unified helper method that is used to implement .next,
-    // .throw, and .return (see defineIteratorMethods).
-    this._invoke = enqueue;
-  }
-
-  defineIteratorMethods(AsyncIterator.prototype);
-  AsyncIterator.prototype[asyncIteratorSymbol] = function () {
-    return this;
-  };
-  runtime.AsyncIterator = AsyncIterator;
-
-  // Note that simple async functions are implemented on top of
-  // AsyncIterator objects; they just return a Promise for the value of
-  // the final result produced by the iterator.
-  runtime.async = function(innerFn, outerFn, self, tryLocsList) {
-    var iter = new AsyncIterator(
-      wrap(innerFn, outerFn, self, tryLocsList)
-    );
-
-    return runtime.isGeneratorFunction(outerFn)
-      ? iter // If outerFn is a generator, return the full iterator.
-      : iter.next().then(function(result) {
-          return result.done ? result.value : iter.next();
-        });
-  };
-
-  function makeInvokeMethod(innerFn, self, context) {
-    var state = GenStateSuspendedStart;
-
-    return function invoke(method, arg) {
-      if (state === GenStateExecuting) {
-        throw new Error("Generator is already running");
-      }
-
-      if (state === GenStateCompleted) {
-        if (method === "throw") {
-          throw arg;
-        }
-
-        // Be forgiving, per 25.3.3.3.3 of the spec:
-        // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
-        return doneResult();
-      }
-
-      context.method = method;
-      context.arg = arg;
-
-      while (true) {
-        var delegate = context.delegate;
-        if (delegate) {
-          var delegateResult = maybeInvokeDelegate(delegate, context);
-          if (delegateResult) {
-            if (delegateResult === ContinueSentinel) continue;
-            return delegateResult;
-          }
-        }
-
-        if (context.method === "next") {
-          // Setting context._sent for legacy support of Babel's
-          // function.sent implementation.
-          context.sent = context._sent = context.arg;
-
-        } else if (context.method === "throw") {
-          if (state === GenStateSuspendedStart) {
-            state = GenStateCompleted;
-            throw context.arg;
-          }
-
-          context.dispatchException(context.arg);
-
-        } else if (context.method === "return") {
-          context.abrupt("return", context.arg);
-        }
-
-        state = GenStateExecuting;
-
-        var record = tryCatch(innerFn, self, context);
-        if (record.type === "normal") {
-          // If an exception is thrown from innerFn, we leave state ===
-          // GenStateExecuting and loop back for another invocation.
-          state = context.done
-            ? GenStateCompleted
-            : GenStateSuspendedYield;
-
-          if (record.arg === ContinueSentinel) {
-            continue;
-          }
-
-          return {
-            value: record.arg,
-            done: context.done
-          };
-
-        } else if (record.type === "throw") {
-          state = GenStateCompleted;
-          // Dispatch the exception by looping back around to the
-          // context.dispatchException(context.arg) call above.
-          context.method = "throw";
-          context.arg = record.arg;
-        }
-      }
-    };
-  }
-
-  // Call delegate.iterator[context.method](context.arg) and handle the
-  // result, either by returning a { value, done } result from the
-  // delegate iterator, or by modifying context.method and context.arg,
-  // setting context.delegate to null, and returning the ContinueSentinel.
-  function maybeInvokeDelegate(delegate, context) {
-    var method = delegate.iterator[context.method];
-    if (method === undefined) {
-      // A .throw or .return when the delegate iterator has no .throw
-      // method always terminates the yield* loop.
-      context.delegate = null;
-
-      if (context.method === "throw") {
-        if (delegate.iterator.return) {
-          // If the delegate iterator has a return method, give it a
-          // chance to clean up.
-          context.method = "return";
-          context.arg = undefined;
-          maybeInvokeDelegate(delegate, context);
-
-          if (context.method === "throw") {
-            // If maybeInvokeDelegate(context) changed context.method from
-            // "return" to "throw", let that override the TypeError below.
-            return ContinueSentinel;
-          }
-        }
-
-        context.method = "throw";
-        context.arg = new TypeError(
-          "The iterator does not provide a 'throw' method");
-      }
-
-      return ContinueSentinel;
-    }
-
-    var record = tryCatch(method, delegate.iterator, context.arg);
-
-    if (record.type === "throw") {
-      context.method = "throw";
-      context.arg = record.arg;
-      context.delegate = null;
-      return ContinueSentinel;
-    }
-
-    var info = record.arg;
-
-    if (! info) {
-      context.method = "throw";
-      context.arg = new TypeError("iterator result is not an object");
-      context.delegate = null;
-      return ContinueSentinel;
-    }
-
-    if (info.done) {
-      // Assign the result of the finished delegate to the temporary
-      // variable specified by delegate.resultName (see delegateYield).
-      context[delegate.resultName] = info.value;
-
-      // Resume execution at the desired location (see delegateYield).
-      context.next = delegate.nextLoc;
-
-      // If context.method was "throw" but the delegate handled the
-      // exception, let the outer generator proceed normally. If
-      // context.method was "next", forget context.arg since it has been
-      // "consumed" by the delegate iterator. If context.method was
-      // "return", allow the original .return call to continue in the
-      // outer generator.
-      if (context.method !== "return") {
-        context.method = "next";
-        context.arg = undefined;
-      }
-
-    } else {
-      // Re-yield the result returned by the delegate method.
-      return info;
-    }
-
-    // The delegate iterator is finished, so forget it and continue with
-    // the outer generator.
-    context.delegate = null;
-    return ContinueSentinel;
-  }
-
-  // Define Generator.prototype.{next,throw,return} in terms of the
-  // unified ._invoke helper method.
-  defineIteratorMethods(Gp);
-
-  Gp[toStringTagSymbol] = "Generator";
-
-  // A Generator should always return itself as the iterator object when the
-  // @@iterator function is called on it. Some browsers' implementations of the
-  // iterator prototype chain incorrectly implement this, causing the Generator
-  // object to not be returned from this call. This ensures that doesn't happen.
-  // See https://github.com/facebook/regenerator/issues/274 for more details.
-  Gp[iteratorSymbol] = function() {
-    return this;
-  };
-
-  Gp.toString = function() {
-    return "[object Generator]";
-  };
-
-  function pushTryEntry(locs) {
-    var entry = { tryLoc: locs[0] };
-
-    if (1 in locs) {
-      entry.catchLoc = locs[1];
-    }
-
-    if (2 in locs) {
-      entry.finallyLoc = locs[2];
-      entry.afterLoc = locs[3];
-    }
-
-    this.tryEntries.push(entry);
-  }
-
-  function resetTryEntry(entry) {
-    var record = entry.completion || {};
-    record.type = "normal";
-    delete record.arg;
-    entry.completion = record;
-  }
-
-  function Context(tryLocsList) {
-    // The root entry object (effectively a try statement without a catch
-    // or a finally block) gives us a place to store values thrown from
-    // locations where there is no enclosing try statement.
-    this.tryEntries = [{ tryLoc: "root" }];
-    tryLocsList.forEach(pushTryEntry, this);
-    this.reset(true);
-  }
-
-  runtime.keys = function(object) {
-    var keys = [];
-    for (var key in object) {
-      keys.push(key);
-    }
-    keys.reverse();
-
-    // Rather than returning an object with a next method, we keep
-    // things simple and return the next function itself.
-    return function next() {
-      while (keys.length) {
-        var key = keys.pop();
-        if (key in object) {
-          next.value = key;
-          next.done = false;
-          return next;
-        }
-      }
-
-      // To avoid creating an additional object, we just hang the .value
-      // and .done properties off the next function object itself. This
-      // also ensures that the minifier will not anonymize the function.
-      next.done = true;
-      return next;
-    };
-  };
-
-  function values(iterable) {
-    if (iterable) {
-      var iteratorMethod = iterable[iteratorSymbol];
-      if (iteratorMethod) {
-        return iteratorMethod.call(iterable);
-      }
-
-      if (typeof iterable.next === "function") {
-        return iterable;
-      }
-
-      if (!isNaN(iterable.length)) {
-        var i = -1, next = function next() {
-          while (++i < iterable.length) {
-            if (hasOwn.call(iterable, i)) {
-              next.value = iterable[i];
-              next.done = false;
-              return next;
-            }
-          }
-
-          next.value = undefined;
-          next.done = true;
-
-          return next;
-        };
-
-        return next.next = next;
-      }
-    }
-
-    // Return an iterator with no values.
-    return { next: doneResult };
-  }
-  runtime.values = values;
-
-  function doneResult() {
-    return { value: undefined, done: true };
-  }
-
-  Context.prototype = {
-    constructor: Context,
-
-    reset: function(skipTempReset) {
-      this.prev = 0;
-      this.next = 0;
-      // Resetting context._sent for legacy support of Babel's
-      // function.sent implementation.
-      this.sent = this._sent = undefined;
-      this.done = false;
-      this.delegate = null;
-
-      this.method = "next";
-      this.arg = undefined;
-
-      this.tryEntries.forEach(resetTryEntry);
-
-      if (!skipTempReset) {
-        for (var name in this) {
-          // Not sure about the optimal order of these conditions:
-          if (name.charAt(0) === "t" &&
-              hasOwn.call(this, name) &&
-              !isNaN(+name.slice(1))) {
-            this[name] = undefined;
-          }
-        }
-      }
-    },
-
-    stop: function() {
-      this.done = true;
-
-      var rootEntry = this.tryEntries[0];
-      var rootRecord = rootEntry.completion;
-      if (rootRecord.type === "throw") {
-        throw rootRecord.arg;
-      }
-
-      return this.rval;
-    },
-
-    dispatchException: function(exception) {
-      if (this.done) {
-        throw exception;
-      }
-
-      var context = this;
-      function handle(loc, caught) {
-        record.type = "throw";
-        record.arg = exception;
-        context.next = loc;
-
-        if (caught) {
-          // If the dispatched exception was caught by a catch block,
-          // then let that catch block handle the exception normally.
-          context.method = "next";
-          context.arg = undefined;
-        }
-
-        return !! caught;
-      }
-
-      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
-        var entry = this.tryEntries[i];
-        var record = entry.completion;
-
-        if (entry.tryLoc === "root") {
-          // Exception thrown outside of any try block that could handle
-          // it, so set the completion value of the entire function to
-          // throw the exception.
-          return handle("end");
-        }
-
-        if (entry.tryLoc <= this.prev) {
-          var hasCatch = hasOwn.call(entry, "catchLoc");
-          var hasFinally = hasOwn.call(entry, "finallyLoc");
-
-          if (hasCatch && hasFinally) {
-            if (this.prev < entry.catchLoc) {
-              return handle(entry.catchLoc, true);
-            } else if (this.prev < entry.finallyLoc) {
-              return handle(entry.finallyLoc);
-            }
-
-          } else if (hasCatch) {
-            if (this.prev < entry.catchLoc) {
-              return handle(entry.catchLoc, true);
-            }
-
-          } else if (hasFinally) {
-            if (this.prev < entry.finallyLoc) {
-              return handle(entry.finallyLoc);
-            }
-
-          } else {
-            throw new Error("try statement without catch or finally");
-          }
-        }
-      }
-    },
-
-    abrupt: function(type, arg) {
-      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
-        var entry = this.tryEntries[i];
-        if (entry.tryLoc <= this.prev &&
-            hasOwn.call(entry, "finallyLoc") &&
-            this.prev < entry.finallyLoc) {
-          var finallyEntry = entry;
-          break;
-        }
-      }
-
-      if (finallyEntry &&
-          (type === "break" ||
-           type === "continue") &&
-          finallyEntry.tryLoc <= arg &&
-          arg <= finallyEntry.finallyLoc) {
-        // Ignore the finally entry if control is not jumping to a
-        // location outside the try/catch block.
-        finallyEntry = null;
-      }
-
-      var record = finallyEntry ? finallyEntry.completion : {};
-      record.type = type;
-      record.arg = arg;
-
-      if (finallyEntry) {
-        this.method = "next";
-        this.next = finallyEntry.finallyLoc;
-        return ContinueSentinel;
-      }
-
-      return this.complete(record);
-    },
-
-    complete: function(record, afterLoc) {
-      if (record.type === "throw") {
-        throw record.arg;
-      }
-
-      if (record.type === "break" ||
-          record.type === "continue") {
-        this.next = record.arg;
-      } else if (record.type === "return") {
-        this.rval = this.arg = record.arg;
-        this.method = "return";
-        this.next = "end";
-      } else if (record.type === "normal" && afterLoc) {
-        this.next = afterLoc;
-      }
-
-      return ContinueSentinel;
-    },
-
-    finish: function(finallyLoc) {
-      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
-        var entry = this.tryEntries[i];
-        if (entry.finallyLoc === finallyLoc) {
-          this.complete(entry.completion, entry.afterLoc);
-          resetTryEntry(entry);
-          return ContinueSentinel;
-        }
-      }
-    },
-
-    "catch": function(tryLoc) {
-      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
-        var entry = this.tryEntries[i];
-        if (entry.tryLoc === tryLoc) {
-          var record = entry.completion;
-          if (record.type === "throw") {
-            var thrown = record.arg;
-            resetTryEntry(entry);
-          }
-          return thrown;
-        }
-      }
-
-      // The context.catch method must only be called with a location
-      // argument that corresponds to a known catch block.
-      throw new Error("illegal catch attempt");
-    },
-
-    delegateYield: function(iterable, resultName, nextLoc) {
-      this.delegate = {
-        iterator: values(iterable),
-        resultName: resultName,
-        nextLoc: nextLoc
-      };
-
-      if (this.method === "next") {
-        // Deliberately forget the last sent value so that we don't
-        // accidentally pass it on to the delegate.
-        this.arg = undefined;
-      }
-
-      return ContinueSentinel;
-    }
-  };
-})(
-  // In sloppy mode, unbound `this` refers to the global object, fallback to
-  // Function constructor if we're in global strict mode. That is sadly a form
-  // of indirect eval which violates Content Security Policy.
-  (function() { return this })() || Function("return this")()
-);
-
-
-/***/ }),
-/* 502 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-exports.__esModule = true;
-
-var _promise = __webpack_require__(503);
-
-var _promise2 = _interopRequireDefault(_promise);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = function (fn) {
-  return function () {
-    var gen = fn.apply(this, arguments);
-    return new _promise2.default(function (resolve, reject) {
-      function step(key, arg) {
-        try {
-          var info = gen[key](arg);
-          var value = info.value;
-        } catch (error) {
-          reject(error);
-          return;
-        }
-
-        if (info.done) {
-          resolve(value);
-        } else {
-          return _promise2.default.resolve(value).then(function (value) {
-            step("next", value);
-          }, function (err) {
-            step("throw", err);
-          });
-        }
-      }
-
-      return step("next");
-    });
-  };
-};
-
-/***/ }),
-/* 503 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = { "default": __webpack_require__(504), __esModule: true };
-
-/***/ }),
-/* 504 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(216);
-__webpack_require__(108);
-__webpack_require__(115);
-__webpack_require__(505);
-__webpack_require__(516);
-__webpack_require__(517);
-module.exports = __webpack_require__(16).Promise;
-
-
-/***/ }),
-/* 505 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var LIBRARY = __webpack_require__(86);
-var global = __webpack_require__(20);
-var ctx = __webpack_require__(109);
-var classof = __webpack_require__(162);
-var $export = __webpack_require__(44);
-var isObject = __webpack_require__(51);
-var aFunction = __webpack_require__(110);
-var anInstance = __webpack_require__(506);
-var forOf = __webpack_require__(507);
-var speciesConstructor = __webpack_require__(224);
-var task = __webpack_require__(225).set;
-var microtask = __webpack_require__(511)();
-var newPromiseCapabilityModule = __webpack_require__(163);
-var perform = __webpack_require__(226);
-var userAgent = __webpack_require__(512);
-var promiseResolve = __webpack_require__(227);
-var PROMISE = 'Promise';
-var TypeError = global.TypeError;
-var process = global.process;
-var versions = process && process.versions;
-var v8 = versions && versions.v8 || '';
-var $Promise = global[PROMISE];
-var isNode = classof(process) == 'process';
-var empty = function () { /* empty */ };
-var Internal, newGenericPromiseCapability, OwnPromiseCapability, Wrapper;
-var newPromiseCapability = newGenericPromiseCapability = newPromiseCapabilityModule.f;
-
-var USE_NATIVE = !!function () {
-  try {
-    // correct subclassing with @@species support
-    var promise = $Promise.resolve(1);
-    var FakePromise = (promise.constructor = {})[__webpack_require__(21)('species')] = function (exec) {
-      exec(empty, empty);
-    };
-    // unhandled rejections tracking support, NodeJS Promise without it fails @@species test
-    return (isNode || typeof PromiseRejectionEvent == 'function')
-      && promise.then(empty) instanceof FakePromise
-      // v8 6.6 (Node 10 and Chrome 66) have a bug with resolving custom thenables
-      // https://bugs.chromium.org/p/chromium/issues/detail?id=830565
-      // we can't detect it synchronously, so just check versions
-      && v8.indexOf('6.6') !== 0
-      && userAgent.indexOf('Chrome/66') === -1;
-  } catch (e) { /* empty */ }
-}();
-
-// helpers
-var isThenable = function (it) {
-  var then;
-  return isObject(it) && typeof (then = it.then) == 'function' ? then : false;
-};
-var notify = function (promise, isReject) {
-  if (promise._n) return;
-  promise._n = true;
-  var chain = promise._c;
-  microtask(function () {
-    var value = promise._v;
-    var ok = promise._s == 1;
-    var i = 0;
-    var run = function (reaction) {
-      var handler = ok ? reaction.ok : reaction.fail;
-      var resolve = reaction.resolve;
-      var reject = reaction.reject;
-      var domain = reaction.domain;
-      var result, then, exited;
-      try {
-        if (handler) {
-          if (!ok) {
-            if (promise._h == 2) onHandleUnhandled(promise);
-            promise._h = 1;
-          }
-          if (handler === true) result = value;
-          else {
-            if (domain) domain.enter();
-            result = handler(value); // may throw
-            if (domain) {
-              domain.exit();
-              exited = true;
-            }
-          }
-          if (result === reaction.promise) {
-            reject(TypeError('Promise-chain cycle'));
-          } else if (then = isThenable(result)) {
-            then.call(result, resolve, reject);
-          } else resolve(result);
-        } else reject(value);
-      } catch (e) {
-        if (domain && !exited) domain.exit();
-        reject(e);
-      }
-    };
-    while (chain.length > i) run(chain[i++]); // variable length - can't use forEach
-    promise._c = [];
-    promise._n = false;
-    if (isReject && !promise._h) onUnhandled(promise);
-  });
-};
-var onUnhandled = function (promise) {
-  task.call(global, function () {
-    var value = promise._v;
-    var unhandled = isUnhandled(promise);
-    var result, handler, console;
-    if (unhandled) {
-      result = perform(function () {
-        if (isNode) {
-          process.emit('unhandledRejection', value, promise);
-        } else if (handler = global.onunhandledrejection) {
-          handler({ promise: promise, reason: value });
-        } else if ((console = global.console) && console.error) {
-          console.error('Unhandled promise rejection', value);
-        }
-      });
-      // Browsers should not trigger `rejectionHandled` event if it was handled here, NodeJS - should
-      promise._h = isNode || isUnhandled(promise) ? 2 : 1;
-    } promise._a = undefined;
-    if (unhandled && result.e) throw result.v;
-  });
-};
-var isUnhandled = function (promise) {
-  return promise._h !== 1 && (promise._a || promise._c).length === 0;
-};
-var onHandleUnhandled = function (promise) {
-  task.call(global, function () {
-    var handler;
-    if (isNode) {
-      process.emit('rejectionHandled', promise);
-    } else if (handler = global.onrejectionhandled) {
-      handler({ promise: promise, reason: promise._v });
-    }
-  });
-};
-var $reject = function (value) {
-  var promise = this;
-  if (promise._d) return;
-  promise._d = true;
-  promise = promise._w || promise; // unwrap
-  promise._v = value;
-  promise._s = 2;
-  if (!promise._a) promise._a = promise._c.slice();
-  notify(promise, true);
-};
-var $resolve = function (value) {
-  var promise = this;
-  var then;
-  if (promise._d) return;
-  promise._d = true;
-  promise = promise._w || promise; // unwrap
-  try {
-    if (promise === value) throw TypeError("Promise can't be resolved itself");
-    if (then = isThenable(value)) {
-      microtask(function () {
-        var wrapper = { _w: promise, _d: false }; // wrap
-        try {
-          then.call(value, ctx($resolve, wrapper, 1), ctx($reject, wrapper, 1));
-        } catch (e) {
-          $reject.call(wrapper, e);
-        }
-      });
-    } else {
-      promise._v = value;
-      promise._s = 1;
-      notify(promise, false);
-    }
-  } catch (e) {
-    $reject.call({ _w: promise, _d: false }, e); // wrap
-  }
-};
-
-// constructor polyfill
-if (!USE_NATIVE) {
-  // 25.4.3.1 Promise(executor)
-  $Promise = function Promise(executor) {
-    anInstance(this, $Promise, PROMISE, '_h');
-    aFunction(executor);
-    Internal.call(this);
-    try {
-      executor(ctx($resolve, this, 1), ctx($reject, this, 1));
-    } catch (err) {
-      $reject.call(this, err);
-    }
-  };
-  // eslint-disable-next-line no-unused-vars
-  Internal = function Promise(executor) {
-    this._c = [];             // <- awaiting reactions
-    this._a = undefined;      // <- checked in isUnhandled reactions
-    this._s = 0;              // <- state
-    this._d = false;          // <- done
-    this._v = undefined;      // <- value
-    this._h = 0;              // <- rejection state, 0 - default, 1 - handled, 2 - unhandled
-    this._n = false;          // <- notify
-  };
-  Internal.prototype = __webpack_require__(513)($Promise.prototype, {
-    // 25.4.5.3 Promise.prototype.then(onFulfilled, onRejected)
-    then: function then(onFulfilled, onRejected) {
-      var reaction = newPromiseCapability(speciesConstructor(this, $Promise));
-      reaction.ok = typeof onFulfilled == 'function' ? onFulfilled : true;
-      reaction.fail = typeof onRejected == 'function' && onRejected;
-      reaction.domain = isNode ? process.domain : undefined;
-      this._c.push(reaction);
-      if (this._a) this._a.push(reaction);
-      if (this._s) notify(this, false);
-      return reaction.promise;
-    },
-    // 25.4.5.1 Promise.prototype.catch(onRejected)
-    'catch': function (onRejected) {
-      return this.then(undefined, onRejected);
-    }
-  });
-  OwnPromiseCapability = function () {
-    var promise = new Internal();
-    this.promise = promise;
-    this.resolve = ctx($resolve, promise, 1);
-    this.reject = ctx($reject, promise, 1);
-  };
-  newPromiseCapabilityModule.f = newPromiseCapability = function (C) {
-    return C === $Promise || C === Wrapper
-      ? new OwnPromiseCapability(C)
-      : newGenericPromiseCapability(C);
-  };
-}
-
-$export($export.G + $export.W + $export.F * !USE_NATIVE, { Promise: $Promise });
-__webpack_require__(113)($Promise, PROMISE);
-__webpack_require__(514)(PROMISE);
-Wrapper = __webpack_require__(16)[PROMISE];
-
-// statics
-$export($export.S + $export.F * !USE_NATIVE, PROMISE, {
-  // 25.4.4.5 Promise.reject(r)
-  reject: function reject(r) {
-    var capability = newPromiseCapability(this);
-    var $$reject = capability.reject;
-    $$reject(r);
-    return capability.promise;
-  }
-});
-$export($export.S + $export.F * (LIBRARY || !USE_NATIVE), PROMISE, {
-  // 25.4.4.6 Promise.resolve(x)
-  resolve: function resolve(x) {
-    return promiseResolve(LIBRARY && this === Wrapper ? $Promise : this, x);
-  }
-});
-$export($export.S + $export.F * !(USE_NATIVE && __webpack_require__(515)(function (iter) {
-  $Promise.all(iter)['catch'](empty);
-})), PROMISE, {
-  // 25.4.4.1 Promise.all(iterable)
-  all: function all(iterable) {
-    var C = this;
-    var capability = newPromiseCapability(C);
-    var resolve = capability.resolve;
-    var reject = capability.reject;
-    var result = perform(function () {
-      var values = [];
-      var index = 0;
-      var remaining = 1;
-      forOf(iterable, false, function (promise) {
-        var $index = index++;
-        var alreadyCalled = false;
-        values.push(undefined);
-        remaining++;
-        C.resolve(promise).then(function (value) {
-          if (alreadyCalled) return;
-          alreadyCalled = true;
-          values[$index] = value;
-          --remaining || resolve(values);
-        }, reject);
-      });
-      --remaining || resolve(values);
-    });
-    if (result.e) reject(result.v);
-    return capability.promise;
-  },
-  // 25.4.4.4 Promise.race(iterable)
-  race: function race(iterable) {
-    var C = this;
-    var capability = newPromiseCapability(C);
-    var reject = capability.reject;
-    var result = perform(function () {
-      forOf(iterable, false, function (promise) {
-        C.resolve(promise).then(capability.resolve, reject);
-      });
-    });
-    if (result.e) reject(result.v);
-    return capability.promise;
-  }
-});
-
-
-/***/ }),
-/* 506 */
-/***/ (function(module, exports) {
-
-module.exports = function (it, Constructor, name, forbiddenField) {
-  if (!(it instanceof Constructor) || (forbiddenField !== undefined && forbiddenField in it)) {
-    throw TypeError(name + ': incorrect invocation!');
-  } return it;
-};
-
-
-/***/ }),
-/* 507 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var ctx = __webpack_require__(109);
-var call = __webpack_require__(508);
-var isArrayIter = __webpack_require__(509);
-var anObject = __webpack_require__(45);
-var toLength = __webpack_require__(212);
-var getIterFn = __webpack_require__(223);
-var BREAK = {};
-var RETURN = {};
-var exports = module.exports = function (iterable, entries, fn, that, ITERATOR) {
-  var iterFn = ITERATOR ? function () { return iterable; } : getIterFn(iterable);
-  var f = ctx(fn, that, entries ? 2 : 1);
-  var index = 0;
-  var length, step, iterator, result;
-  if (typeof iterFn != 'function') throw TypeError(iterable + ' is not iterable!');
-  // fast case for arrays with default iterator
-  if (isArrayIter(iterFn)) for (length = toLength(iterable.length); length > index; index++) {
-    result = entries ? f(anObject(step = iterable[index])[0], step[1]) : f(iterable[index]);
-    if (result === BREAK || result === RETURN) return result;
-  } else for (iterator = iterFn.call(iterable); !(step = iterator.next()).done;) {
-    result = call(iterator, f, step.value, entries);
-    if (result === BREAK || result === RETURN) return result;
-  }
-};
-exports.BREAK = BREAK;
-exports.RETURN = RETURN;
-
-
-/***/ }),
-/* 508 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// call something on iterator step with safe closing on error
-var anObject = __webpack_require__(45);
-module.exports = function (iterator, fn, value, entries) {
-  try {
-    return entries ? fn(anObject(value)[0], value[1]) : fn(value);
-  // 7.4.6 IteratorClose(iterator, completion)
-  } catch (e) {
-    var ret = iterator['return'];
-    if (ret !== undefined) anObject(ret.call(iterator));
-    throw e;
-  }
-};
-
-
-/***/ }),
-/* 509 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// check on default Array iterator
-var Iterators = __webpack_require__(75);
-var ITERATOR = __webpack_require__(21)('iterator');
-var ArrayProto = Array.prototype;
-
-module.exports = function (it) {
-  return it !== undefined && (Iterators.Array === it || ArrayProto[ITERATOR] === it);
-};
-
-
-/***/ }),
-/* 510 */
-/***/ (function(module, exports) {
-
-// fast apply, http://jsperf.lnkit.com/fast-apply/5
-module.exports = function (fn, args, that) {
-  var un = that === undefined;
-  switch (args.length) {
-    case 0: return un ? fn()
-                      : fn.call(that);
-    case 1: return un ? fn(args[0])
-                      : fn.call(that, args[0]);
-    case 2: return un ? fn(args[0], args[1])
-                      : fn.call(that, args[0], args[1]);
-    case 3: return un ? fn(args[0], args[1], args[2])
-                      : fn.call(that, args[0], args[1], args[2]);
-    case 4: return un ? fn(args[0], args[1], args[2], args[3])
-                      : fn.call(that, args[0], args[1], args[2], args[3]);
-  } return fn.apply(that, args);
-};
-
-
-/***/ }),
-/* 511 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var global = __webpack_require__(20);
-var macrotask = __webpack_require__(225).set;
-var Observer = global.MutationObserver || global.WebKitMutationObserver;
-var process = global.process;
-var Promise = global.Promise;
-var isNode = __webpack_require__(87)(process) == 'process';
-
-module.exports = function () {
-  var head, last, notify;
-
-  var flush = function () {
-    var parent, fn;
-    if (isNode && (parent = process.domain)) parent.exit();
-    while (head) {
-      fn = head.fn;
-      head = head.next;
-      try {
-        fn();
-      } catch (e) {
-        if (head) notify();
-        else last = undefined;
-        throw e;
-      }
-    } last = undefined;
-    if (parent) parent.enter();
-  };
-
-  // Node.js
-  if (isNode) {
-    notify = function () {
-      process.nextTick(flush);
-    };
-  // browsers with MutationObserver, except iOS Safari - https://github.com/zloirock/core-js/issues/339
-  } else if (Observer && !(global.navigator && global.navigator.standalone)) {
-    var toggle = true;
-    var node = document.createTextNode('');
-    new Observer(flush).observe(node, { characterData: true }); // eslint-disable-line no-new
-    notify = function () {
-      node.data = toggle = !toggle;
-    };
-  // environments with maybe non-completely correct, but existent Promise
-  } else if (Promise && Promise.resolve) {
-    // Promise.resolve without an argument throws an error in LG WebOS 2
-    var promise = Promise.resolve(undefined);
-    notify = function () {
-      promise.then(flush);
-    };
-  // for other environments - macrotask based on:
-  // - setImmediate
-  // - MessageChannel
-  // - window.postMessag
-  // - onreadystatechange
-  // - setTimeout
-  } else {
-    notify = function () {
-      // strange IE + webpack dev server bug - use .call(global)
-      macrotask.call(global, flush);
-    };
-  }
-
-  return function (fn) {
-    var task = { fn: fn, next: undefined };
-    if (last) last.next = task;
-    if (!head) {
-      head = task;
-      notify();
-    } last = task;
-  };
-};
-
-
-/***/ }),
-/* 512 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var global = __webpack_require__(20);
-var navigator = global.navigator;
-
-module.exports = navigator && navigator.userAgent || '';
-
-
-/***/ }),
-/* 513 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var hide = __webpack_require__(64);
-module.exports = function (target, src, safe) {
-  for (var key in src) {
-    if (safe && target[key]) target[key] = src[key];
-    else hide(target, key, src[key]);
-  } return target;
-};
-
-
-/***/ }),
-/* 514 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var global = __webpack_require__(20);
-var core = __webpack_require__(16);
-var dP = __webpack_require__(50);
-var DESCRIPTORS = __webpack_require__(40);
-var SPECIES = __webpack_require__(21)('species');
-
-module.exports = function (KEY) {
-  var C = typeof core[KEY] == 'function' ? core[KEY] : global[KEY];
-  if (DESCRIPTORS && C && !C[SPECIES]) dP.f(C, SPECIES, {
-    configurable: true,
-    get: function () { return this; }
-  });
-};
-
-
-/***/ }),
-/* 515 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var ITERATOR = __webpack_require__(21)('iterator');
-var SAFE_CLOSING = false;
-
-try {
-  var riter = [7][ITERATOR]();
-  riter['return'] = function () { SAFE_CLOSING = true; };
-  // eslint-disable-next-line no-throw-literal
-  Array.from(riter, function () { throw 2; });
-} catch (e) { /* empty */ }
-
-module.exports = function (exec, skipClosing) {
-  if (!skipClosing && !SAFE_CLOSING) return false;
-  var safe = false;
-  try {
-    var arr = [7];
-    var iter = arr[ITERATOR]();
-    iter.next = function () { return { done: safe = true }; };
-    arr[ITERATOR] = function () { return iter; };
-    exec(arr);
-  } catch (e) { /* empty */ }
-  return safe;
-};
-
-
-/***/ }),
-/* 516 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-// https://github.com/tc39/proposal-promise-finally
-
-var $export = __webpack_require__(44);
-var core = __webpack_require__(16);
-var global = __webpack_require__(20);
-var speciesConstructor = __webpack_require__(224);
-var promiseResolve = __webpack_require__(227);
-
-$export($export.P + $export.R, 'Promise', { 'finally': function (onFinally) {
-  var C = speciesConstructor(this, core.Promise || global.Promise);
-  var isFunction = typeof onFinally == 'function';
-  return this.then(
-    isFunction ? function (x) {
-      return promiseResolve(C, onFinally()).then(function () { return x; });
-    } : onFinally,
-    isFunction ? function (e) {
-      return promiseResolve(C, onFinally()).then(function () { throw e; });
-    } : onFinally
-  );
-} });
-
-
-/***/ }),
-/* 517 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-// https://github.com/tc39/proposal-promise-try
-var $export = __webpack_require__(44);
-var newPromiseCapability = __webpack_require__(163);
-var perform = __webpack_require__(226);
-
-$export($export.S, 'Promise', { 'try': function (callbackfn) {
-  var promiseCapability = newPromiseCapability.f(this);
-  var result = perform(callbackfn);
-  (result.e ? promiseCapability.reject : promiseCapability.resolve)(result.v);
-  return promiseCapability.promise;
-} });
-
-
-/***/ }),
-/* 518 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Enums) {
-  var CAN_REMOVE_BEACON_CLS = 'can-remove-beacon';
-  return Okta.View.extend({
-    className: 'auth-container main-container',
-    id: Enums.WIDGET_CONTAINER_ID,
-    attributes: { 'data-se': 'auth-container' },
-    initialize: function initialize(options) {
-      this.listenTo(options.appState, 'change:beaconType', function (model, type) {
-        this.$el.toggleClass(CAN_REMOVE_BEACON_CLS, type === 'security');
-      });
-    }
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 519 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(164), __webpack_require__(67), __webpack_require__(35)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, Factor, BrowserFeatures, Errors) {
-
-  // Keep track of stateMachine with this special model. Some reasons to not
-  // keep it generic:
-  // 1. We know exactly what we're using appState for by requiring props
-  // 2. Can have some derived functions to help us translate the lastAuthRes
-
-  var _ = Okta._;
-  var $ = Okta.$;
-  var compile = Okta.Handlebars.compile;
-
-  var DEFAULT_APP_LOGO = '/img/logos/default.png';
-  var USER_NOT_SEEN_ON_DEVICE = '/img/security/unknown.png';
-  var UNDEFINED_USER = '/img/security/default.png';
-  var NEW_USER = '/img/security/unknown-device.png';
-  var NEW_USER_IMAGE_DESCRIPTION = '';
-  var UNDEFINED_USER_IMAGE_DESCRIPTION = '';
-  var UNKNOWN_IMAGE_DESCRIPTION = '';
-
-  var securityImageUrlTpl = compile('{{baseUrl}}/login/getimage?username={{username}}');
-
-  function getSecurityImage(baseUrl, username, deviceFingerprint) {
-    // Reserved characters in the username must be escaped before the query can be safely executed
-    username = encodeURIComponent(username);
-    var url = securityImageUrlTpl({ baseUrl: baseUrl, username: username });
-
-    // When the username is empty, we want to show the default image.
-    if (_.isEmpty(username) || _.isUndefined(username)) {
-      return Q({
-        'securityImage': UNDEFINED_USER,
-        'securityImageDescription': UNDEFINED_USER_IMAGE_DESCRIPTION
-      });
-    }
-
-    var data = {
-      url: url,
-      dataType: 'json'
-    };
-    if (deviceFingerprint) {
-      data['headers'] = { 'X-Device-Fingerprint': deviceFingerprint };
-    }
-    return Q($.ajax(data)).then(function (res) {
-      if (res.pwdImg === USER_NOT_SEEN_ON_DEVICE) {
-        // When we get an unknown.png security image from OKTA,
-        // we want to show the unknown-device security image.
-        // We are mapping the server's img url to a new one because
-        // we still need to support the original login page.
-        return {
-          'securityImage': NEW_USER,
-          'securityImageDescription': NEW_USER_IMAGE_DESCRIPTION
-        };
-      }
-      return {
-        'securityImage': res.pwdImg,
-        'securityImageDescription': res.imageDescription || UNKNOWN_IMAGE_DESCRIPTION
-      };
-    });
-  }
-
-  function getMinutesString(factorLifetimeInMinutes) {
-    if (factorLifetimeInMinutes > 60 && factorLifetimeInMinutes <= 1440) {
-      var lifetimeInHours = factorLifetimeInMinutes / 60;
-      return Okta.loc('hours', 'login', [lifetimeInHours]);
-    } else if (factorLifetimeInMinutes > 1440) {
-      var lifetimeInDays = factorLifetimeInMinutes / 1440;
-      return Okta.loc('days', 'login', [lifetimeInDays]);
-    }
-    //Use minutes as the time unit by default
-    if (factorLifetimeInMinutes === 1) {
-      return Okta.loc('minutes.oneMinute', 'login');
-    }
-    return Okta.loc('minutes', 'login', [factorLifetimeInMinutes]);
-  }
-
-  function combineFactorsObjects(factorTypes, factors) {
-    var addedFactorTypes = [];
-    var combinedFactors = [];
-    _.each(factors, function (factor) {
-      var factorType = factor.factorType;
-      if (!_.contains(addedFactorTypes, factorType)) {
-        var factorTypeObj = _.findWhere(factorTypes, { factorType: factorType });
-        if (factorTypeObj) {
-          addedFactorTypes.push(factorType);
-          combinedFactors.push(factorTypeObj);
-        } else {
-          combinedFactors.push(factor);
-        }
-      }
-    });
-    return combinedFactors;
-  }
-
-  return Okta.Model.extend({
-
-    initialize: function initialize() {
-      // Handle this in initialize (as opposed to a derived property) because
-      // the operation is asynchronous
-      if (this.settings.get('features.securityImage')) {
-        var self = this;
-        this.listenTo(this, 'change:username', function (model, username) {
-          getSecurityImage(this.get('baseUrl'), username, this.get('deviceFingerprint')).then(function (image) {
-            model.set('securityImage', image.securityImage);
-            model.set('securityImageDescription', image.securityImageDescription);
-            model.unset('deviceFingerprint'); //Fingerprint can only be used once
-          }).fail(function (jqXhr) {
-            // Only notify the consumer on a CORS error
-            if (BrowserFeatures.corsIsNotEnabled(jqXhr)) {
-              self.settings.callGlobalError(new Errors.UnsupportedBrowserError(Okta.loc('error.enabled.cors')));
-            } else {
-              throw jqXhr;
-            }
-          }).done();
-        });
-      }
-    },
-
-    local: {
-      baseUrl: 'string',
-      lastAuthResponse: ['object', true, {}],
-      transaction: 'object',
-      transactionError: 'object',
-      username: 'string',
-      factors: 'object',
-      policy: 'object',
-      securityImage: ['string', true, UNDEFINED_USER],
-      securityImageDescription: ['string', true, UNDEFINED_USER_IMAGE_DESCRIPTION],
-      userCountryCode: 'string',
-      userPhoneNumber: 'string',
-      factorActivationType: 'string',
-      flashError: 'object',
-      beaconType: 'string',
-      deviceFingerprint: 'string', // valid only once
-      typingPattern: 'string',
-      // Note: languageCode is special in that it is shared between Settings
-      // and AppState. Settings is the *configured* language, and is static.
-      // AppState is the dynamic language state - it can be changed via a
-      // language picker, etc.
-      languageCode: ['string', true],
-      disableUsername: ['boolean', false, false],
-      trapMfaRequiredResponse: ['boolean', false, false]
-    },
-
-    setAuthResponse: function setAuthResponse(res) {
-      var _this = this;
-
-      // Because of MFA_CHALLENGE (i.e. DUO), we need to remember factors
-      // across auth responses. Not doing this, for example, results in being
-      // unable to switch away from the duo factor dropdown.
-      if (res._embedded && res._embedded.policy) {
-        this.set('policy', res._embedded.policy);
-      }
-
-      if (res._embedded && res._embedded.factors) {
-        var factors = res._embedded.factors;
-        if (res._embedded.factorTypes) {
-          factors = combineFactorsObjects(res._embedded.factorTypes, factors);
-        }
-
-        var factorsObject = _.map(factors, function (factor) {
-          factor.settings = _this.settings;
-          factor.appState = _this;
-          return factor;
-        });
-        this.set('factors', new Factor.Collection(factorsObject, { parse: true }));
-      }
-
-      this.set('lastAuthResponse', res);
-    },
-
-    derived: {
-      'isSuccessResponse': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'SUCCESS';
-        }
-      },
-      'isMfaRequired': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'MFA_REQUIRED' || res.status === 'FACTOR_REQUIRED';
-        }
-      },
-      'isProfileRequired': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'PROFILE_REQUIRED';
-        }
-      },
-      'isMfaEnroll': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'MFA_ENROLL' || res.status === 'FACTOR_ENROLL';
-        }
-      },
-      'isMfaChallenge': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'MFA_CHALLENGE' || res.status === 'FACTOR_CHALLENGE';
-        }
-      },
-      'isUnauthenticated': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'UNAUTHENTICATED';
-        }
-      },
-      'isMfaRejectedByUser': {
-        // MFA failures are usually error responses
-        // except in the case of Okta Push, when a
-        // user clicks 'deny' on his phone.
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.factorResult === 'REJECTED';
-        }
-      },
-      'isMfaTimeout': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.factorResult === 'TIMEOUT';
-        }
-      },
-      'isMfaEnrollActivate': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'MFA_ENROLL_ACTIVATE' || res.status === 'FACTOR_ENROLL_ACTIVATE';
-        }
-      },
-      'isWaitingForActivation': {
-        deps: ['isMfaEnrollActivate', 'lastAuthResponse'],
-        fn: function fn(isMfaEnrollActivate, res) {
-          return isMfaEnrollActivate && res.factorResult === 'WAITING';
-        }
-      },
-      'hasMultipleFactorsAvailable': {
-        deps: ['factors', 'isMfaRequired', 'isMfaChallenge', 'isUnauthenticated'],
-        fn: function fn(factors, isMfaRequired, isMfaChallenge, isUnauthenticated) {
-          if (!isMfaRequired && !isMfaChallenge && !isUnauthenticated) {
-            return false;
-          }
-          return factors && factors.length > 1;
-        }
-      },
-      'promptForFactorInUnauthenticated': {
-        deps: ['lastAuthResponse', 'factors'],
-        fn: function fn(res, factors) {
-          if (res.status !== 'UNAUTHENTICATED') {
-            return false;
-          }
-          return factors && factors.length > 0;
-        }
-      },
-      'userId': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded || !res._embedded.user) {
-            return null;
-          }
-          return res._embedded.user.id;
-        }
-      },
-      'isIdxStateToken': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res && _.isString(res.stateToken) && res.stateToken.startsWith('01');
-        }
-      },
-      'isPwdExpiringSoon': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.status === 'PASSWORD_WARN';
-        }
-      },
-      'passwordExpireDays': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded || !res._embedded.policy || !res._embedded.policy.expiration) {
-            return null;
-          }
-          return res._embedded.policy.expiration.passwordExpireDays;
-        }
-      },
-      'isPwdManagedByOkta': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._links || !res._links.next || !res._links.next.title) {
-            return true;
-          }
-          return false;
-        }
-      },
-      'passwordExpiredWebsiteName': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._links || !res._links.next || !res._links.next.title) {
-            return null;
-          }
-          return res._links.next.title;
-        }
-      },
-      'passwordExpiredLinkUrl': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._links || !res._links.next || !res._links.next.title || !res._links.next.href) {
-            return null;
-          }
-          return res._links.next.href;
-        }
-      },
-      'recoveryType': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.recoveryType;
-        }
-      },
-      'factorType': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.factorType;
-        }
-      },
-      'factor': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded || !res._embedded.factor) {
-            return null;
-          }
-          return res._embedded.factor;
-        }
-      },
-      'activatedFactorId': {
-        deps: ['factor'],
-        fn: function fn(factor) {
-          return factor ? factor.id : null;
-        }
-      },
-      'activatedFactorType': {
-        deps: ['factor'],
-        fn: function fn(factor) {
-          return factor ? factor.factorType : null;
-        }
-      },
-      'activatedFactorProvider': {
-        deps: ['factor'],
-        fn: function fn(factor) {
-          return factor ? factor.provider : null;
-        }
-      },
-      'qrcode': {
-        deps: ['factor'],
-        fn: function fn(factor) {
-          try {
-            return factor._embedded.activation._links.qrcode.href;
-          } catch (err) {
-            return null;
-          }
-        }
-      },
-      'activationSendLinks': {
-        deps: ['factor'],
-        fn: function fn(factor) {
-          var sendLinks;
-          try {
-            sendLinks = factor._embedded.activation._links.send;
-          } catch (err) {
-            sendLinks = [];
-          }
-          return sendLinks;
-        }
-      },
-      'textActivationLinkUrl': {
-        deps: ['activationSendLinks'],
-        fn: function fn(activationSendLinks) {
-          var item = _.findWhere(activationSendLinks, { name: 'sms' });
-          return item ? item.href : null;
-        }
-      },
-      'emailActivationLinkUrl': {
-        deps: ['activationSendLinks'],
-        fn: function fn(activationSendLinks) {
-          var item = _.findWhere(activationSendLinks, { name: 'email' });
-          return item ? item.href : null;
-        }
-      },
-      'sharedSecret': {
-        deps: ['factor'],
-        fn: function fn(factor) {
-          try {
-            return factor._embedded.activation.sharedSecret;
-          } catch (err) {
-            return null;
-          }
-        }
-      },
-      'duoEnrollActivation': {
-        deps: ['factor'],
-        fn: function fn(factor) {
-          if (!factor || !factor._embedded || !factor._embedded.activation) {
-            return null;
-          }
-          return factor._embedded.activation;
-        }
-      },
-      'prevLink': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (res._links && res._links.prev) {
-            return res._links.prev.href;
-          }
-          return null;
-        }
-      },
-      'skipLink': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (res._links && res._links.skip) {
-            return res._links.skip.href;
-          }
-          return null;
-        }
-      },
-      'user': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded || !res._embedded.user) {
-            return null;
-          }
-          return res._embedded.user;
-        }
-      },
-      'recoveryQuestion': {
-        deps: ['user'],
-        fn: function fn(user) {
-          if (!user || !user.recovery_question) {
-            return null;
-          }
-          return user.recovery_question.question;
-        }
-      },
-      'userProfile': {
-        deps: ['user'],
-        fn: function fn(user) {
-          if (!user || !user.profile) {
-            return null;
-          }
-          return user.profile;
-        }
-      },
-      'userConsentName': {
-        deps: ['userProfile', 'username'],
-        fn: function fn(userProfile, username) {
-          if (!userProfile || _.isEmpty(userProfile.firstName)) {
-            return username;
-          }
-          if (_.isEmpty(userProfile.lastName)) {
-            return userProfile.firstName;
-          }
-          return userProfile.firstName + ' ' + userProfile.lastName.charAt(0) + '.';
-        }
-      },
-      'userEmail': {
-        deps: ['userProfile'],
-        fn: function fn(userProfile) {
-          if (!userProfile || !userProfile.login) {
-            return null;
-          }
-          return userProfile.login;
-        }
-      },
-      'userFullName': {
-        deps: ['userProfile'],
-        fn: function fn(userProfile) {
-          if (!userProfile || !userProfile.firstName && !userProfile.lastName) {
-            return '';
-          }
-          return userProfile.firstName + ' ' + userProfile.lastName;
-        }
-      },
-      'defaultAppLogo': {
-        deps: ['baseUrl'],
-        fn: function fn(baseUrl) {
-          return baseUrl + DEFAULT_APP_LOGO;
-        }
-      },
-      'expiresAt': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          return res.expiresAt;
-        }
-      },
-      'target': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded) {
-            return null;
-          }
-          return res._embedded.target;
-        }
-      },
-      'targetLabel': {
-        deps: ['target'],
-        fn: function fn(target) {
-          if (!target) {
-            return null;
-          }
-          return target.label;
-        }
-      },
-      'targetLogo': {
-        deps: ['target'],
-        fn: function fn(target) {
-          if (!target || !target._links) {
-            return null;
-          }
-          return target._links.logo;
-        }
-      },
-      'targetTermsOfService': {
-        deps: ['target'],
-        fn: function fn(target) {
-          if (!target || !target._links) {
-            return null;
-          }
-          return target._links['terms-of-service'];
-        }
-      },
-      'targetPrivacyPolicy': {
-        deps: ['target'],
-        fn: function fn(target) {
-          if (!target || !target._links) {
-            return null;
-          }
-          return target._links['privacy-policy'];
-        }
-      },
-      'targetClientURI': {
-        deps: ['target'],
-        fn: function fn(target) {
-          if (!target || !target._links) {
-            return null;
-          }
-          return target._links['client-uri'];
-        }
-      },
-      'scopes': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded) {
-            return null;
-          }
-          return res._embedded.scopes;
-        }
-      },
-      'hasExistingPhones': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded || !res._embedded.factors) {
-            return false;
-          }
-          var factors = res._embedded.factors;
-          var factor = _.findWhere(factors, { factorType: 'sms', provider: 'OKTA' });
-          if (!factor || !factor._embedded) {
-            return false;
-          }
-
-          return !!factor._embedded.phones.length;
-        }
-      },
-      'hasExistingPhonesForCall': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._embedded || !res._embedded.factors) {
-            return false;
-          }
-          var factors = res._embedded.factors;
-          var factor = _.findWhere(factors, { factorType: 'call', provider: 'OKTA' });
-          if (!factor || !factor._embedded) {
-            return false;
-          }
-
-          return !!factor._embedded.phones.length;
-        }
-      },
-      'isUndefinedUser': {
-        deps: ['securityImage'],
-        fn: function fn(securityImage) {
-          return securityImage === UNDEFINED_USER;
-        }
-      },
-      'isNewUser': {
-        deps: ['securityImage'],
-        fn: function fn(securityImage) {
-          return securityImage === NEW_USER;
-        }
-      },
-      'allowRememberDevice': {
-        deps: ['policy'],
-        fn: function fn(policy) {
-          return policy && policy.allowRememberDevice;
-        }
-      },
-      'rememberDeviceLabel': {
-        deps: ['policy'],
-        fn: function fn(policy) {
-          if (policy && policy.rememberDeviceLifetimeInMinutes > 0) {
-            var timeString = getMinutesString(policy.rememberDeviceLifetimeInMinutes);
-            return Okta.loc('rememberDevice.timebased', 'login', [timeString]);
-          } else if (policy && policy.rememberDeviceLifetimeInMinutes === 0) {
-            return Okta.loc('rememberDevice.devicebased', 'login');
-          }
-          return Okta.loc('rememberDevice', 'login');
-        }
-      },
-      'rememberDeviceByDefault': {
-        deps: ['policy'],
-        fn: function fn(policy) {
-          return policy && policy.rememberDeviceByDefault;
-        }
-      },
-      'factorsPolicyInfo': {
-        deps: ['policy'],
-        fn: function fn(policy) {
-          return policy && policy.factorsPolicyInfo ? policy.factorsPolicyInfo : null;
-        }
-      },
-      'verifyCustomFactorRedirectUrl': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._links || !res._links.next || res._links.next.name !== 'redirect' || !res._links.next.href) {
-            return null;
-          }
-          return res._links.next.href;
-        }
-      },
-      'enrollCustomFactorRedirectUrl': {
-        deps: ['lastAuthResponse'],
-        fn: function fn(res) {
-          if (!res._links || !res._links.next || res._links.next.name !== 'activate' || !res._links.next.href) {
-            return null;
-          }
-          return res._links.next.href;
-        }
-      }
-    },
-
-    parse: function parse(options) {
-      this.settings = options.settings;
-      return _.extend(_.omit(options, 'settings'), { languageCode: this.settings.get('languageCode') });
-    }
-
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 520 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-var _defineProperty2 = __webpack_require__(521);
-
-var _defineProperty3 = _interopRequireDefault(_defineProperty2);
-
-var _assign = __webpack_require__(522);
-
-var _assign2 = _interopRequireDefault(_assign);
-
-var _keys = __webpack_require__(526);
-
-var _keys2 = _interopRequireDefault(_keys);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(529), __webpack_require__(530)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (parseMs, toMilliseconds) {
-
-  var MOMENT_UNIT = {
-    MILLISECOND: 'milliseconds',
-    SECOND: 'seconds',
-    MINUTE: 'minutes',
-    HOUR: 'hours',
-    DAY: 'days'
-  };
-
-  var MOMENT_UNIT_KEYS = (0, _keys2.default)(MOMENT_UNIT);
-
-  /**
-   * @method convertMomentUnits
-   * Conversion between moment's units and our units internally
-   *
-   * @param {String} momentUnit The units that val is in
-   * @return {String} The key in the MOMENT_UNIT hash
-   */
-  var convertMomentUnits = function convertMomentUnits(momentUnit) {
-    var entry = MOMENT_UNIT_KEYS.filter(function (k) {
-      return MOMENT_UNIT[k] === momentUnit;
-    });
-
-    return entry.length === 1 ? entry[0] : momentUnit;
-  };
-
-  return {
-
-    /**
-     * @method getTimeInHighestRelevantUnit
-     * Will return a number in the units of the highest relevant time unit.
-     * Only checks milliseconds, seconds, minutes, hours, and days.
-     * E.g.
-     *   15 MINUTE  -> 15 MINUTE
-     *   15 minutes -> 15 MINUTE
-     *   60 minutes ->  1 HOUR
-     *   90 minutes -> 90 MINUTE
-     *   24 HOUR    ->  1 DAY
-     *   24 hours   ->  1 DAY
-     *   30 DAY     -> 30 DAY
-     *
-     * @typedef { "MILLISECOND" | "SECOND" | "MINUTE" | "HOUR" | "DAY" } TimeUnit
-     *
-     * @typedef { "MILLISECOND" | "SECOND" | "MINUTE" | "HOUR" | "DAY" |
-     *            "milliseconds" | "seconds" | "minutes" | "hours" | "days"
-     *          } FlexibleTimeUnit
-     *
-     * @typedef TimeAndUnit
-     * @property {number} time the consolidated time
-     * @property {TimeUnit} unit the unit of the time
-     *
-     * @param {FlexibleTimeUnit} unit The time unit
-     * @return {TimeAndUnit} An object containing the amount of time and the unit
-     */
-    getTimeInHighestRelevantUnit: function getTimeInHighestRelevantUnit(val, unit) {
-      var defaultTimeObj = {
-        days: 0,
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
-        milliseconds: 0
-      };
-      var normalizedUnit = MOMENT_UNIT[unit] || unit;
-      var timeObj = void 0;
-
-      try {
-        var ms = toMilliseconds((0, _assign2.default)(defaultTimeObj, (0, _defineProperty3.default)({}, normalizedUnit, val)));
-        timeObj = parseMs(ms);
-      } catch (error) {
-        timeObj = {};
-      }
-
-      var duration = (0, _keys2.default)(timeObj).reduce(function (init, k) {
-        if (timeObj[k] !== 0) {
-          init[k] = timeObj[k];
-        }
-        return init;
-      }, {});
-
-      var highestUnit = void 0;
-      var time = void 0;
-      if ((0, _keys2.default)(duration).length === 1) {
-        (0, _keys2.default)(duration).forEach(function (k) {
-          time = duration[k];
-          highestUnit = k;
-        });
-      } else {
-        time = val;
-        highestUnit = normalizedUnit;
-      }
-
-      return {
-        time: time,
-        unit: convertMomentUnits(highestUnit)
-      };
-    }
-
-  };
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 521 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-exports.__esModule = true;
-
-var _defineProperty = __webpack_require__(217);
-
-var _defineProperty2 = _interopRequireDefault(_defineProperty);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = function (obj, key, value) {
-  if (key in obj) {
-    (0, _defineProperty2.default)(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-};
-
-/***/ }),
-/* 522 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = { "default": __webpack_require__(523), __esModule: true };
-
-/***/ }),
-/* 523 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(524);
-module.exports = __webpack_require__(16).Object.assign;
-
-
-/***/ }),
-/* 524 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// 19.1.3.1 Object.assign(target, source)
-var $export = __webpack_require__(44);
-
-$export($export.S + $export.F, 'Object', { assign: __webpack_require__(525) });
-
-
-/***/ }),
-/* 525 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-// 19.1.2.1 Object.assign(target, source, ...)
-var DESCRIPTORS = __webpack_require__(40);
-var getKeys = __webpack_require__(76);
-var gOPS = __webpack_require__(158);
-var pIE = __webpack_require__(88);
-var toObject = __webpack_require__(114);
-var IObject = __webpack_require__(211);
-var $assign = Object.assign;
-
-// should work with symbols and should have deterministic property order (V8 bug)
-module.exports = !$assign || __webpack_require__(74)(function () {
-  var A = {};
-  var B = {};
-  // eslint-disable-next-line no-undef
-  var S = Symbol();
-  var K = 'abcdefghijklmnopqrst';
-  A[S] = 7;
-  K.split('').forEach(function (k) { B[k] = k; });
-  return $assign({}, A)[S] != 7 || Object.keys($assign({}, B)).join('') != K;
-}) ? function assign(target, source) { // eslint-disable-line no-unused-vars
-  var T = toObject(target);
-  var aLen = arguments.length;
-  var index = 1;
-  var getSymbols = gOPS.f;
-  var isEnum = pIE.f;
-  while (aLen > index) {
-    var S = IObject(arguments[index++]);
-    var keys = getSymbols ? getKeys(S).concat(getSymbols(S)) : getKeys(S);
-    var length = keys.length;
-    var j = 0;
-    var key;
-    while (length > j) {
-      key = keys[j++];
-      if (!DESCRIPTORS || isEnum.call(S, key)) T[key] = S[key];
-    }
-  } return T;
-} : $assign;
-
-
-/***/ }),
-/* 526 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = { "default": __webpack_require__(527), __esModule: true };
-
-/***/ }),
-/* 527 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(528);
-module.exports = __webpack_require__(16).Object.keys;
-
-
-/***/ }),
-/* 528 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// 19.1.2.14 Object.keys(O)
-var toObject = __webpack_require__(114);
-var $keys = __webpack_require__(76);
-
-__webpack_require__(228)('keys', function () {
-  return function keys(it) {
-    return $keys(toObject(it));
-  };
-});
-
-
-/***/ }),
-/* 529 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = function (milliseconds) {
-	if (typeof milliseconds !== 'number') {
-		throw new TypeError('Expected a number');
-	}
-
-	var roundTowardsZero = milliseconds > 0 ? Math.floor : Math.ceil;
-
-	return {
-		days: roundTowardsZero(milliseconds / 86400000),
-		hours: roundTowardsZero(milliseconds / 3600000) % 24,
-		minutes: roundTowardsZero(milliseconds / 60000) % 60,
-		seconds: roundTowardsZero(milliseconds / 1000) % 60,
-		milliseconds: roundTowardsZero(milliseconds) % 1000,
-		microseconds: roundTowardsZero(milliseconds * 1000) % 1000,
-		nanoseconds: roundTowardsZero(milliseconds * 1e6) % 1000
-	};
-};
-
-/***/ }),
-/* 530 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _typeof2 = __webpack_require__(85);
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
-var _slicedToArray2 = __webpack_require__(229);
-
-var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
-
-var _entries = __webpack_require__(537);
-
-var _entries2 = _interopRequireDefault(_entries);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var converters = {
-	days: function days(value) {
-		return value * 864e5;
-	},
-	hours: function hours(value) {
-		return value * 36e5;
-	},
-	minutes: function minutes(value) {
-		return value * 6e4;
-	},
-	seconds: function seconds(value) {
-		return value * 1e3;
-	},
-	milliseconds: function milliseconds(value) {
-		return value;
-	},
-	microseconds: function microseconds(value) {
-		return value / 1e3;
-	},
-	nanoseconds: function nanoseconds(value) {
-		return value / 1e6;
-	}
-};
-
-var toMilliseconds = function toMilliseconds(object) {
-	return (0, _entries2.default)(object).reduce(function (milliseconds, _ref) {
-		var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
-		    key = _ref2[0],
-		    value = _ref2[1];
-
-		if (typeof value !== 'number') {
-			throw new TypeError('Expected a `number` for key `' + key + '`, got `' + value + '` (' + (typeof value === 'undefined' ? 'undefined' : (0, _typeof3.default)(value)) + ')');
-		}
-
-		if (!converters[key]) {
-			throw new Error('Unsupported time key');
-		}
-
-		return milliseconds + converters[key](value);
-	}, 0);
-};
-
-module.exports = toMilliseconds;
-// TODO: remove this for next major version
-module.exports.default = toMilliseconds;
-
-/***/ }),
-/* 531 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = { "default": __webpack_require__(532), __esModule: true };
-
-/***/ }),
-/* 532 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(115);
-__webpack_require__(108);
-module.exports = __webpack_require__(533);
-
-
-/***/ }),
-/* 533 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var classof = __webpack_require__(162);
-var ITERATOR = __webpack_require__(21)('iterator');
-var Iterators = __webpack_require__(75);
-module.exports = __webpack_require__(16).isIterable = function (it) {
-  var O = Object(it);
-  return O[ITERATOR] !== undefined
-    || '@@iterator' in O
-    // eslint-disable-next-line no-prototype-builtins
-    || Iterators.hasOwnProperty(classof(O));
-};
-
-
-/***/ }),
-/* 534 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = { "default": __webpack_require__(535), __esModule: true };
-
-/***/ }),
-/* 535 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(115);
-__webpack_require__(108);
-module.exports = __webpack_require__(536);
-
-
-/***/ }),
-/* 536 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var anObject = __webpack_require__(45);
-var get = __webpack_require__(223);
-module.exports = __webpack_require__(16).getIterator = function (it) {
-  var iterFn = get(it);
-  if (typeof iterFn != 'function') throw TypeError(it + ' is not iterable!');
-  return anObject(iterFn.call(it));
-};
-
-
-/***/ }),
-/* 537 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = { "default": __webpack_require__(538), __esModule: true };
-
-/***/ }),
-/* 538 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(539);
-module.exports = __webpack_require__(16).Object.entries;
-
-
-/***/ }),
-/* 539 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// https://github.com/tc39/proposal-object-values-entries
-var $export = __webpack_require__(44);
-var $entries = __webpack_require__(540)(true);
-
-$export($export.S, 'Object', {
-  entries: function entries(it) {
-    return $entries(it);
-  }
-});
-
-
-/***/ }),
-/* 540 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var DESCRIPTORS = __webpack_require__(40);
-var getKeys = __webpack_require__(76);
-var toIObject = __webpack_require__(66);
-var isEnum = __webpack_require__(88).f;
-module.exports = function (isEntries) {
-  return function (it) {
-    var O = toIObject(it);
-    var keys = getKeys(O);
-    var length = keys.length;
-    var i = 0;
-    var result = [];
-    var key;
-    while (length > i) {
-      key = keys[i++];
-      if (!DESCRIPTORS || isEnum.call(O, key)) {
-        result.push(isEntries ? [key, O[key]] : O[key]);
-      }
-    }
-    return result;
-  };
-};
-
-
-/***/ }),
-/* 541 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2018-Present, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Enums) {
-  var fn = {};
-
-  var template = function template(colors) {
-    return '\n#okta-sign-in.auth-container .button-primary,\n#okta-sign-in.auth-container .button-primary:active,\n#okta-sign-in.auth-container .button-primary:focus { background: ' + colors.brand + '; }\n#okta-sign-in.auth-container .button-primary:hover { background: ' + fn.lighten(colors.brand, 0.05) + '; }\n#okta-sign-in.auth-container .button.button-primary.link-button-disabled {\n  background: ' + colors.brand + ';\n  opacity: 0.5;\n}\n    ';
-  };
-
-  // visible for testing
-  fn.lighten = function (hex, lum) {
-    lum = lum || 0;
-    hex = hex.substr(1);
-    var newHex = '#';
-    for (var i = 0; i < 3; i++) {
-      var c = parseInt(hex.substr(i * 2, 2), 16);
-      c = Math.round(Math.min(Math.max(0, c + c * lum), 255)).toString(16);
-      newHex += ('00' + c).substr(c.length);
-    }
-    return newHex;
-  };
-
-  fn.addStyle = function (colors) {
-    var css = template(colors);
-    var main = document.getElementById(Enums.WIDGET_CONTAINER_ID);
-    var style = document.createElement('style');
-
-    style.id = Enums.WIDGET_CONFIG_COLORS_ID;
-    style.type = 'text/css';
-    style.appendChild(document.createTextNode(css));
-
-    main.appendChild(style);
-  };
-
-  fn.isLoaded = function () {
-    return !!document.getElementById(Enums.WIDGET_CONFIG_COLORS_ID);
-  };
-
-  return fn;
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 542 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-
-!(module.exports = {
-  INVALID_TOKEN_EXCEPTION: 'E0000011'
-});
-
-/***/ }),
-/* 543 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -62915,7 +56239,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(230), __webpack_require__(165), __webpack_require__(547), __webpack_require__(548), __webpack_require__(234), __webpack_require__(79), __webpack_require__(233)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, PrimaryAuthController, PrimaryAuthModel, IDPDiscoveryForm, IDPDiscoveryModel, Footer, BaseLoginController, CustomButtons) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(222), __webpack_require__(162), __webpack_require__(506), __webpack_require__(507), __webpack_require__(228), __webpack_require__(79), __webpack_require__(227)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, PrimaryAuthController, PrimaryAuthModel, IDPDiscoveryForm, IDPDiscoveryModel, Footer, BaseLoginController, CustomButtons) {
 
   return PrimaryAuthController.extend({
     className: 'idp-discovery',
@@ -62938,10 +56262,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       // If social auth is configured, 'socialAuthPositionTop' will determine
       // the order in which the social auth and primary auth are shown on the screen.
       if (options.settings.get('hasConfiguredButtons')) {
-        // CustomButtons needs current controller as parameter
         this.add(CustomButtons, {
           prepend: options.settings.get('socialAuthPositionTop'),
-          options: { currentController: this }
+          options: {
+            // To trigger an afterError event, we require the current controller
+            currentController: this
+          }
         });
       }
 
@@ -62978,7 +56304,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 544 */
+/* 497 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -62995,7 +56321,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  *
  * See the License for the specific language governing permissions and limitations under the License.
  */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(545)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (TypingDNA) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(498)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (TypingDNA) {
   var tdna;
   return {
     track: function track(selectorId) {
@@ -63021,17 +56347,17 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 545 */
+/* 498 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var _slicedToArray2 = __webpack_require__(229);
+var _slicedToArray2 = __webpack_require__(225);
 
 var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
 
-var _typeof2 = __webpack_require__(85);
+var _typeof2 = __webpack_require__(106);
 
 var _typeof3 = _interopRequireDefault(_typeof2);
 
@@ -64294,7 +57620,66 @@ module.exports = function TypingDNA() {
 };
 
 /***/ }),
-/* 546 */
+/* 499 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = { "default": __webpack_require__(500), __esModule: true };
+
+/***/ }),
+/* 500 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(114);
+__webpack_require__(107);
+module.exports = __webpack_require__(501);
+
+
+/***/ }),
+/* 501 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var classof = __webpack_require__(161);
+var ITERATOR = __webpack_require__(22)('iterator');
+var Iterators = __webpack_require__(75);
+module.exports = __webpack_require__(16).isIterable = function (it) {
+  var O = Object(it);
+  return O[ITERATOR] !== undefined
+    || '@@iterator' in O
+    // eslint-disable-next-line no-prototype-builtins
+    || Iterators.hasOwnProperty(classof(O));
+};
+
+
+/***/ }),
+/* 502 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = { "default": __webpack_require__(503), __esModule: true };
+
+/***/ }),
+/* 503 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(114);
+__webpack_require__(107);
+module.exports = __webpack_require__(504);
+
+
+/***/ }),
+/* 504 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var anObject = __webpack_require__(46);
+var get = __webpack_require__(226);
+module.exports = __webpack_require__(16).getIterator = function (it) {
+  var iterFn = get(it);
+  if (typeof iterFn != 'function') throw TypeError(it + ' is not iterable!');
+  return anObject(iterFn.call(it));
+};
+
+
+/***/ }),
+/* 505 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -64351,7 +57736,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 547 */
+/* 506 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -64369,7 +57754,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(231)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, PrimaryAuthForm) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(223)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Util, PrimaryAuthForm) {
 
   var _ = Okta._;
 
@@ -64388,16 +57773,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     inputs: function inputs() {
       var inputs = [];
       var usernameProps = {
+        className: 'margin-btm-30',
+        label: Okta.loc('primaryauth.username.placeholder', 'login'),
+        'label-top': true,
+        explain: Util.createInputExplain('primaryauth.username.tooltip', 'primaryauth.username.placeholder', 'login'),
+        'explain-top': true,
         inputId: 'idp-discovery-username',
-        placeholder: Okta.loc('primaryauth.username.placeholder', 'login'),
-        disabled: false,
-        params: {
-          innerTooltip: {
-            title: Okta.loc('primaryauth.username.placeholder', 'login'),
-            text: Okta.loc('primaryauth.username.tooltip', 'login')
-          },
-          icon: 'person-16-gray'
-        }
+        disabled: false
       };
       inputs.push(_.extend(this.getUsernameField(), usernameProps));
       if (this.settings.get('features.rememberMe')) {
@@ -64419,7 +57801,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 548 */
+/* 507 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -64437,8 +57819,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(165), __webpack_require__(166), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, PrimaryAuthModel, CookieUtil, Enums) {
-  var CourageUtil = Okta.internal.util.Util;
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(162), __webpack_require__(163), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, PrimaryAuthModel, CookieUtil, Enums) {
 
   var _ = Okta._;
 
@@ -64481,25 +57862,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       var authClient = this.appState.settings.authClient;
 
       authClient.webfinger(webfingerArgs).then(_.bind(function (res) {
-        if (res) {
-          if (res.links && res.links[0] && res.links[0].properties['okta:idp:type'] === 'OKTA') {
+        if (res && res.links && res.links[0]) {
+          if (res.links[0].properties['okta:idp:type'] === 'OKTA') {
             this.trigger('goToPrimaryAuth');
-          } else {
+          } else if (res.links[0].href) {
             var redirectFn = this.settings.get('redirectUtilFn');
-
-            var successData = {
-              idpDiscovery: {
-                redirectToIdp: function redirectToIdp(redirectUrl) {
-                  if (res.links && res.links[0] && res.links[0].href) {
-                    var queryParams = { fromURI: redirectUrl };
-                    queryParams['login_hint'] = username;
-                    var url = res.links[0].href + CourageUtil.getUrlQueryString(queryParams);
-                    redirectFn(url);
-                  }
-                }
-              }
-            };
-            this.settings.callGlobalSuccess(Enums.IDP_DISCOVERY, successData);
+            redirectFn(res.links[0].href);
           }
         }
       }, this)).fail(_.bind(function () {
@@ -64517,7 +57885,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 549 */
+/* 508 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -64536,7 +57904,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint camelcase: 0 */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(235), __webpack_require__(12), __webpack_require__(17), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(46)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Duo, Q, FactorUtil, FormController, Enums, FormType, FooterSignout) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(229), __webpack_require__(12), __webpack_require__(18), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(48)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Duo, Q, FactorUtil, FormController, Enums, FormType, FooterSignout) {
 
   var $ = Okta.$,
       _ = Okta._;
@@ -64675,7 +58043,406 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 550 */
+/* 509 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+var _defineProperty2 = __webpack_require__(510);
+
+var _defineProperty3 = _interopRequireDefault(_defineProperty2);
+
+var _assign = __webpack_require__(511);
+
+var _assign2 = _interopRequireDefault(_assign);
+
+var _keys = __webpack_require__(515);
+
+var _keys2 = _interopRequireDefault(_keys);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(518), __webpack_require__(519)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (parseMs, toMilliseconds) {
+
+  var MOMENT_UNIT = {
+    MILLISECOND: 'milliseconds',
+    SECOND: 'seconds',
+    MINUTE: 'minutes',
+    HOUR: 'hours',
+    DAY: 'days'
+  };
+
+  var MOMENT_UNIT_KEYS = (0, _keys2.default)(MOMENT_UNIT);
+
+  /**
+   * @method convertMomentUnits
+   * Conversion between moment's units and our units internally
+   *
+   * @param {String} momentUnit The units that val is in
+   * @return {String} The key in the MOMENT_UNIT hash
+   */
+  var convertMomentUnits = function convertMomentUnits(momentUnit) {
+    var entry = MOMENT_UNIT_KEYS.filter(function (k) {
+      return MOMENT_UNIT[k] === momentUnit;
+    });
+
+    return entry.length === 1 ? entry[0] : momentUnit;
+  };
+
+  return {
+
+    /**
+     * @method getTimeInHighestRelevantUnit
+     * Will return a number in the units of the highest relevant time unit.
+     * Only checks milliseconds, seconds, minutes, hours, and days.
+     * E.g.
+     *   15 MINUTE  -> 15 MINUTE
+     *   15 minutes -> 15 MINUTE
+     *   60 minutes ->  1 HOUR
+     *   90 minutes -> 90 MINUTE
+     *   24 HOUR    ->  1 DAY
+     *   24 hours   ->  1 DAY
+     *   30 DAY     -> 30 DAY
+     *
+     * @typedef { "MILLISECOND" | "SECOND" | "MINUTE" | "HOUR" | "DAY" } TimeUnit
+     *
+     * @typedef { "MILLISECOND" | "SECOND" | "MINUTE" | "HOUR" | "DAY" |
+     *            "milliseconds" | "seconds" | "minutes" | "hours" | "days"
+     *          } FlexibleTimeUnit
+     *
+     * @typedef TimeAndUnit
+     * @property {number} time the consolidated time
+     * @property {TimeUnit} unit the unit of the time
+     *
+     * @param {FlexibleTimeUnit} unit The time unit
+     * @return {TimeAndUnit} An object containing the amount of time and the unit
+     */
+    getTimeInHighestRelevantUnit: function getTimeInHighestRelevantUnit(val, unit) {
+      var defaultTimeObj = {
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        milliseconds: 0
+      };
+      var normalizedUnit = MOMENT_UNIT[unit] || unit;
+      var timeObj = void 0;
+
+      try {
+        var ms = toMilliseconds((0, _assign2.default)(defaultTimeObj, (0, _defineProperty3.default)({}, normalizedUnit, val)));
+        timeObj = parseMs(ms);
+      } catch (error) {
+        timeObj = {};
+      }
+
+      var duration = (0, _keys2.default)(timeObj).reduce(function (init, k) {
+        if (timeObj[k] !== 0) {
+          init[k] = timeObj[k];
+        }
+        return init;
+      }, {});
+
+      var highestUnit = void 0;
+      var time = void 0;
+      if ((0, _keys2.default)(duration).length === 1) {
+        (0, _keys2.default)(duration).forEach(function (k) {
+          time = duration[k];
+          highestUnit = k;
+        });
+      } else {
+        time = val;
+        highestUnit = normalizedUnit;
+      }
+
+      return {
+        time: time,
+        unit: convertMomentUnits(highestUnit)
+      };
+    }
+
+  };
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 510 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+exports.__esModule = true;
+
+var _defineProperty = __webpack_require__(217);
+
+var _defineProperty2 = _interopRequireDefault(_defineProperty);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = function (obj, key, value) {
+  if (key in obj) {
+    (0, _defineProperty2.default)(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+};
+
+/***/ }),
+/* 511 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = { "default": __webpack_require__(512), __esModule: true };
+
+/***/ }),
+/* 512 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(513);
+module.exports = __webpack_require__(16).Object.assign;
+
+
+/***/ }),
+/* 513 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 19.1.3.1 Object.assign(target, source)
+var $export = __webpack_require__(41);
+
+$export($export.S + $export.F, 'Object', { assign: __webpack_require__(514) });
+
+
+/***/ }),
+/* 514 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+// 19.1.2.1 Object.assign(target, source, ...)
+var DESCRIPTORS = __webpack_require__(42);
+var getKeys = __webpack_require__(76);
+var gOPS = __webpack_require__(158);
+var pIE = __webpack_require__(87);
+var toObject = __webpack_require__(113);
+var IObject = __webpack_require__(211);
+var $assign = Object.assign;
+
+// should work with symbols and should have deterministic property order (V8 bug)
+module.exports = !$assign || __webpack_require__(74)(function () {
+  var A = {};
+  var B = {};
+  // eslint-disable-next-line no-undef
+  var S = Symbol();
+  var K = 'abcdefghijklmnopqrst';
+  A[S] = 7;
+  K.split('').forEach(function (k) { B[k] = k; });
+  return $assign({}, A)[S] != 7 || Object.keys($assign({}, B)).join('') != K;
+}) ? function assign(target, source) { // eslint-disable-line no-unused-vars
+  var T = toObject(target);
+  var aLen = arguments.length;
+  var index = 1;
+  var getSymbols = gOPS.f;
+  var isEnum = pIE.f;
+  while (aLen > index) {
+    var S = IObject(arguments[index++]);
+    var keys = getSymbols ? getKeys(S).concat(getSymbols(S)) : getKeys(S);
+    var length = keys.length;
+    var j = 0;
+    var key;
+    while (length > j) {
+      key = keys[j++];
+      if (!DESCRIPTORS || isEnum.call(S, key)) T[key] = S[key];
+    }
+  } return T;
+} : $assign;
+
+
+/***/ }),
+/* 515 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = { "default": __webpack_require__(516), __esModule: true };
+
+/***/ }),
+/* 516 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(517);
+module.exports = __webpack_require__(16).Object.keys;
+
+
+/***/ }),
+/* 517 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 19.1.2.14 Object.keys(O)
+var toObject = __webpack_require__(113);
+var $keys = __webpack_require__(76);
+
+__webpack_require__(230)('keys', function () {
+  return function keys(it) {
+    return $keys(toObject(it));
+  };
+});
+
+
+/***/ }),
+/* 518 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = function (milliseconds) {
+	if (typeof milliseconds !== 'number') {
+		throw new TypeError('Expected a number');
+	}
+
+	var roundTowardsZero = milliseconds > 0 ? Math.floor : Math.ceil;
+
+	return {
+		days: roundTowardsZero(milliseconds / 86400000),
+		hours: roundTowardsZero(milliseconds / 3600000) % 24,
+		minutes: roundTowardsZero(milliseconds / 60000) % 60,
+		seconds: roundTowardsZero(milliseconds / 1000) % 60,
+		milliseconds: roundTowardsZero(milliseconds) % 1000,
+		microseconds: roundTowardsZero(milliseconds * 1000) % 1000,
+		nanoseconds: roundTowardsZero(milliseconds * 1e6) % 1000
+	};
+};
+
+/***/ }),
+/* 519 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _typeof2 = __webpack_require__(106);
+
+var _typeof3 = _interopRequireDefault(_typeof2);
+
+var _slicedToArray2 = __webpack_require__(225);
+
+var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
+
+var _entries = __webpack_require__(520);
+
+var _entries2 = _interopRequireDefault(_entries);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var converters = {
+	days: function days(value) {
+		return value * 864e5;
+	},
+	hours: function hours(value) {
+		return value * 36e5;
+	},
+	minutes: function minutes(value) {
+		return value * 6e4;
+	},
+	seconds: function seconds(value) {
+		return value * 1e3;
+	},
+	milliseconds: function milliseconds(value) {
+		return value;
+	},
+	microseconds: function microseconds(value) {
+		return value / 1e3;
+	},
+	nanoseconds: function nanoseconds(value) {
+		return value / 1e6;
+	}
+};
+
+var toMilliseconds = function toMilliseconds(object) {
+	return (0, _entries2.default)(object).reduce(function (milliseconds, _ref) {
+		var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
+		    key = _ref2[0],
+		    value = _ref2[1];
+
+		if (typeof value !== 'number') {
+			throw new TypeError('Expected a `number` for key `' + key + '`, got `' + value + '` (' + (typeof value === 'undefined' ? 'undefined' : (0, _typeof3.default)(value)) + ')');
+		}
+
+		if (!converters[key]) {
+			throw new Error('Unsupported time key');
+		}
+
+		return milliseconds + converters[key](value);
+	}, 0);
+};
+
+module.exports = toMilliseconds;
+// TODO: remove this for next major version
+module.exports.default = toMilliseconds;
+
+/***/ }),
+/* 520 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = { "default": __webpack_require__(521), __esModule: true };
+
+/***/ }),
+/* 521 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(522);
+module.exports = __webpack_require__(16).Object.entries;
+
+
+/***/ }),
+/* 522 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// https://github.com/tc39/proposal-object-values-entries
+var $export = __webpack_require__(41);
+var $entries = __webpack_require__(523)(true);
+
+$export($export.S, 'Object', {
+  entries: function entries(it) {
+    return $entries(it);
+  }
+});
+
+
+/***/ }),
+/* 523 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var DESCRIPTORS = __webpack_require__(42);
+var getKeys = __webpack_require__(76);
+var toIObject = __webpack_require__(67);
+var isEnum = __webpack_require__(87).f;
+module.exports = function (isEntries) {
+  return function (it) {
+    var O = toIObject(it);
+    var keys = getKeys(O);
+    var length = keys.length;
+    var i = 0;
+    var result = [];
+    var key;
+    while (length > i) {
+      key = keys[i++];
+      if (!DESCRIPTORS || isEnum.call(O, key)) {
+        result.push(isEntries ? [key, O[key]] : O[key]);
+      }
+    }
+    return result;
+  };
+};
+
+
+/***/ }),
+/* 524 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -64694,7 +58461,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint complexity: [2, 21] max-statements: [2, 25] max-params: [2, 12]*/
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(79), __webpack_require__(551), __webpack_require__(552), __webpack_require__(553), __webpack_require__(554), __webpack_require__(555), __webpack_require__(556), __webpack_require__(557), __webpack_require__(558), __webpack_require__(46)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginController, TOTPForm, YubikeyForm, SecurityQuestionForm, PassCodeForm, EmailMagicLinkForm, PushForm, PasswordForm, InlineTOTPForm, FooterSignout) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(79), __webpack_require__(525), __webpack_require__(526), __webpack_require__(527), __webpack_require__(532), __webpack_require__(528), __webpack_require__(529), __webpack_require__(530), __webpack_require__(531), __webpack_require__(48)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginController, TOTPForm, YubikeyForm, SecurityQuestionForm, PassCodeForm, EmailMagicLinkForm, PushForm, PasswordForm, InlineTOTPForm, FooterSignout) {
   var CheckBox = Okta.internal.views.forms.inputs.CheckBox;
 
 
@@ -64830,7 +58597,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 551 */
+/* 525 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -64873,9 +58640,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       }
 
       this.addInput({
-        label: false,
+        label: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
         'label-top': true,
-        placeholder: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
         className: 'o-form-fieldset o-form-label-top auth-passcode',
         name: 'answer',
         input: TextBox,
@@ -64910,7 +58676,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 552 */
+/* 526 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -64948,13 +58714,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       this.subtitle = Okta.loc('factor.totpHard.yubikey.description', 'login');
 
       this.addInput({
-        label: false,
+        label: Okta.loc('factor.totpHard.yubikey.placeholder', 'login'),
         'label-top': true,
         className: 'o-form-fieldset o-form-label-top auth-passcode',
         name: 'answer',
         input: TextBox,
-        type: 'password',
-        placeholder: Okta.loc('factor.totpHard.yubikey.placeholder', 'login')
+        inputId: 'mfa-answer',
+        type: 'password'
       });
 
       if (this.options.appState.get('allowRememberDevice')) {
@@ -64974,7 +58740,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 553 */
+/* 527 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65036,164 +58802,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 554 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
-
-/*!
- * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
- * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
- *
- * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *
- * See the License for the specific language governing permissions and limitations under the License.
- */
-/* eslint complexity: [2, 7] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, TextBox) {
-
-  var subtitleTpl = Okta.Handlebars.compile('({{subtitle}})');
-  var _ = Okta._;
-  var API_RATE_LIMIT = 30000; //milliseconds
-  var warningTemplate = '<div class="okta-form-infobox-warning infobox infobox-warning login-timeout-warning">\
-                           <span class="icon warning-16"></span>\
-                           <p>{{{warning}}}</p>\
-                         </div>\
-                         ';
-
-  function getFormAndButtonDetails(factorType) {
-    switch (factorType) {
-      case 'sms':
-        return {
-          buttonDataSe: 'sms-send-code',
-          buttonClassName: 'sms-request-button',
-          formSubmit: Okta.loc('mfa.sendCode', 'login'),
-          formRetry: Okta.loc('mfa.resendCode', 'login'),
-          formSubmitted: Okta.loc('mfa.sent', 'login'),
-          subtitle: subtitleTpl({ subtitle: this.model.get('phoneNumber') }),
-          warning: Okta.loc('factor.sms.time.warning', 'login')
-        };
-      case 'call':
-        return {
-          buttonDataSe: 'make-call',
-          buttonClassName: 'call-request-button',
-          formSubmit: Okta.loc('mfa.call', 'login'),
-          formRetry: Okta.loc('mfa.redial', 'login'),
-          formSubmitted: Okta.loc('mfa.calling', 'login'),
-          subtitle: subtitleTpl({ subtitle: this.model.get('phoneNumber') }),
-          warning: Okta.loc('factor.call.time.warning', 'login')
-        };
-      case 'email':
-        return {
-          buttonDataSe: 'email-send-code',
-          buttonClassName: 'email-request-button',
-          formSubmit: Okta.loc('mfa.sendEmail', 'login'),
-          formRetry: Okta.loc('mfa.resendEmail', 'login'),
-          formSubmitted: Okta.loc('mfa.sent', 'login'),
-          subtitle: subtitleTpl({ subtitle: this.model.get('email') })
-        };
-      default:
-        return {
-          buttonDataSe: '',
-          buttonClassName: '',
-          formSubmit: '',
-          formRetry: '',
-          formSubmitted: ''
-        };
-    }
-  }
-
-  return Okta.Form.extend({
-    className: 'mfa-verify-passcode',
-    autoSave: true,
-    noCancelButton: true,
-    save: _.partial(Okta.loc, 'mfa.challenge.verify', 'login'),
-    scrollOnError: false,
-    layout: 'o-form-theme',
-
-    disableSubmitButton: function disableSubmitButton() {
-      return this.model.appState.get('isMfaChallenge') && this.model.get('answer');
-    },
-
-    showWarning: function showWarning(msg) {
-      this.clearWarnings();
-      this.add(warningTemplate, '.o-form-error-container', { options: { warning: msg } });
-    },
-    clearWarnings: function clearWarnings() {
-      this.$('.okta-form-infobox-warning').remove();
-    },
-
-    initialize: function initialize() {
-      var form = this;
-      this.title = this.model.get('factorLabel');
-
-      var factorType = this.model.get('factorType');
-      var formAndButtonDetails = getFormAndButtonDetails.call(this, factorType);
-      var warningDetails = formAndButtonDetails.warning;
-      this.$el.attr('data-se', 'factor-' + factorType);
-
-      this.subtitle = formAndButtonDetails.subtitle;
-      this.listenTo(this.model, 'error', function () {
-        this.clearErrors();
-      });
-      this.add(Okta.createButton({
-        attributes: { 'data-se': formAndButtonDetails.buttonDataSe },
-        className: 'button ' + formAndButtonDetails.buttonClassName,
-        title: formAndButtonDetails.formSubmit,
-        click: function click() {
-          form.clearErrors();
-          this.disable();
-          form.clearWarnings();
-          this.options.title = formAndButtonDetails.formSubmitted;
-          this.render();
-          // To send an OTP to the device, make the same request but use
-          // an empty passCode
-          this.model.set('answer', '');
-          this.model.save().then(function () {
-            // render and focus on the passcode input field.
-            form.getInputs().first().render().focus();
-            return Q.delay(API_RATE_LIMIT);
-          }).then(_.bind(function () {
-            this.options.title = formAndButtonDetails.formRetry;
-            this.enable();
-            if (factorType === 'call' || factorType === 'sms') {
-              form.showWarning(warningDetails);
-            }
-            this.render();
-          }, this));
-        }
-      }));
-      this.addInput({
-        label: false,
-        'label-top': true,
-        placeholder: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
-        className: 'o-form-fieldset o-form-label-top auth-passcode',
-        name: 'answer',
-        input: TextBox,
-        type: 'tel'
-      });
-      if (this.options.appState.get('allowRememberDevice')) {
-        this.addInput({
-          label: false,
-          'label-top': true,
-          placeholder: this.options.appState.get('rememberDeviceLabel'),
-          className: 'margin-btm-0',
-          name: 'rememberDevice',
-          type: 'checkbox'
-        });
-      }
-    }
-
-  });
-}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-
-/***/ }),
-/* 555 */
+/* 528 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65251,7 +58860,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 556 */
+/* 529 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65269,7 +58878,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(166), __webpack_require__(68)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, CookieUtil, Util) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(163), __webpack_require__(17)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, CookieUtil, Util) {
 
   var _ = Okta._;
   // deviceName is escaped on BaseForm (see BaseForm's template)
@@ -65382,7 +58991,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 557 */
+/* 530 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65417,9 +59026,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       this.title = this.model.get('factorLabel');
 
       this.addInput({
-        label: false,
+        label: Okta.loc('mfa.challenge.password.placeholder', 'login'),
         'label-top': true,
-        placeholder: Okta.loc('mfa.challenge.password.placeholder', 'login'),
         className: 'auth-passcode',
         name: 'password',
         type: 'password',
@@ -65444,7 +59052,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 558 */
+/* 531 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65467,9 +59075,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
   function addInlineTotp(form) {
     form.addDivider();
     form.addInput({
-      label: false,
+      label: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
       'label-top': true,
-      placeholder: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
       className: 'o-form-fieldset o-form-label-top inline-input auth-passcode',
       name: 'answer',
       input: TextBox,
@@ -65477,7 +59084,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     });
     form.add(Okta.createButton({
       attributes: { 'data-se': 'inline-totp-verify' },
-      className: 'button inline-totp-verify',
+      className: 'button inline-totp-verify margin-top-30',
       title: Okta.loc('mfa.challenge.verify', 'login'),
       click: function click() {
         if (!form.isValid()) {
@@ -65534,7 +59141,163 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 559 */
+/* 532 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+/* eslint complexity: [2, 7] */
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, TextBox) {
+
+  var subtitleTpl = Okta.Handlebars.compile('({{subtitle}})');
+  var _ = Okta._;
+  var API_RATE_LIMIT = 30000; //milliseconds
+  var warningTemplate = '<div class="okta-form-infobox-warning infobox infobox-warning login-timeout-warning">\
+                           <span class="icon warning-16"></span>\
+                           <p>{{{warning}}}</p>\
+                         </div>\
+                         ';
+
+  function getFormAndButtonDetails(factorType) {
+    switch (factorType) {
+      case 'sms':
+        return {
+          buttonDataSe: 'sms-send-code',
+          buttonClassName: 'sms-request-button',
+          formSubmit: Okta.loc('mfa.sendCode', 'login'),
+          formRetry: Okta.loc('mfa.resendCode', 'login'),
+          formSubmitted: Okta.loc('mfa.sent', 'login'),
+          subtitle: subtitleTpl({ subtitle: this.model.get('phoneNumber') }),
+          warning: Okta.loc('factor.sms.time.warning', 'login')
+        };
+      case 'call':
+        return {
+          buttonDataSe: 'make-call',
+          buttonClassName: 'call-request-button',
+          formSubmit: Okta.loc('mfa.call', 'login'),
+          formRetry: Okta.loc('mfa.redial', 'login'),
+          formSubmitted: Okta.loc('mfa.calling', 'login'),
+          subtitle: subtitleTpl({ subtitle: this.model.get('phoneNumber') }),
+          warning: Okta.loc('factor.call.time.warning', 'login')
+        };
+      case 'email':
+        return {
+          buttonDataSe: 'email-send-code',
+          buttonClassName: 'email-request-button',
+          formSubmit: Okta.loc('mfa.sendEmail', 'login'),
+          formRetry: Okta.loc('mfa.resendEmail', 'login'),
+          formSubmitted: Okta.loc('mfa.sent', 'login'),
+          subtitle: subtitleTpl({ subtitle: this.model.get('email') })
+        };
+      default:
+        return {
+          buttonDataSe: '',
+          buttonClassName: '',
+          formSubmit: '',
+          formRetry: '',
+          formSubmitted: ''
+        };
+    }
+  }
+
+  return Okta.Form.extend({
+    className: 'mfa-verify-passcode',
+    autoSave: true,
+    noCancelButton: true,
+    save: _.partial(Okta.loc, 'mfa.challenge.verify', 'login'),
+    scrollOnError: false,
+    layout: 'o-form-theme',
+
+    disableSubmitButton: function disableSubmitButton() {
+      return this.model.appState.get('isMfaChallenge') && this.model.get('answer');
+    },
+
+    showWarning: function showWarning(msg) {
+      this.clearWarnings();
+      this.add(warningTemplate, '.o-form-error-container', { options: { warning: msg } });
+    },
+    clearWarnings: function clearWarnings() {
+      this.$('.okta-form-infobox-warning').remove();
+    },
+
+    initialize: function initialize() {
+      var form = this;
+      this.title = this.model.get('factorLabel');
+
+      var factorType = this.model.get('factorType');
+      var formAndButtonDetails = getFormAndButtonDetails.call(this, factorType);
+      var warningDetails = formAndButtonDetails.warning;
+      this.$el.attr('data-se', 'factor-' + factorType);
+
+      this.subtitle = formAndButtonDetails.subtitle;
+      this.listenTo(this.model, 'error', function () {
+        this.clearErrors();
+      });
+      this.addInput({
+        label: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+        'label-top': true,
+        className: 'o-form-fieldset o-form-label-top auth-passcode',
+        name: 'answer',
+        input: TextBox,
+        type: 'tel'
+      });
+      this.add(Okta.createButton({
+        attributes: { 'data-se': formAndButtonDetails.buttonDataSe },
+        className: 'button ' + formAndButtonDetails.buttonClassName,
+        title: formAndButtonDetails.formSubmit,
+        click: function click() {
+          form.clearErrors();
+          this.disable();
+          form.clearWarnings();
+          this.options.title = formAndButtonDetails.formSubmitted;
+          this.render();
+          // To send an OTP to the device, make the same request but use
+          // an empty passCode
+          this.model.set('answer', '');
+          this.model.save().then(function () {
+            // render and focus on the passcode input field.
+            form.getInputs().first().render().focus();
+            return Q.delay(API_RATE_LIMIT);
+          }).then(_.bind(function () {
+            this.options.title = formAndButtonDetails.formRetry;
+            this.enable();
+            if (factorType === 'call' || factorType === 'sms') {
+              form.showWarning(warningDetails);
+            }
+            this.render();
+          }, this));
+        }
+      }));
+      if (this.options.appState.get('allowRememberDevice')) {
+        this.addInput({
+          label: false,
+          'label-top': true,
+          placeholder: this.options.appState.get('rememberDeviceLabel'),
+          className: 'margin-btm-0',
+          name: 'rememberDevice',
+          type: 'checkbox'
+        });
+      }
+    }
+
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 533 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65552,7 +59315,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(117), __webpack_require__(236), __webpack_require__(46), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, webauthn, Spinner, FooterSignout, HtmlErrorMessageView) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(117), __webpack_require__(231), __webpack_require__(48), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, webauthn, Spinner, FooterSignout, HtmlErrorMessageView) {
 
   var _ = Okta._;
 
@@ -65697,7 +59460,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       },
 
       _successEnrollment: function _successEnrollment() {
-        this.subtitle = Okta.loc('verify.windowsHello.subtitle.signingIn', 'login');
+        this.subtitle = this.settings.get('brandName') ? Okta.loc('verify.windowsHello.subtitle.signingIn.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('verify.windowsHello.subtitle.signingIn.generic', 'login');
         this.render();
         this.$('.o-form-button-bar').addClass('hide');
       },
@@ -65722,28 +59485,28 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 560 */
+/* 534 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = { "default": __webpack_require__(561), __esModule: true };
+module.exports = { "default": __webpack_require__(535), __esModule: true };
 
 /***/ }),
-/* 561 */
+/* 535 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(562);
+__webpack_require__(536);
 module.exports = __webpack_require__(16).Object.freeze;
 
 
 /***/ }),
-/* 562 */
+/* 536 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.2.5 Object.freeze(O)
-var isObject = __webpack_require__(51);
+var isObject = __webpack_require__(47);
 var meta = __webpack_require__(214).onFreeze;
 
-__webpack_require__(228)('freeze', function ($freeze) {
+__webpack_require__(230)('freeze', function ($freeze) {
   return function freeze(it) {
     return $freeze && isObject(it) ? $freeze(meta(it)) : it;
   };
@@ -65751,7 +59514,7 @@ __webpack_require__(228)('freeze', function ($freeze) {
 
 
 /***/ }),
-/* 563 */
+/* 537 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65771,7 +59534,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
 /* global u2f */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(35), __webpack_require__(3), __webpack_require__(5), __webpack_require__(46), __webpack_require__(12), __webpack_require__(17), __webpack_require__(167), __webpack_require__(69), __webpack_require__(237)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormController, FormType, FooterSignout, Q, FactorUtil, FidoUtil, HtmlErrorMessageView) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(36), __webpack_require__(3), __webpack_require__(5), __webpack_require__(48), __webpack_require__(12), __webpack_require__(18), __webpack_require__(164), __webpack_require__(69), __webpack_require__(232)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormController, FormType, FooterSignout, Q, FactorUtil, FidoUtil, HtmlErrorMessageView) {
 
   var _ = Okta._;
 
@@ -65941,7 +59704,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 564 */
+/* 538 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -65961,7 +59724,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
 /* eslint complexity:[2, 10], max-params: [2, 11] */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(35), __webpack_require__(3), __webpack_require__(5), __webpack_require__(238), __webpack_require__(117), __webpack_require__(46), __webpack_require__(12), __webpack_require__(17), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormController, FormType, CryptoUtil, webauthn, FooterSignout, Q, FactorUtil, HtmlErrorMessageView) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(36), __webpack_require__(3), __webpack_require__(5), __webpack_require__(233), __webpack_require__(117), __webpack_require__(48), __webpack_require__(12), __webpack_require__(18), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormController, FormType, CryptoUtil, webauthn, FooterSignout, Q, FactorUtil, HtmlErrorMessageView) {
 
   var _ = Okta._;
 
@@ -66125,7 +59888,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 565 */
+/* 539 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -66143,7 +59906,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(46), __webpack_require__(17)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FooterSignout, FactorUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(48), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FooterSignout, FactorUtil) {
 
   var _ = Okta._;
   var Util = Okta.internal.util.Util;
@@ -66220,8 +59983,6 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       };
     },
 
-    Footer: FooterSignout,
-
     trapAuthResponse: function trapAuthResponse() {
       if (this.options.appState.get('isMfaChallenge')) {
         return true;
@@ -66238,6 +59999,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     initialize: function initialize() {
       this.model.set('provider', this.options.provider);
       this.model.set('factorType', this.options.factorType);
+      if (!this.settings.get('features.hideSignOutLinkInMFA')) {
+        this.addFooter(FooterSignout);
+      }
     }
 
   });
@@ -66245,11 +60009,17 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 566 */
+/* 540 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+var _isInteger = __webpack_require__(541);
+
+var _isInteger2 = _interopRequireDefault(_isInteger);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /*!
  * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
@@ -66264,7 +60034,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint complexity: [2, 13] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(22), __webpack_require__(239), __webpack_require__(567), __webpack_require__(568)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, RouterUtil, FactorList, RequiredFactorList, Footer) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(23), __webpack_require__(234), __webpack_require__(546), __webpack_require__(547)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, RouterUtil, FactorList, RequiredFactorList, Footer) {
 
   var _ = Okta._;
 
@@ -66290,9 +60060,20 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
           case Enums.ALL_OPTIONAL_SOME_ENROLLED:
           case Enums.HAS_REQUIRED_ALL_REQUIRED_ENROLLED:
             return Okta.loc('enroll.choices.optional', 'login');
+          case Enums.HAS_REQUIRED_SOME_REQUIRED_ENROLLED:
+            var remainingDays = this.options.appState.get('gracePeriodRemainingDays');
+            return (0, _isInteger2.default)(remainingDays) && remainingDays >= 0 ? this.getGracePeriodSubtitle(remainingDays) : this.getDefaultSubtitle();
           default:
-            return Okta.loc('enroll.choices.description', 'login');
+            return this.getDefaultSubtitle();
         }
+      },
+
+      getDefaultSubtitle: function getDefaultSubtitle() {
+        return this.settings.get('brandName') ? Okta.loc('enroll.choices.description.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('enroll.choices.description.generic', 'login');
+      },
+
+      getGracePeriodSubtitle: function getGracePeriodSubtitle(remainingDays) {
+        return remainingDays >= 1 ? Okta.loc('enroll.choices.description.gracePeriod', 'login', [remainingDays]) : Okta.loc('enroll.choices.description.gracePeriod.oneDay', 'login');
       },
 
       save: function save() {
@@ -66448,7 +60229,66 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 567 */
+/* 541 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = { "default": __webpack_require__(542), __esModule: true };
+
+/***/ }),
+/* 542 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(543);
+module.exports = __webpack_require__(16).Number.isInteger;
+
+
+/***/ }),
+/* 543 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 20.1.2.3 Number.isInteger(number)
+var $export = __webpack_require__(41);
+
+$export($export.S, 'Number', { isInteger: __webpack_require__(544) });
+
+
+/***/ }),
+/* 544 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 20.1.2.3 Number.isInteger(number)
+var isObject = __webpack_require__(47);
+var floor = Math.floor;
+module.exports = function isInteger(it) {
+  return !isObject(it) && isFinite(it) && floor(it) === it;
+};
+
+
+/***/ }),
+/* 545 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(module.exports = {
+  INVALID_TOKEN_EXCEPTION: 'E0000011'
+});
+
+/***/ }),
+/* 546 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -66466,7 +60306,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(239)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorList) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(234)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorList) {
 
   var _ = Okta._;
 
@@ -66493,7 +60333,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 568 */
+/* 547 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -66529,7 +60369,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 569 */
+/* 548 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -66548,7 +60388,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint camelcase: 0*/
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(235), __webpack_require__(12), __webpack_require__(3), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Duo, Q, FormController, Footer) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(229), __webpack_require__(12), __webpack_require__(3), __webpack_require__(19)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Duo, Q, FormController, Footer) {
 
   var $ = Okta.$,
       _ = Okta._;
@@ -66651,7 +60491,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 570 */
+/* 549 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -66669,7 +60509,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(17), __webpack_require__(18), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FactorUtil, Footer, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(18), __webpack_require__(17), __webpack_require__(19), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FactorUtil, Util, Footer, TextBox) {
 
   var _ = Okta._;
 
@@ -66716,16 +60556,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
             searchThreshold: 25
           }
         }, {
-          label: false,
+          label: Okta.loc('mfa.challenge.answer.placeholder', 'login'),
           'label-top': true,
-          placeholder: Okta.loc('mfa.challenge.answer.placeholder', 'login'),
+          explain: Util.createInputExplain('mfa.challenge.answer.tooltip', 'mfa.challenge.answer.placeholder', 'login'),
+          'explain-top': true,
           className: 'o-form-fieldset o-form-label-top auth-passcode',
           name: 'answer',
           input: TextBox,
-          type: 'text',
-          params: {
-            innerTooltip: Okta.loc('mfa.challenge.answer.tooltip', 'login')
-          }
+          type: 'text'
         }];
       }
     },
@@ -66754,7 +60592,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 571 */
+/* 550 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -66772,7 +60610,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(92), __webpack_require__(18), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, ValidationUtil, Footer, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(90), __webpack_require__(19), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, ValidationUtil, Footer, TextBox) {
 
   var _ = Okta._;
 
@@ -66806,17 +60644,15 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       title: _.partial(Okta.loc, 'enroll.password.setup', 'login'),
       inputs: function inputs() {
         return [{
-          label: false,
+          label: Okta.loc('mfa.challenge.password.placeholder', 'login'),
           'label-top': true,
-          placeholder: Okta.loc('mfa.challenge.password.placeholder', 'login'),
           className: 'o-form-fieldset o-form-label-top auth-passcode',
           name: 'password',
           input: TextBox,
           type: 'password'
         }, {
-          label: false,
+          label: Okta.loc('password.confirmPassword.placeholder', 'login'),
           'label-top': true,
-          placeholder: Okta.loc('password.confirmPassword.placeholder', 'login'),
           className: 'o-form-fieldset o-form-label-top auth-passcode',
           name: 'confirmPassword',
           input: TextBox,
@@ -66830,7 +60666,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 572 */
+/* 551 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -66848,7 +60684,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(117), __webpack_require__(236), __webpack_require__(18), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, webauthn, Spinner, Footer, HtmlErrorMessageView) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(117), __webpack_require__(231), __webpack_require__(19), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, webauthn, Spinner, Footer, HtmlErrorMessageView) {
 
   var _ = Okta._;
 
@@ -67023,7 +60859,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 573 */
+/* 552 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67041,7 +60877,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 /* eslint complexity: [2, 8] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(18), __webpack_require__(240), __webpack_require__(14), __webpack_require__(168), __webpack_require__(5)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Footer, PhoneTextBox, TextBox, CountryUtil, FormType) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(19), __webpack_require__(235), __webpack_require__(14), __webpack_require__(165), __webpack_require__(5), __webpack_require__(17)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Footer, PhoneTextBox, TextBox, CountryUtil, FormType, Util) {
 
   var _ = Okta._;
   var API_RATE_LIMIT = 30000; //milliseconds
@@ -67216,7 +61052,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         wide: true,
         options: CountryUtil.getCountries()
       }), FormType.Input({
-        placeholder: Okta.loc('mfa.phoneNumber.placeholder', 'login'),
+        label: Okta.loc('mfa.phoneNumber.placeholder', 'login'),
+        'label-top': true,
         className: numberFieldClassName,
         name: 'phoneNumber',
         input: PhoneTextBox,
@@ -67227,7 +61064,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       })];
       if (isCall) {
         formChildren.push(FormType.Input({
-          placeholder: Okta.loc('mfa.phoneNumber.ext.placeholder', 'login'),
+          label: Okta.loc('mfa.phoneNumber.ext.placeholder', 'login'),
+          'label-top': true,
           className: 'enroll-call-extension',
           name: 'phoneExtension',
           input: TextBox,
@@ -67237,14 +61075,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       formChildren.push(FormType.Button({
         title: formSubmit,
         attributes: { 'data-se': buttonClassName },
-        className: 'button button-primary js-enroll-phone ' + buttonClassName,
+        className: 'button button-primary js-enroll-phone margin-top-30 ' + buttonClassName,
         click: function click() {
           this.model.sendCode();
         }
       }), FormType.Button({
         title: formRetry,
         attributes: { 'data-se': buttonClassName },
-        className: 'button js-enroll-phone ' + buttonClassName,
+        className: 'button js-enroll-phone margin-top-30 ' + buttonClassName,
         click: function click() {
           this.model.resendCode();
         },
@@ -67264,13 +61102,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       }), FormType.Divider({
         showWhen: factorIdIsDefined
       }), FormType.Input({
-        placeholder: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+        label: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+        'label-top': true,
+        explain: Util.createInputExplain('mfa.challenge.enterCode.tooltip', 'mfa.challenge.enterCode.placeholder', 'login'),
+        'explain-top': true,
         name: 'passCode',
         input: TextBox,
         type: 'tel',
-        params: {
-          innerTooltip: Okta.loc('mfa.challenge.enterCode.tooltip', 'login')
-        },
         showWhen: factorIdIsDefined
       }), FormType.Toolbar({
         noCancelButton: true,
@@ -67339,7 +61177,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 574 */
+/* 553 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67360,7 +61198,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 !(module.exports = { 'US': '1', 'AG': '1', 'AI': '1', 'AS': '1', 'BB': '1', 'BM': '1', 'BS': '1', 'CA': '1', 'DM': '1', 'DO': '1', 'GD': '1', 'GU': '1', 'JM': '1', 'KN': '1', 'KY': '1', 'LC': '1', 'MP': '1', 'MS': '1', 'PR': '1', 'SX': '1', 'TC': '1', 'TT': '1', 'VC': '1', 'VG': '1', 'VI': '1', 'RU': '7', 'KZ': '7', 'EG': '20', 'ZA': '27', 'GR': '30', 'NL': '31', 'BE': '32', 'FR': '33', 'ES': '34', 'HU': '36', 'IT': '39', 'RO': '40', 'CH': '41', 'AT': '43', 'GB': '44', 'GG': '44', 'IM': '44', 'JE': '44', 'DK': '45', 'SE': '46', 'NO': '47', 'SJ': '47', 'PL': '48', 'DE': '49', 'PE': '51', 'MX': '52', 'CU': '53', 'AR': '54', 'BR': '55', 'CL': '56', 'CO': '57', 'VE': '58', 'MY': '60', 'AU': '61', 'CC': '61', 'CX': '61', 'ID': '62', 'PH': '63', 'NZ': '64', 'SG': '65', 'TH': '66', 'JP': '81', 'KR': '82', 'VN': '84', 'CN': '86', 'TR': '90', 'IN': '91', 'PK': '92', 'AF': '93', 'LK': '94', 'MM': '95', 'IR': '98', 'SS': '211', 'MA': '212', 'EH': '212', 'DZ': '213', 'TN': '216', 'LY': '218', 'GM': '220', 'SN': '221', 'MR': '222', 'ML': '223', 'GN': '224', 'CI': '225', 'BF': '226', 'NE': '227', 'TG': '228', 'BJ': '229', 'MU': '230', 'LR': '231', 'SL': '232', 'GH': '233', 'NG': '234', 'TD': '235', 'CF': '236', 'CM': '237', 'CV': '238', 'ST': '239', 'GQ': '240', 'GA': '241', 'CG': '242', 'CD': '243', 'AO': '244', 'GW': '245', 'IO': '246', 'AC': '247', 'SC': '248', 'SD': '249', 'RW': '250', 'ET': '251', 'SO': '252', 'DJ': '253', 'KE': '254', 'TZ': '255', 'UG': '256', 'BI': '257', 'MZ': '258', 'ZM': '260', 'MG': '261', 'RE': '262', 'YT': '262', 'ZW': '263', 'NA': '264', 'MW': '265', 'LS': '266', 'BW': '267', 'SZ': '268', 'KM': '269', 'SH': '290', 'TA': '290', 'ER': '291', 'AW': '297', 'FO': '298', 'GL': '299', 'GI': '350', 'PT': '351', 'LU': '352', 'IE': '353', 'IS': '354', 'AL': '355', 'MT': '356', 'CY': '357', 'FI': '358', 'AX': '358', 'BG': '359', 'LT': '370', 'LV': '371', 'EE': '372', 'MD': '373', 'AM': '374', 'BY': '375', 'AD': '376', 'MC': '377', 'SM': '378', 'VA': '379', 'UA': '380', 'RS': '381', 'ME': '382', 'HR': '385', 'SI': '386', 'BA': '387', 'MK': '389', 'CZ': '420', 'SK': '421', 'LI': '423', 'FK': '500', 'BZ': '501', 'GT': '502', 'SV': '503', 'HN': '504', 'NI': '505', 'CR': '506', 'PA': '507', 'PM': '508', 'HT': '509', 'GP': '590', 'BL': '590', 'MF': '590', 'BO': '591', 'GY': '592', 'EC': '593', 'GF': '594', 'PY': '595', 'MQ': '596', 'SR': '597', 'UY': '598', 'CW': '599', 'BQ': '599', 'TL': '670', 'NF': '672', 'BN': '673', 'NR': '674', 'PG': '675', 'TO': '676', 'SB': '677', 'VU': '678', 'FJ': '679', 'PW': '680', 'WF': '681', 'CK': '682', 'NU': '683', 'WS': '685', 'KI': '686', 'NC': '687', 'TV': '688', 'PF': '689', 'TK': '690', 'FM': '691', 'MH': '692', '001': '979', 'KP': '850', 'HK': '852', 'MO': '853', 'KH': '855', 'LA': '856', 'BD': '880', 'TW': '886', 'MV': '960', 'LB': '961', 'JO': '962', 'SY': '963', 'IQ': '964', 'KW': '965', 'SA': '966', 'YE': '967', 'OM': '968', 'PS': '970', 'AE': '971', 'IL': '972', 'BH': '973', 'QA': '974', 'BT': '975', 'MN': '976', 'NP': '977', 'TJ': '992', 'TM': '993', 'AZ': '994', 'GE': '995', 'KG': '996', 'UZ': '998', 'GS': 500, 'PN': 64, 'AQ': 672, 'UM': 1, 'AN': 599 });
 
 /***/ }),
-/* 575 */
+/* 554 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67378,7 +61216,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(3), __webpack_require__(18), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, FormController, Footer, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(3), __webpack_require__(17), __webpack_require__(19), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, FormController, Util, Footer, TextBox) {
 
   var _ = Okta._;
 
@@ -67444,21 +61282,21 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
           }, this));
         },
         formChildren: [FormType.Input({
+          label: Okta.loc('enroll.onprem.username.placeholder', 'login', [vendorName]),
+          'label-top': true,
+          explain: Util.createInputExplain('enroll.onprem.username.tooltip', 'enroll.onprem.username.placeholder', 'login', [vendorName], [vendorName]),
+          'explain-top': true,
           name: 'credentialId',
           input: TextBox,
-          type: 'text',
-          placeholder: Okta.loc('enroll.onprem.username.placeholder', 'login', [vendorName]),
-          params: {
-            innerTooltip: Okta.loc('enroll.onprem.username.tooltip', 'login', [_.escape(vendorName)])
-          }
+          type: 'text'
         }), FormType.Input({
+          label: Okta.loc('enroll.onprem.passcode.placeholder', 'login', [vendorName]),
+          'label-top': true,
+          explain: Util.createInputExplain('enroll.onprem.passcode.tooltip', 'enroll.onprem.passcode.placeholder', 'login', [vendorName], [vendorName]),
+          'explain-top': true,
           name: 'passCode',
           input: TextBox,
-          type: 'password',
-          placeholder: Okta.loc('enroll.onprem.passcode.placeholder', 'login', [vendorName]),
-          params: {
-            innerTooltip: Okta.loc('enroll.onprem.passcode.tooltip', 'login', [_.escape(vendorName)])
-          }
+          type: 'password'
         }), FormType.Toolbar({
           noCancelButton: true,
           save: Okta.loc('mfa.challenge.verify', 'login')
@@ -67473,7 +61311,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 576 */
+/* 555 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67491,7 +61329,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(3), __webpack_require__(18), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, FormController, Footer, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(3), __webpack_require__(17), __webpack_require__(19), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, FormController, Util, Footer, TextBox) {
 
   var _ = Okta._;
 
@@ -67528,29 +61366,29 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       className: 'enroll-symantec',
       formChildren: function formChildren() {
         return [FormType.Input({
+          label: Okta.loc('enroll.symantecVip.credentialId.placeholder', 'login'),
+          'label-top': true,
+          explain: Util.createInputExplain('enroll.symantecVip.credentialId.tooltip', 'enroll.symantecVip.credentialId.placeholder', 'login'),
+          'explain-top': true,
           name: 'credentialId',
           input: TextBox,
-          type: 'text',
-          placeholder: Okta.loc('enroll.symantecVip.credentialId.placeholder', 'login'),
-          params: {
-            innerTooltip: Okta.loc('enroll.symantecVip.credentialId.tooltip', 'login')
-          }
+          type: 'text'
         }), FormType.Input({
+          label: Okta.loc('enroll.symantecVip.passcode1.placeholder', 'login'),
+          'label-top': true,
+          explain: Util.createInputExplain('enroll.symantecVip.passcode1.tooltip', 'enroll.symantecVip.passcode1.placeholder', 'login'),
+          'explain-top': true,
           name: 'passCode',
           input: TextBox,
-          type: 'text',
-          placeholder: Okta.loc('enroll.symantecVip.passcode1.placeholder', 'login'),
-          params: {
-            innerTooltip: Okta.loc('enroll.symantecVip.passcode1.tooltip', 'login')
-          }
+          type: 'text'
         }), FormType.Input({
+          label: Okta.loc('enroll.symantecVip.passcode2.placeholder', 'login'),
+          'label-top': true,
+          explain: Util.createInputExplain('enroll.symantecVip.passcode2.tooltip', 'enroll.symantecVip.passcode2.placeholder', 'login'),
+          'explain-top': true,
           name: 'nextPassCode',
           input: TextBox,
-          type: 'text',
-          placeholder: Okta.loc('enroll.symantecVip.passcode2.placeholder', 'login'),
-          params: {
-            innerTooltip: Okta.loc('enroll.symantecVip.passcode2.tooltip', 'login')
-          }
+          type: 'text'
         }), FormType.Toolbar({
           noCancelButton: true,
           save: Okta.loc('mfa.challenge.verify', 'login')
@@ -67565,7 +61403,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 577 */
+/* 556 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67583,7 +61421,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(3), __webpack_require__(18), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, FormController, Footer, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(5), __webpack_require__(3), __webpack_require__(19), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormType, FormController, Footer, TextBox) {
 
   var _ = Okta._;
 
@@ -67629,7 +61467,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 578 */
+/* 557 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67647,7 +61485,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(3), __webpack_require__(5), __webpack_require__(22), __webpack_require__(579), __webpack_require__(169), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, StoreLinks, BarcodeView, Footer) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(18), __webpack_require__(3), __webpack_require__(5), __webpack_require__(23), __webpack_require__(558), __webpack_require__(166), __webpack_require__(19)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, StoreLinks, BarcodeView, Footer) {
 
   var _ = Okta._;
 
@@ -67756,7 +61594,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 579 */
+/* 558 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67794,7 +61632,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 });
 
 /***/ }),
-/* 580 */
+/* 559 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67814,7 +61652,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
 /* global u2f */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(35), __webpack_require__(5), __webpack_require__(3), __webpack_require__(167), __webpack_require__(18), __webpack_require__(12), __webpack_require__(69), __webpack_require__(237)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormType, FormController, FidoUtil, Footer, Q, HtmlErrorMessageView) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(36), __webpack_require__(5), __webpack_require__(3), __webpack_require__(164), __webpack_require__(19), __webpack_require__(12), __webpack_require__(69), __webpack_require__(232)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormType, FormController, FidoUtil, Footer, Q, HtmlErrorMessageView) {
 
   var _ = Okta._;
 
@@ -67953,7 +61791,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 581 */
+/* 560 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -67971,7 +61809,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(35), __webpack_require__(5), __webpack_require__(3), __webpack_require__(238), __webpack_require__(117), __webpack_require__(18), __webpack_require__(12), __webpack_require__(69), __webpack_require__(67)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormType, FormController, CryptoUtil, webauthn, Footer, Q, HtmlErrorMessageView, BrowserFeatures) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(36), __webpack_require__(5), __webpack_require__(3), __webpack_require__(233), __webpack_require__(117), __webpack_require__(19), __webpack_require__(12), __webpack_require__(69), __webpack_require__(68)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Errors, FormType, FormController, CryptoUtil, webauthn, Footer, Q, HtmlErrorMessageView, BrowserFeatures) {
 
   var _ = Okta._;
 
@@ -68106,7 +61944,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 582 */
+/* 561 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68124,7 +61962,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Footer) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(19)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Footer) {
 
   var _ = Okta._;
   var Util = Okta.internal.util.Util;
@@ -68193,7 +62031,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 583 */
+/* 562 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68211,7 +62049,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(18), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, Footer, HtmlErrorMessageView) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(19), __webpack_require__(69)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, Footer, HtmlErrorMessageView) {
 
   return FormController.extend({
     className: 'enroll-hotp',
@@ -68251,7 +62089,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 584 */
+/* 563 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68269,7 +62107,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(3), __webpack_require__(5), __webpack_require__(22), __webpack_require__(169), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, BarcodeView, Footer) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(18), __webpack_require__(3), __webpack_require__(5), __webpack_require__(23), __webpack_require__(166), __webpack_require__(19)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, BarcodeView, Footer) {
 
   var _ = Okta._;
 
@@ -68311,7 +62149,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 585 */
+/* 564 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68329,69 +62167,2412 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(3), __webpack_require__(5), __webpack_require__(22), __webpack_require__(169), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, BarcodeView, Footer) {
+/* eslint max-params: [2, 15], max-statements: [2, 18] */
+// BaseLoginRouter contains the more complicated router logic - rendering/
+// transition, etc. Most router changes should happen in LoginRouter (which is
+// responsible for adding new routes)
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(68), __webpack_require__(565), __webpack_require__(566), __webpack_require__(236), __webpack_require__(587), __webpack_require__(588), __webpack_require__(589), __webpack_require__(23), __webpack_require__(167), __webpack_require__(36), __webpack_require__(17), __webpack_require__(8), __webpack_require__(160), __webpack_require__(116)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BrowserFeatures, Settings, Header, SecurityBeacon, AuthContainer, AppState, ColorsUtil, RouterUtil, Animations, Errors, Util, Enums, Bundles, Logger) {
+  var _ = Okta._,
+      $ = Okta.$,
+      Backbone = Okta.Backbone;
 
-  var _ = Okta._;
 
-  // Note: Keep-alive is set to 5 seconds - using 5 seconds here will result
-  // in network connection lost errors in Safari and IE.
-  var PUSH_INTERVAL = 6000;
+  function isStateLessRouteHandler(router, fn) {
+    return _.find(router.stateLessRouteHandlers, function (routeName) {
+      return fn === router[routeName];
+    });
+  }
 
-  return FormController.extend({
-    className: 'barcode-push',
-    Model: function Model() {
-      return {
-        local: {
-          '__factorType__': ['string', false, this.options.factorType],
-          '__provider__': ['string', false, this.options.provider]
-        }
-      };
-    },
+  function beaconIsAvailable(Beacon, settings) {
+    if (!Beacon) {
+      return false;
+    }
+    if (Beacon === SecurityBeacon) {
+      return settings.get('features.securityImage');
+    }
+    return true;
+  }
 
-    Form: {
-      title: function title() {
-        var factorName = FactorUtil.getFactorLabel(this.model.get('__provider__'), this.model.get('__factorType__'));
-        return Okta.loc('enroll.totp.title', 'login', [factorName]);
-      },
-      subtitle: _.partial(Okta.loc, 'mfa.scanBarcode', 'login'),
-      noButtonBar: true,
-      attributes: { 'data-se': 'step-scan' },
-      className: 'barcode-scan',
-      initialize: function initialize() {
-        this.listenTo(this.model, 'error errors:clear', function () {
-          this.clearErrors();
-        });
-      },
+  function loadLanguage(appState, i18n, assetBaseUrl, assetRewrite) {
+    var timeout = setTimeout(function () {
+      // Trigger a spinner if we're waiting on a request for a new language.
+      appState.trigger('loading', true);
+    }, 200);
+    return Bundles.loadLanguage(appState.get('languageCode'), i18n, {
+      baseUrl: assetBaseUrl,
+      rewrite: assetRewrite
+    }).then(function () {
+      clearTimeout(timeout);
+      appState.trigger('loading', false);
+    });
+  }
 
-      formChildren: [FormType.View({ View: BarcodeView })]
-    },
+  return Okta.Router.extend({
+    Events: Backbone.Events,
 
-    Footer: Footer,
+    initialize: function initialize(options) {
+      // Create a default success and/or error handler if
+      // one is not provided.
+      if (!options.globalSuccessFn) {
+        options.globalSuccessFn = function () {};
+      }
+      if (!options.globalErrorFn) {
+        options.globalErrorFn = function (err) {
+          Logger.error(err);
+        };
+      }
+      this.settings = new Settings(_.omit(options, 'el', 'authClient'), { parse: true });
+      this.settings.setAuthClient(options.authClient);
 
-    initialize: function initialize() {
-      this.pollForEnrollment();
-    },
+      if (!options.el) {
+        this.settings.callGlobalError(new Errors.ConfigError(Okta.loc('error.required.el')));
+      }
 
-    pollForEnrollment: function pollForEnrollment() {
-      return this.model.doTransaction(function (transaction) {
-        return transaction.poll(PUSH_INTERVAL);
+      $('body > div').on('click', function () {
+        // OKTA-69769 Tooltip wont close on iPhone/iPad
+        // Registering a click handler on the first div
+        // allows a tap that falls outside the tooltip
+        // to be registered as a tap by iOS
+        // and then the open tooltip will lose focus and close.
+      });
+
+      this.appState = new AppState({
+        baseUrl: this.settings.get('baseUrl'),
+        settings: this.settings
+      }, { parse: true });
+
+      var wrapper = new AuthContainer({ appState: this.appState });
+      Okta.$(options.el).append(wrapper.render().$el);
+      this.el = '#' + Enums.WIDGET_CONTAINER_ID;
+
+      this.header = new Header({
+        el: this.el,
+        appState: this.appState,
+        settings: this.settings
+      });
+
+      this.listenTo(this.appState, 'change:transactionError', function (appState, err) {
+        RouterUtil.routeAfterAuthStatusChangeError(this, err);
+      });
+
+      this.listenTo(this.appState, 'change:transaction', function (appState, trans) {
+        RouterUtil.routeAfterAuthStatusChange(this, trans.data);
+      });
+
+      this.listenTo(this.appState, 'navigate', function (url) {
+        this.navigate(url, { trigger: true });
       });
     },
 
-    trapAuthResponse: function trapAuthResponse() {
-      if (this.options.appState.get('isMfaEnrollActivate')) {
-        return true;
+    execute: function execute(cb, args) {
+      // Recovery flow with a token passed through widget settings
+      var recoveryToken = this.settings.get('recoveryToken');
+      if (recoveryToken) {
+        this.settings.unset('recoveryToken');
+        this.navigate(RouterUtil.createRecoveryUrl(recoveryToken), { trigger: true });
+        return;
       }
+
+      // Refresh flow with a stateToken passed through widget settings
+      var stateToken = this.settings.get('stateToken');
+      if (stateToken) {
+        this.settings.unset('stateToken');
+        this.navigate(RouterUtil.createRefreshUrl(stateToken), { trigger: true });
+        return;
+      }
+
+      // Normal flow - we've either navigated to a stateless page, or are
+      // in the middle of an auth flow
+      var trans = this.appState.get('transaction');
+      if (trans && trans.data || isStateLessRouteHandler(this, cb)) {
+        cb.apply(this, args);
+        return;
+      }
+
+      // StateToken cookie exists on page load, and we are on a stateful url
+      if (this.settings.getAuthClient().tx.exists()) {
+        this.navigate(RouterUtil.createRefreshUrl(), { trigger: true });
+        return;
+      }
+
+      // We've hit a page that requires state, but have no stateToken - redirect
+      // back to primary auth
+      this.navigate('', { trigger: true });
+    },
+
+    // Overriding the default navigate method to allow the widget consumer
+    // to "turn off" routing - if features.router is false, the browser
+    // location bar will not update when the router navigates
+    navigate: function navigate(fragment, options) {
+      if (this.settings.get('features.router')) {
+        return Okta.Router.prototype.navigate.apply(this, arguments);
+      }
+      if (options && options.trigger) {
+        return Backbone.history.loadUrl(fragment);
+      }
+    },
+
+    render: function render(Controller, options) {
+      options || (options = {});
+
+      var Beacon = options.Beacon;
+      var controllerOptions = _.extend({ settings: this.settings, appState: this.appState }, _.omit(options, 'Beacon'));
+
+      // Since we have a wrapper view, render our wrapper and use its content
+      // element as our new el.
+      // Note: Render it here because we know dom is ready at this point
+      if (!this.header.rendered()) {
+        this.el = this.header.render().getContentEl();
+      }
+
+      // If we need to load a language (or apply custom i18n overrides), do
+      // this now and re-run render after it's finished.
+      if (!Bundles.isLoaded(this.appState.get('languageCode'))) {
+        return loadLanguage(this.appState, this.settings.get('i18n'), this.settings.get('assets.baseUrl'), this.settings.get('assets.rewrite')).then(_.bind(this.render, this, Controller, options)).done();
+      }
+
+      // Load the custom colors only on the first render
+      if (this.settings.get('colors.brand') && !ColorsUtil.isLoaded()) {
+        var colors = {
+          brand: this.settings.get('colors.brand')
+        };
+        ColorsUtil.addStyle(colors);
+      }
+
+      var oldController = this.controller;
+      this.controller = new Controller(controllerOptions);
+
+      // Bubble up all controller events
+      this.listenTo(this.controller, 'all', this.trigger);
+
+      // First run fetchInitialData, in case the next controller needs data
+      // before it's initial render. This will leave the current page in a
+      // loading state.
+      this.controller.fetchInitialData().then(_.bind(function () {
+
+        // Beacon transition occurs in parallel to page swap
+        if (!beaconIsAvailable(Beacon, this.settings)) {
+          Beacon = null;
+        }
+        this.header.setBeacon(Beacon, controllerOptions);
+
+        this.controller.render();
+
+        if (!oldController) {
+          this.el.append(this.controller.el);
+          this.controller.postRenderAnimation();
+          return;
+        }
+
+        return Animations.swapPages({
+          $parent: this.el,
+          $oldRoot: oldController.$el,
+          $newRoot: this.controller.$el,
+          dir: oldController.state.get('navigateDir'),
+          ctx: this,
+          success: function success() {
+            var flashError = this.appState.get('flashError'),
+                model = this.controller.model;
+            oldController.remove();
+            oldController.$el.remove();
+            this.controller.postRenderAnimation();
+            if (flashError) {
+              model.trigger('error', model, {
+                responseJSON: {
+                  errorSummary: Okta.loc('error.expired.session')
+                }
+              });
+              this.appState.unset('flashError');
+              Util.triggerAfterError(this.controller, flashError);
+            }
+          }
+        });
+      }, this)).fail(function () {
+        // OKTA-69665 - if an error occurs in fetchInitialData, we're left in
+        // a state with two active controllers. Therefore, we clean up the
+        // old one. Note: This explicitly handles the invalid token case -
+        // if we get some other type of error which doesn't force a redirect,
+        // we will probably be left in a bad state. I.e. old controller is
+        // dropped and new controller is not rendered.
+        if (oldController) {
+          oldController.remove();
+          oldController.$el.remove();
+        }
+      }).done();
+    },
+
+    start: function start() {
+      var pushState = false;
+      // Support for browser's back button.
+      if (window.addEventListener && this.settings.get('features.router')) {
+        window.addEventListener('popstate', _.bind(function (e) {
+          if (this.controller.back) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            this.controller.back();
+          }
+        }, this));
+        pushState = BrowserFeatures.supportsPushState();
+      }
+      Okta.Router.prototype.start.call(this, { pushState: pushState });
+    },
+
+    hide: function hide() {
+      this.header.$el.hide();
+    },
+
+    show: function show() {
+      this.header.$el.show();
+    },
+
+    remove: function remove() {
+      this.controller.remove();
+      this.header.$el.remove();
+      Bundles.remove();
+      Backbone.history.stop();
     }
+
   });
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 565 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(36), __webpack_require__(68), __webpack_require__(17), __webpack_require__(116), __webpack_require__(146)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, Errors, BrowserFeatures, Util, Logger, config) {
+
+  var SharedUtil = Okta.internal.util.Util;
+
+  var DEFAULT_LANGUAGE = 'en';
+
+  var supportedIdps = ['facebook', 'google', 'linkedin', 'microsoft'],
+      supportedResponseTypes = ['token', 'id_token', 'code'],
+      oauthRedirectTpl = Okta.tpl('{{origin}}');
+
+  var _ = Okta._,
+      ConfigError = Errors.ConfigError,
+      UnsupportedBrowserError = Errors.UnsupportedBrowserError;
+
+  var assetBaseUrlTpl = Okta.tpl('https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/{{version}}');
+
+  return Okta.Model.extend({
+
+    flat: true,
+    authClient: undefined,
+
+    local: {
+      'baseUrl': ['string', true],
+      'recoveryToken': ['string', false, undefined],
+      'stateToken': ['string', false, undefined],
+      'username': ['string', false],
+      'signOutLink': ['string', false],
+      'relayState': ['string', false],
+
+      // Function to transform the username before passing it to the API
+      // for Primary Auth, Forgot Password and Unlock Account.
+      'transformUsername': ['function', false],
+
+      // CALLBACKS
+      'globalSuccessFn': 'function',
+      'globalErrorFn': 'function',
+      'processCreds': 'function',
+
+      // IMAGES
+      'logo': 'string',
+      'logoText': ['string', false],
+      'helpSupportNumber': 'string',
+
+      // FEATURES
+      'features.router': ['boolean', true, false],
+      'features.securityImage': ['boolean', true, false],
+      'features.rememberMe': ['boolean', true, true],
+      'features.autoPush': ['boolean', true, false],
+      'features.smsRecovery': ['boolean', true, false],
+      'features.callRecovery': ['boolean', true, false],
+      'features.emailRecovery': ['boolean', false, true],
+      'features.windowsVerify': ['boolean', true, false],
+      'features.webauthn': ['boolean', true, false],
+      'features.selfServiceUnlock': ['boolean', true, false],
+      'features.multiOptionalFactorEnroll': ['boolean', true, false],
+      'features.preventBrowserFromSavingOktaPassword': ['boolean', true, true],
+      'features.deviceFingerprinting': ['boolean', false, false],
+      'features.hideSignOutLinkInMFA': ['boolean', false, false],
+      'features.hideBackToSignInForReset': ['boolean', false, false],
+      'features.customExpiredPassword': ['boolean', true, false],
+      'features.registration': ['boolean', false, false],
+      'features.consent': ['boolean', false, false],
+      'features.idpDiscovery': ['boolean', false, false],
+      'features.passwordlessAuth': ['boolean', false, false],
+      'features.showPasswordToggleOnSignInPage': ['boolean', false, false],
+      'features.trackTypingPattern': ['boolean', false, false],
+      'features.redirectByFormSubmit': ['boolean', false, false],
+      'features.useDeviceFingerprintForSecurityImage': ['boolean', false, true],
+      'features.restrictRedirectToForeground': ['boolean', true, false],
+      'features.hideDefaultTip': ['boolean', false, true],
+
+      // I18N
+      'language': ['any', false], // Can be a string or a function
+      'i18n': ['object', false],
+
+      // ASSETS
+      'assets.baseUrl': ['string', false],
+      'assets.rewrite': {
+        type: 'function',
+        value: _.identity
+      },
+
+      // OAUTH2
+      'authScheme': ['string', false, 'OAUTH2'],
+      'authParams.display': {
+        type: 'string',
+        values: ['none', 'popup', 'page']
+      },
+
+      // Note: It shouldn't be necessary to override/pass in this property -
+      // it will be set correctly depending on what the value of display is
+      // and whether we are using Okta or a social IDP.
+      'authParams.responseMode': {
+        type: 'string',
+        values: ['query', 'fragment', 'form_post', 'okta_post_message']
+      },
+
+      // Can either be a string or an array, i.e.
+      // - Single value: 'id_token', 'token', or 'code'
+      // - Multiple values: ['id_token', 'token']
+      'authParams.responseType': ['any', false, 'id_token'],
+      'authParams.scopes': ['array', false],
+
+      'authParams.issuer': ['string', false],
+      'authParams.authorizeUrl': ['string', false],
+      'authParams.state': ['string', false],
+      'authParams.nonce': ['string', false],
+
+      'policyId': 'string',
+      'clientId': 'string',
+      'redirectUri': 'string',
+      'idps': ['array', false, []],
+      'idpDisplay': {
+        type: 'string',
+        values: ['PRIMARY', 'SECONDARY'],
+        value: 'SECONDARY'
+      },
+      'oAuthTimeout': ['number', false],
+
+      // HELP LINKS
+      'helpLinks.help': 'string',
+      'helpLinks.forgotPassword': 'string',
+      'helpLinks.unlock': 'string',
+      'helpLinks.custom': 'array',
+
+      //Custom Buttons
+      'customButtons': ['array', false, []],
+
+      //Registration
+      'registration.click': 'function',
+      'registration.parseSchema': 'function',
+      'registration.preSubmit': 'function',
+      'registration.postSubmit': 'function',
+
+      //Consent
+      'consent.cancel': 'function',
+
+      //IDP Discovery
+      'idpDiscovery.requestContext': 'string',
+
+      //Colors
+      'colors.brand': 'string',
+
+      //Descriptions
+      'brandName': 'string'
+    },
+
+    derived: {
+      redirectUtilFn: {
+        deps: ['features.redirectByFormSubmit'],
+        fn: function fn(redirectByFormSubmit) {
+          return redirectByFormSubmit ? Util.redirectWithFormGet.bind(Util) : SharedUtil.redirect.bind(SharedUtil);
+        },
+        cache: true
+      },
+      supportedLanguages: {
+        deps: ['i18n'],
+        fn: function fn(i18n) {
+          // Developers can pass in their own languages
+          return _.union(config.supportedLanguages, _.keys(i18n));
+        },
+        cache: true
+      },
+      languageCode: {
+        deps: ['language', 'supportedLanguages'],
+        fn: function fn(language, supportedLanguages) {
+          var userLanguages = BrowserFeatures.getUserLanguages(),
+              preferred = _.clone(userLanguages),
+              supportedLowerCase = Util.toLower(supportedLanguages),
+              expanded;
+
+          // Any developer defined "language" takes highest priority:
+          // As a string, i.e. 'en', 'ja', 'zh-CN'
+          if (_.isString(language)) {
+            preferred.unshift(language);
+          }
+          // As a callback function, which is passed the list of supported
+          // languages and detected user languages. This function must return
+          // a languageCode, i.e. 'en', 'ja', 'zh-CN'
+          else if (_.isFunction(language)) {
+              preferred.unshift(language(supportedLanguages, userLanguages));
+            }
+
+          // Add english as the default, and expand to include any language
+          // codes that do not include region, dialect, etc.
+          preferred.push(DEFAULT_LANGUAGE);
+          expanded = Util.toLower(Util.expandLanguages(preferred));
+
+          // Perform a case insensitive search - this is necessary in the case
+          // of browsers like Safari
+          var i, supportedPos;
+          for (i = 0; i < expanded.length; i++) {
+            supportedPos = supportedLowerCase.indexOf(expanded[i]);
+            if (supportedPos > -1) {
+              return supportedLanguages[supportedPos];
+            }
+          }
+        }
+      },
+      oauth2Enabled: {
+        deps: ['clientId', 'authScheme', 'authParams.responseType'],
+        fn: function fn(clientId, authScheme, responseType) {
+          if (!clientId) {
+            return false;
+          }
+          if (authScheme.toLowerCase() !== 'oauth2') {
+            return false;
+          }
+          var responseTypes = _.isArray(responseType) ? responseType : [responseType];
+          return _.intersection(responseTypes, supportedResponseTypes).length > 0;
+        },
+        cache: true
+      },
+      // Redirect Uri to provide in the oauth API
+      oauthRedirectUri: {
+        deps: ['redirectUri'],
+        fn: function fn(redirectUri) {
+          if (redirectUri) {
+            return redirectUri;
+          }
+
+          var origin = window.location.origin;
+          // IE8
+          if (!origin) {
+            var href = window.location.href;
+            var path = window.location.pathname;
+            if (path !== '') {
+              origin = href.substring(0, href.lastIndexOf(path));
+            }
+          }
+
+          return oauthRedirectTpl({
+            origin: origin
+          });
+        }
+      },
+      // Adjusts the idps passed into the widget based on if they get explicit support
+      configuredSocialIdps: {
+        deps: ['idps'],
+        fn: function fn(idps) {
+          return _.map(idps, function (idp) {
+            var type = idp.type && idp.type.toLowerCase();
+            if (!(type && _.contains(supportedIdps, type))) {
+              type = 'general-idp';
+              idp.text = idp.text || '{ Please provide a text value }';
+            }
+
+            idp.className = ['social-auth-button', 'social-auth-' + type + '-button ', idp.className ? idp.className : ''].join(' ');
+            idp.dataAttr = 'social-auth-' + type + '-button';
+            idp.i18nKey = 'socialauth.' + type + '.label';
+            return idp;
+          });
+        },
+        cache: true
+      },
+      // social auth buttons order - 'above'/'below' the primary auth form (boolean)
+      socialAuthPositionTop: {
+        deps: ['configuredSocialIdps', 'idpDisplay'],
+        fn: function fn(configuredSocialIdps, idpDisplay) {
+          return !_.isEmpty(configuredSocialIdps) && idpDisplay.toUpperCase() === 'PRIMARY';
+        },
+        cache: true
+      },
+      hasConfiguredButtons: {
+        deps: ['configuredSocialIdps', 'customButtons'],
+        fn: function fn(configuredSocialIdps, customButtons) {
+          return !_.isEmpty(configuredSocialIdps) || !_.isEmpty(customButtons);
+        },
+        cache: true
+      }
+    },
+
+    initialize: function initialize(options) {
+      if (!options.baseUrl) {
+        this.callGlobalError(new ConfigError(Okta.loc('error.required.baseUrl')));
+      } else if (options.colors && _.isString(options.colors.brand) && !options.colors.brand.match(/^#[0-9A-Fa-f]{6}$/)) {
+        this.callGlobalError(new ConfigError(Okta.loc('error.invalid.colors.brand')));
+      } else if (BrowserFeatures.corsIsNotSupported()) {
+        this.callGlobalError(new UnsupportedBrowserError(Okta.loc('error.unsupported.cors')));
+      }
+    },
+
+    setAcceptLanguageHeader: function setAcceptLanguageHeader(authClient) {
+      if (authClient && authClient.options && authClient.options.headers) {
+        authClient.options.headers['Accept-Language'] = this.get('languageCode');
+      }
+    },
+
+    setAuthClient: function setAuthClient(authClient) {
+      this.setAcceptLanguageHeader(authClient);
+      this.authClient = authClient;
+    },
+
+    getAuthClient: function getAuthClient() {
+      return this.authClient;
+    },
+
+    set: function set() {
+      try {
+        return Okta.Model.prototype.set.apply(this, arguments);
+      } catch (e) {
+        var message = e.message ? e.message : e;
+        this.callGlobalError(new ConfigError(message));
+      }
+    },
+
+    // Invokes the global success function. This should only be called on a
+    // terminal part of the code (i.e. authStatus SUCCESS or after sending
+    // a recovery email)
+    callGlobalSuccess: function callGlobalSuccess(status, data) {
+      // Defer this to ensure that our functions have rendered completely
+      // before invoking their function
+      var res = _.extend(data, { status: status });
+      _.defer(_.partial(this.get('globalSuccessFn'), res));
+    },
+
+    // Invokes the global error function. This should only be called on non
+    // recoverable errors (i.e. configuration errors, browser unsupported
+    // errors, etc)
+    callGlobalError: function callGlobalError(err) {
+      // Note: Must use "this.options.globalErrorFn" when they've passed invalid
+      // arguments - globalErrorFn will not have been set yet
+      var globalErrorFn = this.get('globalErrorFn') || this.options.globalErrorFn;
+      if (globalErrorFn) {
+        globalErrorFn(err);
+      } else {
+        // Only throw the error if they have not registered a globalErrorFn
+        throw err;
+      }
+    },
+
+    // Get the username by applying the transform function if it exists.
+    transformUsername: function transformUsername(username, operation) {
+      var transformFn = this.get('transformUsername');
+      if (transformFn && _.isFunction(transformFn)) {
+        return transformFn(username, operation);
+      }
+      return username;
+    },
+
+    processCreds: function processCreds(creds) {
+      var processCreds = this.get('processCreds');
+      return Q.Promise(function (resolve) {
+        if (!_.isFunction(processCreds)) {
+          resolve();
+        } else if (processCreds.length === 2) {
+          processCreds(creds, resolve);
+        } else {
+          processCreds(creds);
+          resolve();
+        }
+      });
+    },
+
+    parseSchema: function parseSchema(schema, onSuccess, onFailure) {
+      var parseSchema = this.get('registration.parseSchema');
+      //check for parseSchema callback
+      if (_.isFunction(parseSchema)) {
+        parseSchema(schema, function (schema) {
+          onSuccess(schema);
+        }, function (error) {
+          error = error || { 'errorSummary': Okta.loc('registration.default.callbackhook.error') };
+          error['callback'] = 'parseSchema';
+          onFailure(error);
+        });
+      } else {
+        //no callback
+        onSuccess(schema);
+      }
+    },
+
+    preSubmit: function preSubmit(postData, onSuccess, onFailure) {
+      var preSubmit = this.get('registration.preSubmit');
+      //check for preSubmit callback
+      if (_.isFunction(preSubmit)) {
+        preSubmit(postData, function (postData) {
+          onSuccess(postData);
+        }, function (error) {
+          error = error || { 'errorSummary': Okta.loc('registration.default.callbackhook.error') };
+          error['callback'] = 'preSubmit';
+          onFailure(error);
+        });
+      } else {
+        //no callback
+        onSuccess(postData);
+      }
+    },
+
+    postSubmit: function postSubmit(response, onSuccess, onFailure) {
+      var postSubmit = this.get('registration.postSubmit');
+      //check for postSubmit callback
+      if (_.isFunction(postSubmit)) {
+        postSubmit(response, function (response) {
+          onSuccess(response);
+        }, function (error) {
+          error = error || { 'errorSummary': Okta.loc('registration.default.callbackhook.error') };
+          error['callback'] = 'postSubmit';
+          onFailure(error);
+        });
+      } else {
+        //no callback
+        onSuccess(response);
+      }
+    },
+
+    // Use the parse function to transform config options to the standard
+    // settings we currently support. This is a good place to deprecate old
+    // option formats.
+    parse: function parse(options) {
+      if (options.authParams && options.authParams.scope) {
+        Logger.deprecate('Use "scopes" instead of "scope"');
+        options.authParams.scopes = options.authParams.scope;
+        delete options.authParams.scope;
+      }
+
+      if (options.labels || options.country) {
+        Logger.deprecate('Use "i18n" instead of "labels" and "country"');
+        var overrides = options.labels || {};
+        _.each(options.country, function (val, key) {
+          overrides['country.' + key] = val;
+        });
+        // Old behavior is to treat the override as a global override, so we
+        // need to add these overrides to each language
+        options.i18n = {};
+        _.each(config.supportedLanguages, function (language) {
+          options.i18n[language] = overrides;
+        });
+        delete options.labels;
+        delete options.country;
+      }
+
+      // Default the assets.baseUrl to the cdn, or remove any trailing slashes
+      if (!options.assets) {
+        options.assets = {};
+      }
+      var abu = options.assets.baseUrl;
+      if (!abu) {
+        options.assets.baseUrl = assetBaseUrlTpl({ version: config.version });
+      } else if (abu[abu.length - 1] === '/') {
+        options.assets.baseUrl = abu.substring(0, abu.length - 1);
+      }
+
+      return options;
+    }
+
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 566 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(167), __webpack_require__(567)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Animations, LoadingBeacon) {
+
+  var NO_BEACON_CLS = 'no-beacon';
+  var LOADING_BEACON_CLS = 'beacon-small beacon-loading';
+
+  function isLoadingBeacon(beacon) {
+    return beacon && beacon.equals(LoadingBeacon);
+  }
+
+  function removeBeacon(view) {
+    // There are some timing issues with removing beacons (i.e. the case of
+    // transitioning from loadingBeacon -> loadingBeacon)
+    if (!view.currentBeacon) {
+      return;
+    }
+    view.currentBeacon.remove();
+    view.currentBeacon = null;
+  }
+
+  function addBeacon(view, NextBeacon, selector, options) {
+    view.add(NextBeacon, {
+      selector: selector,
+      options: options
+    });
+    view.currentBeacon = view.first();
+  }
+
+  function typeOfTransition(currentBeacon, NextBeacon, options) {
+    if (!currentBeacon && !NextBeacon) {
+      return 'none';
+    }
+    // Show Loading beacon
+    if (!currentBeacon && options.loading) {
+      return 'load';
+    }
+    // Swap/Hide Loading beacon
+    if (currentBeacon && isLoadingBeacon(currentBeacon)) {
+      return NextBeacon ? 'swap' : 'unload';
+    }
+    if (currentBeacon && currentBeacon.equals(NextBeacon, options)) {
+      return 'same';
+    }
+    if (!currentBeacon && NextBeacon) {
+      return 'add';
+    }
+    if (currentBeacon && !NextBeacon) {
+      return 'remove';
+    }
+    if (currentBeacon instanceof NextBeacon) {
+      return 'fade';
+    }
+    // If none of the above
+    // then we are changing the type of beacon
+    // ex. from SecurityBeacon to FactorBeacon
+    return 'swap';
+  }
+
+  return Okta.View.extend({
+
+    currentBeacon: null,
+
+    template: '\
+      <div class="okta-sign-in-header auth-header">\
+        {{#if logo}}\
+        <img src="{{logo}}" class="auth-org-logo" alt="{{logoText}}"/>\
+        {{/if}}\
+        <div data-type="beacon-container" class="beacon-container"></div>\
+      </div>\
+      <div class="auth-content"><div class="auth-content-inner"></div></div>\
+    ',
+
+    // Attach a 'no-beacon' class if the security image feature
+    // is not passed in to prevent the beacon from jumping.
+    initialize: function initialize(options) {
+      if (!options.settings.get('features.securityImage')) {
+        this.$el.addClass(NO_BEACON_CLS);
+        // To show/hide the spinner when there is no security image,
+        // listen to the appState's loading/removeLoading events.
+        this.listenTo(options.appState, 'loading', this.setLoadingBeacon);
+        this.listenTo(options.appState, 'removeLoading', this.removeLoadingBeacon);
+      }
+    },
+
+    /* eslint complexity: 0 */
+    setBeacon: function setBeacon(NextBeacon, options) {
+      var selector = '[data-type="beacon-container"]',
+          container = this.$(selector),
+          transition = typeOfTransition(this.currentBeacon, NextBeacon, options),
+          self = this;
+
+      switch (transition) {
+        case 'none':
+          this.$el.addClass(NO_BEACON_CLS);
+          return;
+        case 'same':
+          return;
+        case 'add':
+          this.$el.removeClass(NO_BEACON_CLS);
+          addBeacon(this, NextBeacon, selector, options);
+          return Animations.explode(container);
+        case 'remove':
+          this.$el.addClass(NO_BEACON_CLS);
+          return Animations.implode(container).then(function () {
+            removeBeacon(self);
+          }).done();
+        case 'fade':
+          // Other transitions are performed on the beacon container,
+          // but this transition is on the content inside the beacon.
+          // For a SecurityBeacon the username change will update the
+          // AppState and trigger an transition to a new Becon
+          // Since there is no url change this method is not called.
+          // For a FactorBeacon a page refresh has occurred
+          // so we execute the beacon's own transition method.
+          if (!this.currentBeacon.fadeOut) {
+            throw new Error('The current beacon is missing the "fadeOut" method');
+          }
+          options.animate = true;
+          return this.currentBeacon.fadeOut().then(function () {
+            removeBeacon(self);
+            addBeacon(self, NextBeacon, selector, options);
+          }).done();
+        case 'swap':
+          return Animations.swapBeacons({
+            $el: container,
+            swap: function swap() {
+              var isLoading = isLoadingBeacon(self.currentBeacon);
+              // Order of these calls is important for -
+              // loader --> security/factor beacon swap.
+              removeBeacon(self);
+              if (isLoading) {
+                container.removeClass(LOADING_BEACON_CLS);
+                self.$el.removeClass(NO_BEACON_CLS);
+              }
+              addBeacon(self, NextBeacon, selector, options);
+            }
+          }).done();
+        case 'load':
+          // Show the loading beacon. Add a couple of classes
+          // before triggering the add beacon code.
+          container.addClass(LOADING_BEACON_CLS);
+          addBeacon(self, NextBeacon, selector, options);
+          return Animations.explode(container);
+        case 'unload':
+          // Hide the loading beacon.
+          return this.removeLoadingBeacon();
+        default:
+          throw new Error('the "' + transition + '" is not recognized');
+      }
+    },
+
+    // Show the loading beacon when the security image feature is not enabled.
+    setLoadingBeacon: function setLoadingBeacon(isLoading) {
+      if (!isLoading || isLoadingBeacon(this.currentBeacon)) {
+        return;
+      }
+      this.setBeacon(LoadingBeacon, { loading: true });
+    },
+
+    // Hide the beacon on primary auth failure. On primary auth success, setBeacon does this job.
+    removeLoadingBeacon: function removeLoadingBeacon() {
+      var self = this,
+          container = this.$('[data-type="beacon-container"]');
+
+      return Animations.implode(container).then(function () {
+        removeBeacon(self);
+        container.removeClass(LOADING_BEACON_CLS);
+      }).done();
+    },
+
+    getTemplateData: function getTemplateData() {
+      return this.settings.toJSON({ verbose: true });
+    },
+
+    getContentEl: function getContentEl() {
+      return this.$('.auth-content-inner');
+    }
+
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 567 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta) {
+
+  return Okta.View.extend({
+
+    template: '\
+      <div class="beacon-blank"/>\
+      <div class="bg-helper auth-beacon auth-beacon-security" data-se="loading-beacon">\
+      <div class="okta-sign-in-beacon-border auth-beacon-border js-auth-beacon-border"/>\
+      </div>\
+    ',
+
+    equals: function equals(Beacon) {
+      return Beacon && this instanceof Beacon;
+    }
+
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 568 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = __webpack_require__(569);
+
+
+/***/ }),
+/* 569 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/**
+ * Copyright (c) 2014-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// This method of obtaining a reference to the global object needs to be
+// kept identical to the way it is obtained in runtime.js
+var g = (function() { return this })() || Function("return this")();
+
+// Use `getOwnPropertyNames` because not all browsers support calling
+// `hasOwnProperty` on the global `self` object in a worker. See #183.
+var hadRuntime = g.regeneratorRuntime &&
+  Object.getOwnPropertyNames(g).indexOf("regeneratorRuntime") >= 0;
+
+// Save the old regeneratorRuntime in case it needs to be restored later.
+var oldRuntime = hadRuntime && g.regeneratorRuntime;
+
+// Force reevalutation of runtime.js.
+g.regeneratorRuntime = undefined;
+
+module.exports = __webpack_require__(570);
+
+if (hadRuntime) {
+  // Restore the original runtime.
+  g.regeneratorRuntime = oldRuntime;
+} else {
+  // Remove the global property added by runtime.js.
+  try {
+    delete g.regeneratorRuntime;
+  } catch(e) {
+    g.regeneratorRuntime = undefined;
+  }
+}
+
+
+/***/ }),
+/* 570 */
+/***/ (function(module, exports) {
+
+/**
+ * Copyright (c) 2014-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+!(function(global) {
+  "use strict";
+
+  var Op = Object.prototype;
+  var hasOwn = Op.hasOwnProperty;
+  var undefined; // More compressible than void 0.
+  var $Symbol = typeof Symbol === "function" ? Symbol : {};
+  var iteratorSymbol = $Symbol.iterator || "@@iterator";
+  var asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator";
+  var toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag";
+
+  var inModule = typeof module === "object";
+  var runtime = global.regeneratorRuntime;
+  if (runtime) {
+    if (inModule) {
+      // If regeneratorRuntime is defined globally and we're in a module,
+      // make the exports object identical to regeneratorRuntime.
+      module.exports = runtime;
+    }
+    // Don't bother evaluating the rest of this file if the runtime was
+    // already defined globally.
+    return;
+  }
+
+  // Define the runtime globally (as expected by generated code) as either
+  // module.exports (if we're in a module) or a new, empty object.
+  runtime = global.regeneratorRuntime = inModule ? module.exports : {};
+
+  function wrap(innerFn, outerFn, self, tryLocsList) {
+    // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
+    var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
+    var generator = Object.create(protoGenerator.prototype);
+    var context = new Context(tryLocsList || []);
+
+    // The ._invoke method unifies the implementations of the .next,
+    // .throw, and .return methods.
+    generator._invoke = makeInvokeMethod(innerFn, self, context);
+
+    return generator;
+  }
+  runtime.wrap = wrap;
+
+  // Try/catch helper to minimize deoptimizations. Returns a completion
+  // record like context.tryEntries[i].completion. This interface could
+  // have been (and was previously) designed to take a closure to be
+  // invoked without arguments, but in all the cases we care about we
+  // already have an existing method we want to call, so there's no need
+  // to create a new function object. We can even get away with assuming
+  // the method takes exactly one argument, since that happens to be true
+  // in every case, so we don't have to touch the arguments object. The
+  // only additional allocation required is the completion record, which
+  // has a stable shape and so hopefully should be cheap to allocate.
+  function tryCatch(fn, obj, arg) {
+    try {
+      return { type: "normal", arg: fn.call(obj, arg) };
+    } catch (err) {
+      return { type: "throw", arg: err };
+    }
+  }
+
+  var GenStateSuspendedStart = "suspendedStart";
+  var GenStateSuspendedYield = "suspendedYield";
+  var GenStateExecuting = "executing";
+  var GenStateCompleted = "completed";
+
+  // Returning this object from the innerFn has the same effect as
+  // breaking out of the dispatch switch statement.
+  var ContinueSentinel = {};
+
+  // Dummy constructor functions that we use as the .constructor and
+  // .constructor.prototype properties for functions that return Generator
+  // objects. For full spec compliance, you may wish to configure your
+  // minifier not to mangle the names of these two functions.
+  function Generator() {}
+  function GeneratorFunction() {}
+  function GeneratorFunctionPrototype() {}
+
+  // This is a polyfill for %IteratorPrototype% for environments that
+  // don't natively support it.
+  var IteratorPrototype = {};
+  IteratorPrototype[iteratorSymbol] = function () {
+    return this;
+  };
+
+  var getProto = Object.getPrototypeOf;
+  var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
+  if (NativeIteratorPrototype &&
+      NativeIteratorPrototype !== Op &&
+      hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) {
+    // This environment has a native %IteratorPrototype%; use it instead
+    // of the polyfill.
+    IteratorPrototype = NativeIteratorPrototype;
+  }
+
+  var Gp = GeneratorFunctionPrototype.prototype =
+    Generator.prototype = Object.create(IteratorPrototype);
+  GeneratorFunction.prototype = Gp.constructor = GeneratorFunctionPrototype;
+  GeneratorFunctionPrototype.constructor = GeneratorFunction;
+  GeneratorFunctionPrototype[toStringTagSymbol] =
+    GeneratorFunction.displayName = "GeneratorFunction";
+
+  // Helper for defining the .next, .throw, and .return methods of the
+  // Iterator interface in terms of a single ._invoke method.
+  function defineIteratorMethods(prototype) {
+    ["next", "throw", "return"].forEach(function(method) {
+      prototype[method] = function(arg) {
+        return this._invoke(method, arg);
+      };
+    });
+  }
+
+  runtime.isGeneratorFunction = function(genFun) {
+    var ctor = typeof genFun === "function" && genFun.constructor;
+    return ctor
+      ? ctor === GeneratorFunction ||
+        // For the native GeneratorFunction constructor, the best we can
+        // do is to check its .name property.
+        (ctor.displayName || ctor.name) === "GeneratorFunction"
+      : false;
+  };
+
+  runtime.mark = function(genFun) {
+    if (Object.setPrototypeOf) {
+      Object.setPrototypeOf(genFun, GeneratorFunctionPrototype);
+    } else {
+      genFun.__proto__ = GeneratorFunctionPrototype;
+      if (!(toStringTagSymbol in genFun)) {
+        genFun[toStringTagSymbol] = "GeneratorFunction";
+      }
+    }
+    genFun.prototype = Object.create(Gp);
+    return genFun;
+  };
+
+  // Within the body of any async function, `await x` is transformed to
+  // `yield regeneratorRuntime.awrap(x)`, so that the runtime can test
+  // `hasOwn.call(value, "__await")` to determine if the yielded value is
+  // meant to be awaited.
+  runtime.awrap = function(arg) {
+    return { __await: arg };
+  };
+
+  function AsyncIterator(generator) {
+    function invoke(method, arg, resolve, reject) {
+      var record = tryCatch(generator[method], generator, arg);
+      if (record.type === "throw") {
+        reject(record.arg);
+      } else {
+        var result = record.arg;
+        var value = result.value;
+        if (value &&
+            typeof value === "object" &&
+            hasOwn.call(value, "__await")) {
+          return Promise.resolve(value.__await).then(function(value) {
+            invoke("next", value, resolve, reject);
+          }, function(err) {
+            invoke("throw", err, resolve, reject);
+          });
+        }
+
+        return Promise.resolve(value).then(function(unwrapped) {
+          // When a yielded Promise is resolved, its final value becomes
+          // the .value of the Promise<{value,done}> result for the
+          // current iteration. If the Promise is rejected, however, the
+          // result for this iteration will be rejected with the same
+          // reason. Note that rejections of yielded Promises are not
+          // thrown back into the generator function, as is the case
+          // when an awaited Promise is rejected. This difference in
+          // behavior between yield and await is important, because it
+          // allows the consumer to decide what to do with the yielded
+          // rejection (swallow it and continue, manually .throw it back
+          // into the generator, abandon iteration, whatever). With
+          // await, by contrast, there is no opportunity to examine the
+          // rejection reason outside the generator function, so the
+          // only option is to throw it from the await expression, and
+          // let the generator function handle the exception.
+          result.value = unwrapped;
+          resolve(result);
+        }, reject);
+      }
+    }
+
+    var previousPromise;
+
+    function enqueue(method, arg) {
+      function callInvokeWithMethodAndArg() {
+        return new Promise(function(resolve, reject) {
+          invoke(method, arg, resolve, reject);
+        });
+      }
+
+      return previousPromise =
+        // If enqueue has been called before, then we want to wait until
+        // all previous Promises have been resolved before calling invoke,
+        // so that results are always delivered in the correct order. If
+        // enqueue has not been called before, then it is important to
+        // call invoke immediately, without waiting on a callback to fire,
+        // so that the async generator function has the opportunity to do
+        // any necessary setup in a predictable way. This predictability
+        // is why the Promise constructor synchronously invokes its
+        // executor callback, and why async functions synchronously
+        // execute code before the first await. Since we implement simple
+        // async functions in terms of async generators, it is especially
+        // important to get this right, even though it requires care.
+        previousPromise ? previousPromise.then(
+          callInvokeWithMethodAndArg,
+          // Avoid propagating failures to Promises returned by later
+          // invocations of the iterator.
+          callInvokeWithMethodAndArg
+        ) : callInvokeWithMethodAndArg();
+    }
+
+    // Define the unified helper method that is used to implement .next,
+    // .throw, and .return (see defineIteratorMethods).
+    this._invoke = enqueue;
+  }
+
+  defineIteratorMethods(AsyncIterator.prototype);
+  AsyncIterator.prototype[asyncIteratorSymbol] = function () {
+    return this;
+  };
+  runtime.AsyncIterator = AsyncIterator;
+
+  // Note that simple async functions are implemented on top of
+  // AsyncIterator objects; they just return a Promise for the value of
+  // the final result produced by the iterator.
+  runtime.async = function(innerFn, outerFn, self, tryLocsList) {
+    var iter = new AsyncIterator(
+      wrap(innerFn, outerFn, self, tryLocsList)
+    );
+
+    return runtime.isGeneratorFunction(outerFn)
+      ? iter // If outerFn is a generator, return the full iterator.
+      : iter.next().then(function(result) {
+          return result.done ? result.value : iter.next();
+        });
+  };
+
+  function makeInvokeMethod(innerFn, self, context) {
+    var state = GenStateSuspendedStart;
+
+    return function invoke(method, arg) {
+      if (state === GenStateExecuting) {
+        throw new Error("Generator is already running");
+      }
+
+      if (state === GenStateCompleted) {
+        if (method === "throw") {
+          throw arg;
+        }
+
+        // Be forgiving, per 25.3.3.3.3 of the spec:
+        // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
+        return doneResult();
+      }
+
+      context.method = method;
+      context.arg = arg;
+
+      while (true) {
+        var delegate = context.delegate;
+        if (delegate) {
+          var delegateResult = maybeInvokeDelegate(delegate, context);
+          if (delegateResult) {
+            if (delegateResult === ContinueSentinel) continue;
+            return delegateResult;
+          }
+        }
+
+        if (context.method === "next") {
+          // Setting context._sent for legacy support of Babel's
+          // function.sent implementation.
+          context.sent = context._sent = context.arg;
+
+        } else if (context.method === "throw") {
+          if (state === GenStateSuspendedStart) {
+            state = GenStateCompleted;
+            throw context.arg;
+          }
+
+          context.dispatchException(context.arg);
+
+        } else if (context.method === "return") {
+          context.abrupt("return", context.arg);
+        }
+
+        state = GenStateExecuting;
+
+        var record = tryCatch(innerFn, self, context);
+        if (record.type === "normal") {
+          // If an exception is thrown from innerFn, we leave state ===
+          // GenStateExecuting and loop back for another invocation.
+          state = context.done
+            ? GenStateCompleted
+            : GenStateSuspendedYield;
+
+          if (record.arg === ContinueSentinel) {
+            continue;
+          }
+
+          return {
+            value: record.arg,
+            done: context.done
+          };
+
+        } else if (record.type === "throw") {
+          state = GenStateCompleted;
+          // Dispatch the exception by looping back around to the
+          // context.dispatchException(context.arg) call above.
+          context.method = "throw";
+          context.arg = record.arg;
+        }
+      }
+    };
+  }
+
+  // Call delegate.iterator[context.method](context.arg) and handle the
+  // result, either by returning a { value, done } result from the
+  // delegate iterator, or by modifying context.method and context.arg,
+  // setting context.delegate to null, and returning the ContinueSentinel.
+  function maybeInvokeDelegate(delegate, context) {
+    var method = delegate.iterator[context.method];
+    if (method === undefined) {
+      // A .throw or .return when the delegate iterator has no .throw
+      // method always terminates the yield* loop.
+      context.delegate = null;
+
+      if (context.method === "throw") {
+        if (delegate.iterator.return) {
+          // If the delegate iterator has a return method, give it a
+          // chance to clean up.
+          context.method = "return";
+          context.arg = undefined;
+          maybeInvokeDelegate(delegate, context);
+
+          if (context.method === "throw") {
+            // If maybeInvokeDelegate(context) changed context.method from
+            // "return" to "throw", let that override the TypeError below.
+            return ContinueSentinel;
+          }
+        }
+
+        context.method = "throw";
+        context.arg = new TypeError(
+          "The iterator does not provide a 'throw' method");
+      }
+
+      return ContinueSentinel;
+    }
+
+    var record = tryCatch(method, delegate.iterator, context.arg);
+
+    if (record.type === "throw") {
+      context.method = "throw";
+      context.arg = record.arg;
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+
+    var info = record.arg;
+
+    if (! info) {
+      context.method = "throw";
+      context.arg = new TypeError("iterator result is not an object");
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+
+    if (info.done) {
+      // Assign the result of the finished delegate to the temporary
+      // variable specified by delegate.resultName (see delegateYield).
+      context[delegate.resultName] = info.value;
+
+      // Resume execution at the desired location (see delegateYield).
+      context.next = delegate.nextLoc;
+
+      // If context.method was "throw" but the delegate handled the
+      // exception, let the outer generator proceed normally. If
+      // context.method was "next", forget context.arg since it has been
+      // "consumed" by the delegate iterator. If context.method was
+      // "return", allow the original .return call to continue in the
+      // outer generator.
+      if (context.method !== "return") {
+        context.method = "next";
+        context.arg = undefined;
+      }
+
+    } else {
+      // Re-yield the result returned by the delegate method.
+      return info;
+    }
+
+    // The delegate iterator is finished, so forget it and continue with
+    // the outer generator.
+    context.delegate = null;
+    return ContinueSentinel;
+  }
+
+  // Define Generator.prototype.{next,throw,return} in terms of the
+  // unified ._invoke helper method.
+  defineIteratorMethods(Gp);
+
+  Gp[toStringTagSymbol] = "Generator";
+
+  // A Generator should always return itself as the iterator object when the
+  // @@iterator function is called on it. Some browsers' implementations of the
+  // iterator prototype chain incorrectly implement this, causing the Generator
+  // object to not be returned from this call. This ensures that doesn't happen.
+  // See https://github.com/facebook/regenerator/issues/274 for more details.
+  Gp[iteratorSymbol] = function() {
+    return this;
+  };
+
+  Gp.toString = function() {
+    return "[object Generator]";
+  };
+
+  function pushTryEntry(locs) {
+    var entry = { tryLoc: locs[0] };
+
+    if (1 in locs) {
+      entry.catchLoc = locs[1];
+    }
+
+    if (2 in locs) {
+      entry.finallyLoc = locs[2];
+      entry.afterLoc = locs[3];
+    }
+
+    this.tryEntries.push(entry);
+  }
+
+  function resetTryEntry(entry) {
+    var record = entry.completion || {};
+    record.type = "normal";
+    delete record.arg;
+    entry.completion = record;
+  }
+
+  function Context(tryLocsList) {
+    // The root entry object (effectively a try statement without a catch
+    // or a finally block) gives us a place to store values thrown from
+    // locations where there is no enclosing try statement.
+    this.tryEntries = [{ tryLoc: "root" }];
+    tryLocsList.forEach(pushTryEntry, this);
+    this.reset(true);
+  }
+
+  runtime.keys = function(object) {
+    var keys = [];
+    for (var key in object) {
+      keys.push(key);
+    }
+    keys.reverse();
+
+    // Rather than returning an object with a next method, we keep
+    // things simple and return the next function itself.
+    return function next() {
+      while (keys.length) {
+        var key = keys.pop();
+        if (key in object) {
+          next.value = key;
+          next.done = false;
+          return next;
+        }
+      }
+
+      // To avoid creating an additional object, we just hang the .value
+      // and .done properties off the next function object itself. This
+      // also ensures that the minifier will not anonymize the function.
+      next.done = true;
+      return next;
+    };
+  };
+
+  function values(iterable) {
+    if (iterable) {
+      var iteratorMethod = iterable[iteratorSymbol];
+      if (iteratorMethod) {
+        return iteratorMethod.call(iterable);
+      }
+
+      if (typeof iterable.next === "function") {
+        return iterable;
+      }
+
+      if (!isNaN(iterable.length)) {
+        var i = -1, next = function next() {
+          while (++i < iterable.length) {
+            if (hasOwn.call(iterable, i)) {
+              next.value = iterable[i];
+              next.done = false;
+              return next;
+            }
+          }
+
+          next.value = undefined;
+          next.done = true;
+
+          return next;
+        };
+
+        return next.next = next;
+      }
+    }
+
+    // Return an iterator with no values.
+    return { next: doneResult };
+  }
+  runtime.values = values;
+
+  function doneResult() {
+    return { value: undefined, done: true };
+  }
+
+  Context.prototype = {
+    constructor: Context,
+
+    reset: function(skipTempReset) {
+      this.prev = 0;
+      this.next = 0;
+      // Resetting context._sent for legacy support of Babel's
+      // function.sent implementation.
+      this.sent = this._sent = undefined;
+      this.done = false;
+      this.delegate = null;
+
+      this.method = "next";
+      this.arg = undefined;
+
+      this.tryEntries.forEach(resetTryEntry);
+
+      if (!skipTempReset) {
+        for (var name in this) {
+          // Not sure about the optimal order of these conditions:
+          if (name.charAt(0) === "t" &&
+              hasOwn.call(this, name) &&
+              !isNaN(+name.slice(1))) {
+            this[name] = undefined;
+          }
+        }
+      }
+    },
+
+    stop: function() {
+      this.done = true;
+
+      var rootEntry = this.tryEntries[0];
+      var rootRecord = rootEntry.completion;
+      if (rootRecord.type === "throw") {
+        throw rootRecord.arg;
+      }
+
+      return this.rval;
+    },
+
+    dispatchException: function(exception) {
+      if (this.done) {
+        throw exception;
+      }
+
+      var context = this;
+      function handle(loc, caught) {
+        record.type = "throw";
+        record.arg = exception;
+        context.next = loc;
+
+        if (caught) {
+          // If the dispatched exception was caught by a catch block,
+          // then let that catch block handle the exception normally.
+          context.method = "next";
+          context.arg = undefined;
+        }
+
+        return !! caught;
+      }
+
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        var record = entry.completion;
+
+        if (entry.tryLoc === "root") {
+          // Exception thrown outside of any try block that could handle
+          // it, so set the completion value of the entire function to
+          // throw the exception.
+          return handle("end");
+        }
+
+        if (entry.tryLoc <= this.prev) {
+          var hasCatch = hasOwn.call(entry, "catchLoc");
+          var hasFinally = hasOwn.call(entry, "finallyLoc");
+
+          if (hasCatch && hasFinally) {
+            if (this.prev < entry.catchLoc) {
+              return handle(entry.catchLoc, true);
+            } else if (this.prev < entry.finallyLoc) {
+              return handle(entry.finallyLoc);
+            }
+
+          } else if (hasCatch) {
+            if (this.prev < entry.catchLoc) {
+              return handle(entry.catchLoc, true);
+            }
+
+          } else if (hasFinally) {
+            if (this.prev < entry.finallyLoc) {
+              return handle(entry.finallyLoc);
+            }
+
+          } else {
+            throw new Error("try statement without catch or finally");
+          }
+        }
+      }
+    },
+
+    abrupt: function(type, arg) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.tryLoc <= this.prev &&
+            hasOwn.call(entry, "finallyLoc") &&
+            this.prev < entry.finallyLoc) {
+          var finallyEntry = entry;
+          break;
+        }
+      }
+
+      if (finallyEntry &&
+          (type === "break" ||
+           type === "continue") &&
+          finallyEntry.tryLoc <= arg &&
+          arg <= finallyEntry.finallyLoc) {
+        // Ignore the finally entry if control is not jumping to a
+        // location outside the try/catch block.
+        finallyEntry = null;
+      }
+
+      var record = finallyEntry ? finallyEntry.completion : {};
+      record.type = type;
+      record.arg = arg;
+
+      if (finallyEntry) {
+        this.method = "next";
+        this.next = finallyEntry.finallyLoc;
+        return ContinueSentinel;
+      }
+
+      return this.complete(record);
+    },
+
+    complete: function(record, afterLoc) {
+      if (record.type === "throw") {
+        throw record.arg;
+      }
+
+      if (record.type === "break" ||
+          record.type === "continue") {
+        this.next = record.arg;
+      } else if (record.type === "return") {
+        this.rval = this.arg = record.arg;
+        this.method = "return";
+        this.next = "end";
+      } else if (record.type === "normal" && afterLoc) {
+        this.next = afterLoc;
+      }
+
+      return ContinueSentinel;
+    },
+
+    finish: function(finallyLoc) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.finallyLoc === finallyLoc) {
+          this.complete(entry.completion, entry.afterLoc);
+          resetTryEntry(entry);
+          return ContinueSentinel;
+        }
+      }
+    },
+
+    "catch": function(tryLoc) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.tryLoc === tryLoc) {
+          var record = entry.completion;
+          if (record.type === "throw") {
+            var thrown = record.arg;
+            resetTryEntry(entry);
+          }
+          return thrown;
+        }
+      }
+
+      // The context.catch method must only be called with a location
+      // argument that corresponds to a known catch block.
+      throw new Error("illegal catch attempt");
+    },
+
+    delegateYield: function(iterable, resultName, nextLoc) {
+      this.delegate = {
+        iterator: values(iterable),
+        resultName: resultName,
+        nextLoc: nextLoc
+      };
+
+      if (this.method === "next") {
+        // Deliberately forget the last sent value so that we don't
+        // accidentally pass it on to the delegate.
+        this.arg = undefined;
+      }
+
+      return ContinueSentinel;
+    }
+  };
+})(
+  // In sloppy mode, unbound `this` refers to the global object, fallback to
+  // Function constructor if we're in global strict mode. That is sadly a form
+  // of indirect eval which violates Content Security Policy.
+  (function() { return this })() || Function("return this")()
+);
+
+
+/***/ }),
+/* 571 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+exports.__esModule = true;
+
+var _promise = __webpack_require__(572);
+
+var _promise2 = _interopRequireDefault(_promise);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = function (fn) {
+  return function () {
+    var gen = fn.apply(this, arguments);
+    return new _promise2.default(function (resolve, reject) {
+      function step(key, arg) {
+        try {
+          var info = gen[key](arg);
+          var value = info.value;
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        if (info.done) {
+          resolve(value);
+        } else {
+          return _promise2.default.resolve(value).then(function (value) {
+            step("next", value);
+          }, function (err) {
+            step("throw", err);
+          });
+        }
+      }
+
+      return step("next");
+    });
+  };
+};
+
+/***/ }),
+/* 572 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = { "default": __webpack_require__(573), __esModule: true };
+
+/***/ }),
+/* 573 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(216);
+__webpack_require__(107);
+__webpack_require__(114);
+__webpack_require__(574);
+__webpack_require__(585);
+__webpack_require__(586);
+module.exports = __webpack_require__(16).Promise;
+
+
+/***/ }),
+/* 574 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var LIBRARY = __webpack_require__(85);
+var global = __webpack_require__(21);
+var ctx = __webpack_require__(108);
+var classof = __webpack_require__(161);
+var $export = __webpack_require__(41);
+var isObject = __webpack_require__(47);
+var aFunction = __webpack_require__(109);
+var anInstance = __webpack_require__(575);
+var forOf = __webpack_require__(576);
+var speciesConstructor = __webpack_require__(237);
+var task = __webpack_require__(238).set;
+var microtask = __webpack_require__(580)();
+var newPromiseCapabilityModule = __webpack_require__(168);
+var perform = __webpack_require__(239);
+var userAgent = __webpack_require__(581);
+var promiseResolve = __webpack_require__(240);
+var PROMISE = 'Promise';
+var TypeError = global.TypeError;
+var process = global.process;
+var versions = process && process.versions;
+var v8 = versions && versions.v8 || '';
+var $Promise = global[PROMISE];
+var isNode = classof(process) == 'process';
+var empty = function () { /* empty */ };
+var Internal, newGenericPromiseCapability, OwnPromiseCapability, Wrapper;
+var newPromiseCapability = newGenericPromiseCapability = newPromiseCapabilityModule.f;
+
+var USE_NATIVE = !!function () {
+  try {
+    // correct subclassing with @@species support
+    var promise = $Promise.resolve(1);
+    var FakePromise = (promise.constructor = {})[__webpack_require__(22)('species')] = function (exec) {
+      exec(empty, empty);
+    };
+    // unhandled rejections tracking support, NodeJS Promise without it fails @@species test
+    return (isNode || typeof PromiseRejectionEvent == 'function')
+      && promise.then(empty) instanceof FakePromise
+      // v8 6.6 (Node 10 and Chrome 66) have a bug with resolving custom thenables
+      // https://bugs.chromium.org/p/chromium/issues/detail?id=830565
+      // we can't detect it synchronously, so just check versions
+      && v8.indexOf('6.6') !== 0
+      && userAgent.indexOf('Chrome/66') === -1;
+  } catch (e) { /* empty */ }
+}();
+
+// helpers
+var isThenable = function (it) {
+  var then;
+  return isObject(it) && typeof (then = it.then) == 'function' ? then : false;
+};
+var notify = function (promise, isReject) {
+  if (promise._n) return;
+  promise._n = true;
+  var chain = promise._c;
+  microtask(function () {
+    var value = promise._v;
+    var ok = promise._s == 1;
+    var i = 0;
+    var run = function (reaction) {
+      var handler = ok ? reaction.ok : reaction.fail;
+      var resolve = reaction.resolve;
+      var reject = reaction.reject;
+      var domain = reaction.domain;
+      var result, then, exited;
+      try {
+        if (handler) {
+          if (!ok) {
+            if (promise._h == 2) onHandleUnhandled(promise);
+            promise._h = 1;
+          }
+          if (handler === true) result = value;
+          else {
+            if (domain) domain.enter();
+            result = handler(value); // may throw
+            if (domain) {
+              domain.exit();
+              exited = true;
+            }
+          }
+          if (result === reaction.promise) {
+            reject(TypeError('Promise-chain cycle'));
+          } else if (then = isThenable(result)) {
+            then.call(result, resolve, reject);
+          } else resolve(result);
+        } else reject(value);
+      } catch (e) {
+        if (domain && !exited) domain.exit();
+        reject(e);
+      }
+    };
+    while (chain.length > i) run(chain[i++]); // variable length - can't use forEach
+    promise._c = [];
+    promise._n = false;
+    if (isReject && !promise._h) onUnhandled(promise);
+  });
+};
+var onUnhandled = function (promise) {
+  task.call(global, function () {
+    var value = promise._v;
+    var unhandled = isUnhandled(promise);
+    var result, handler, console;
+    if (unhandled) {
+      result = perform(function () {
+        if (isNode) {
+          process.emit('unhandledRejection', value, promise);
+        } else if (handler = global.onunhandledrejection) {
+          handler({ promise: promise, reason: value });
+        } else if ((console = global.console) && console.error) {
+          console.error('Unhandled promise rejection', value);
+        }
+      });
+      // Browsers should not trigger `rejectionHandled` event if it was handled here, NodeJS - should
+      promise._h = isNode || isUnhandled(promise) ? 2 : 1;
+    } promise._a = undefined;
+    if (unhandled && result.e) throw result.v;
+  });
+};
+var isUnhandled = function (promise) {
+  return promise._h !== 1 && (promise._a || promise._c).length === 0;
+};
+var onHandleUnhandled = function (promise) {
+  task.call(global, function () {
+    var handler;
+    if (isNode) {
+      process.emit('rejectionHandled', promise);
+    } else if (handler = global.onrejectionhandled) {
+      handler({ promise: promise, reason: promise._v });
+    }
+  });
+};
+var $reject = function (value) {
+  var promise = this;
+  if (promise._d) return;
+  promise._d = true;
+  promise = promise._w || promise; // unwrap
+  promise._v = value;
+  promise._s = 2;
+  if (!promise._a) promise._a = promise._c.slice();
+  notify(promise, true);
+};
+var $resolve = function (value) {
+  var promise = this;
+  var then;
+  if (promise._d) return;
+  promise._d = true;
+  promise = promise._w || promise; // unwrap
+  try {
+    if (promise === value) throw TypeError("Promise can't be resolved itself");
+    if (then = isThenable(value)) {
+      microtask(function () {
+        var wrapper = { _w: promise, _d: false }; // wrap
+        try {
+          then.call(value, ctx($resolve, wrapper, 1), ctx($reject, wrapper, 1));
+        } catch (e) {
+          $reject.call(wrapper, e);
+        }
+      });
+    } else {
+      promise._v = value;
+      promise._s = 1;
+      notify(promise, false);
+    }
+  } catch (e) {
+    $reject.call({ _w: promise, _d: false }, e); // wrap
+  }
+};
+
+// constructor polyfill
+if (!USE_NATIVE) {
+  // 25.4.3.1 Promise(executor)
+  $Promise = function Promise(executor) {
+    anInstance(this, $Promise, PROMISE, '_h');
+    aFunction(executor);
+    Internal.call(this);
+    try {
+      executor(ctx($resolve, this, 1), ctx($reject, this, 1));
+    } catch (err) {
+      $reject.call(this, err);
+    }
+  };
+  // eslint-disable-next-line no-unused-vars
+  Internal = function Promise(executor) {
+    this._c = [];             // <- awaiting reactions
+    this._a = undefined;      // <- checked in isUnhandled reactions
+    this._s = 0;              // <- state
+    this._d = false;          // <- done
+    this._v = undefined;      // <- value
+    this._h = 0;              // <- rejection state, 0 - default, 1 - handled, 2 - unhandled
+    this._n = false;          // <- notify
+  };
+  Internal.prototype = __webpack_require__(582)($Promise.prototype, {
+    // 25.4.5.3 Promise.prototype.then(onFulfilled, onRejected)
+    then: function then(onFulfilled, onRejected) {
+      var reaction = newPromiseCapability(speciesConstructor(this, $Promise));
+      reaction.ok = typeof onFulfilled == 'function' ? onFulfilled : true;
+      reaction.fail = typeof onRejected == 'function' && onRejected;
+      reaction.domain = isNode ? process.domain : undefined;
+      this._c.push(reaction);
+      if (this._a) this._a.push(reaction);
+      if (this._s) notify(this, false);
+      return reaction.promise;
+    },
+    // 25.4.5.1 Promise.prototype.catch(onRejected)
+    'catch': function (onRejected) {
+      return this.then(undefined, onRejected);
+    }
+  });
+  OwnPromiseCapability = function () {
+    var promise = new Internal();
+    this.promise = promise;
+    this.resolve = ctx($resolve, promise, 1);
+    this.reject = ctx($reject, promise, 1);
+  };
+  newPromiseCapabilityModule.f = newPromiseCapability = function (C) {
+    return C === $Promise || C === Wrapper
+      ? new OwnPromiseCapability(C)
+      : newGenericPromiseCapability(C);
+  };
+}
+
+$export($export.G + $export.W + $export.F * !USE_NATIVE, { Promise: $Promise });
+__webpack_require__(112)($Promise, PROMISE);
+__webpack_require__(583)(PROMISE);
+Wrapper = __webpack_require__(16)[PROMISE];
+
+// statics
+$export($export.S + $export.F * !USE_NATIVE, PROMISE, {
+  // 25.4.4.5 Promise.reject(r)
+  reject: function reject(r) {
+    var capability = newPromiseCapability(this);
+    var $$reject = capability.reject;
+    $$reject(r);
+    return capability.promise;
+  }
+});
+$export($export.S + $export.F * (LIBRARY || !USE_NATIVE), PROMISE, {
+  // 25.4.4.6 Promise.resolve(x)
+  resolve: function resolve(x) {
+    return promiseResolve(LIBRARY && this === Wrapper ? $Promise : this, x);
+  }
+});
+$export($export.S + $export.F * !(USE_NATIVE && __webpack_require__(584)(function (iter) {
+  $Promise.all(iter)['catch'](empty);
+})), PROMISE, {
+  // 25.4.4.1 Promise.all(iterable)
+  all: function all(iterable) {
+    var C = this;
+    var capability = newPromiseCapability(C);
+    var resolve = capability.resolve;
+    var reject = capability.reject;
+    var result = perform(function () {
+      var values = [];
+      var index = 0;
+      var remaining = 1;
+      forOf(iterable, false, function (promise) {
+        var $index = index++;
+        var alreadyCalled = false;
+        values.push(undefined);
+        remaining++;
+        C.resolve(promise).then(function (value) {
+          if (alreadyCalled) return;
+          alreadyCalled = true;
+          values[$index] = value;
+          --remaining || resolve(values);
+        }, reject);
+      });
+      --remaining || resolve(values);
+    });
+    if (result.e) reject(result.v);
+    return capability.promise;
+  },
+  // 25.4.4.4 Promise.race(iterable)
+  race: function race(iterable) {
+    var C = this;
+    var capability = newPromiseCapability(C);
+    var reject = capability.reject;
+    var result = perform(function () {
+      forOf(iterable, false, function (promise) {
+        C.resolve(promise).then(capability.resolve, reject);
+      });
+    });
+    if (result.e) reject(result.v);
+    return capability.promise;
+  }
+});
+
+
+/***/ }),
+/* 575 */
+/***/ (function(module, exports) {
+
+module.exports = function (it, Constructor, name, forbiddenField) {
+  if (!(it instanceof Constructor) || (forbiddenField !== undefined && forbiddenField in it)) {
+    throw TypeError(name + ': incorrect invocation!');
+  } return it;
+};
+
+
+/***/ }),
+/* 576 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var ctx = __webpack_require__(108);
+var call = __webpack_require__(577);
+var isArrayIter = __webpack_require__(578);
+var anObject = __webpack_require__(46);
+var toLength = __webpack_require__(212);
+var getIterFn = __webpack_require__(226);
+var BREAK = {};
+var RETURN = {};
+var exports = module.exports = function (iterable, entries, fn, that, ITERATOR) {
+  var iterFn = ITERATOR ? function () { return iterable; } : getIterFn(iterable);
+  var f = ctx(fn, that, entries ? 2 : 1);
+  var index = 0;
+  var length, step, iterator, result;
+  if (typeof iterFn != 'function') throw TypeError(iterable + ' is not iterable!');
+  // fast case for arrays with default iterator
+  if (isArrayIter(iterFn)) for (length = toLength(iterable.length); length > index; index++) {
+    result = entries ? f(anObject(step = iterable[index])[0], step[1]) : f(iterable[index]);
+    if (result === BREAK || result === RETURN) return result;
+  } else for (iterator = iterFn.call(iterable); !(step = iterator.next()).done;) {
+    result = call(iterator, f, step.value, entries);
+    if (result === BREAK || result === RETURN) return result;
+  }
+};
+exports.BREAK = BREAK;
+exports.RETURN = RETURN;
+
+
+/***/ }),
+/* 577 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// call something on iterator step with safe closing on error
+var anObject = __webpack_require__(46);
+module.exports = function (iterator, fn, value, entries) {
+  try {
+    return entries ? fn(anObject(value)[0], value[1]) : fn(value);
+  // 7.4.6 IteratorClose(iterator, completion)
+  } catch (e) {
+    var ret = iterator['return'];
+    if (ret !== undefined) anObject(ret.call(iterator));
+    throw e;
+  }
+};
+
+
+/***/ }),
+/* 578 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// check on default Array iterator
+var Iterators = __webpack_require__(75);
+var ITERATOR = __webpack_require__(22)('iterator');
+var ArrayProto = Array.prototype;
+
+module.exports = function (it) {
+  return it !== undefined && (Iterators.Array === it || ArrayProto[ITERATOR] === it);
+};
+
+
+/***/ }),
+/* 579 */
+/***/ (function(module, exports) {
+
+// fast apply, http://jsperf.lnkit.com/fast-apply/5
+module.exports = function (fn, args, that) {
+  var un = that === undefined;
+  switch (args.length) {
+    case 0: return un ? fn()
+                      : fn.call(that);
+    case 1: return un ? fn(args[0])
+                      : fn.call(that, args[0]);
+    case 2: return un ? fn(args[0], args[1])
+                      : fn.call(that, args[0], args[1]);
+    case 3: return un ? fn(args[0], args[1], args[2])
+                      : fn.call(that, args[0], args[1], args[2]);
+    case 4: return un ? fn(args[0], args[1], args[2], args[3])
+                      : fn.call(that, args[0], args[1], args[2], args[3]);
+  } return fn.apply(that, args);
+};
+
+
+/***/ }),
+/* 580 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var global = __webpack_require__(21);
+var macrotask = __webpack_require__(238).set;
+var Observer = global.MutationObserver || global.WebKitMutationObserver;
+var process = global.process;
+var Promise = global.Promise;
+var isNode = __webpack_require__(86)(process) == 'process';
+
+module.exports = function () {
+  var head, last, notify;
+
+  var flush = function () {
+    var parent, fn;
+    if (isNode && (parent = process.domain)) parent.exit();
+    while (head) {
+      fn = head.fn;
+      head = head.next;
+      try {
+        fn();
+      } catch (e) {
+        if (head) notify();
+        else last = undefined;
+        throw e;
+      }
+    } last = undefined;
+    if (parent) parent.enter();
+  };
+
+  // Node.js
+  if (isNode) {
+    notify = function () {
+      process.nextTick(flush);
+    };
+  // browsers with MutationObserver, except iOS Safari - https://github.com/zloirock/core-js/issues/339
+  } else if (Observer && !(global.navigator && global.navigator.standalone)) {
+    var toggle = true;
+    var node = document.createTextNode('');
+    new Observer(flush).observe(node, { characterData: true }); // eslint-disable-line no-new
+    notify = function () {
+      node.data = toggle = !toggle;
+    };
+  // environments with maybe non-completely correct, but existent Promise
+  } else if (Promise && Promise.resolve) {
+    // Promise.resolve without an argument throws an error in LG WebOS 2
+    var promise = Promise.resolve(undefined);
+    notify = function () {
+      promise.then(flush);
+    };
+  // for other environments - macrotask based on:
+  // - setImmediate
+  // - MessageChannel
+  // - window.postMessag
+  // - onreadystatechange
+  // - setTimeout
+  } else {
+    notify = function () {
+      // strange IE + webpack dev server bug - use .call(global)
+      macrotask.call(global, flush);
+    };
+  }
+
+  return function (fn) {
+    var task = { fn: fn, next: undefined };
+    if (last) last.next = task;
+    if (!head) {
+      head = task;
+      notify();
+    } last = task;
+  };
+};
+
+
+/***/ }),
+/* 581 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var global = __webpack_require__(21);
+var navigator = global.navigator;
+
+module.exports = navigator && navigator.userAgent || '';
+
+
+/***/ }),
+/* 582 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var hide = __webpack_require__(65);
+module.exports = function (target, src, safe) {
+  for (var key in src) {
+    if (safe && target[key]) target[key] = src[key];
+    else hide(target, key, src[key]);
+  } return target;
+};
+
+
+/***/ }),
+/* 583 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var global = __webpack_require__(21);
+var core = __webpack_require__(16);
+var dP = __webpack_require__(52);
+var DESCRIPTORS = __webpack_require__(42);
+var SPECIES = __webpack_require__(22)('species');
+
+module.exports = function (KEY) {
+  var C = typeof core[KEY] == 'function' ? core[KEY] : global[KEY];
+  if (DESCRIPTORS && C && !C[SPECIES]) dP.f(C, SPECIES, {
+    configurable: true,
+    get: function () { return this; }
+  });
+};
+
+
+/***/ }),
+/* 584 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var ITERATOR = __webpack_require__(22)('iterator');
+var SAFE_CLOSING = false;
+
+try {
+  var riter = [7][ITERATOR]();
+  riter['return'] = function () { SAFE_CLOSING = true; };
+  // eslint-disable-next-line no-throw-literal
+  Array.from(riter, function () { throw 2; });
+} catch (e) { /* empty */ }
+
+module.exports = function (exec, skipClosing) {
+  if (!skipClosing && !SAFE_CLOSING) return false;
+  var safe = false;
+  try {
+    var arr = [7];
+    var iter = arr[ITERATOR]();
+    iter.next = function () { return { done: safe = true }; };
+    arr[ITERATOR] = function () { return iter; };
+    exec(arr);
+  } catch (e) { /* empty */ }
+  return safe;
+};
+
+
+/***/ }),
+/* 585 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+// https://github.com/tc39/proposal-promise-finally
+
+var $export = __webpack_require__(41);
+var core = __webpack_require__(16);
+var global = __webpack_require__(21);
+var speciesConstructor = __webpack_require__(237);
+var promiseResolve = __webpack_require__(240);
+
+$export($export.P + $export.R, 'Promise', { 'finally': function (onFinally) {
+  var C = speciesConstructor(this, core.Promise || global.Promise);
+  var isFunction = typeof onFinally == 'function';
+  return this.then(
+    isFunction ? function (x) {
+      return promiseResolve(C, onFinally()).then(function () { return x; });
+    } : onFinally,
+    isFunction ? function (e) {
+      return promiseResolve(C, onFinally()).then(function () { throw e; });
+    } : onFinally
+  );
+} });
+
 
 /***/ }),
 /* 586 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+// https://github.com/tc39/proposal-promise-try
+var $export = __webpack_require__(41);
+var newPromiseCapability = __webpack_require__(168);
+var perform = __webpack_require__(239);
+
+$export($export.S, 'Promise', { 'try': function (callbackfn) {
+  var promiseCapability = newPromiseCapability.f(this);
+  var result = perform(callbackfn);
+  (result.e ? promiseCapability.reject : promiseCapability.resolve)(result.v);
+  return promiseCapability.promise;
+} });
+
+
+/***/ }),
+/* 587 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
 /*!
@@ -68406,7 +64587,787 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(241), __webpack_require__(18)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, EnterPasscodeForm, Footer) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Enums) {
+  var CAN_REMOVE_BEACON_CLS = 'can-remove-beacon';
+  return Okta.View.extend({
+    className: 'auth-container main-container',
+    id: Enums.WIDGET_CONTAINER_ID,
+    attributes: { 'data-se': 'auth-container' },
+    initialize: function initialize(options) {
+      this.listenTo(options.appState, 'change:beaconType', function (model, type) {
+        this.$el.toggleClass(CAN_REMOVE_BEACON_CLS, type === 'security');
+      });
+    }
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 588 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(169), __webpack_require__(68), __webpack_require__(36)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, Factor, BrowserFeatures, Errors) {
+
+  // Keep track of stateMachine with this special model. Some reasons to not
+  // keep it generic:
+  // 1. We know exactly what we're using appState for by requiring props
+  // 2. Can have some derived functions to help us translate the lastAuthRes
+
+  var _ = Okta._;
+  var $ = Okta.$;
+  var compile = Okta.Handlebars.compile;
+
+  var DEFAULT_APP_LOGO = '/img/logos/default.png';
+  var USER_NOT_SEEN_ON_DEVICE = '/img/security/unknown.png';
+  var UNDEFINED_USER = '/img/security/default.png';
+  var NEW_USER = '/img/security/unknown-device.png';
+  var NEW_USER_IMAGE_DESCRIPTION = '';
+  var UNDEFINED_USER_IMAGE_DESCRIPTION = '';
+  var UNKNOWN_IMAGE_DESCRIPTION = '';
+
+  var securityImageUrlTpl = compile('{{baseUrl}}/login/getimage?username={{username}}');
+
+  function getSecurityImage(baseUrl, username, deviceFingerprint) {
+    // Reserved characters in the username must be escaped before the query can be safely executed
+    username = encodeURIComponent(username);
+    var url = securityImageUrlTpl({ baseUrl: baseUrl, username: username });
+
+    // When the username is empty, we want to show the default image.
+    if (_.isEmpty(username) || _.isUndefined(username)) {
+      return Q({
+        'securityImage': UNDEFINED_USER,
+        'securityImageDescription': UNDEFINED_USER_IMAGE_DESCRIPTION
+      });
+    }
+
+    var data = {
+      url: url,
+      dataType: 'json'
+    };
+    if (deviceFingerprint) {
+      data['headers'] = { 'X-Device-Fingerprint': deviceFingerprint };
+    }
+    return Q($.ajax(data)).then(function (res) {
+      if (res.pwdImg === USER_NOT_SEEN_ON_DEVICE) {
+        // When we get an unknown.png security image from OKTA,
+        // we want to show the unknown-device security image.
+        // We are mapping the server's img url to a new one because
+        // we still need to support the original login page.
+        return {
+          'securityImage': NEW_USER,
+          'securityImageDescription': NEW_USER_IMAGE_DESCRIPTION
+        };
+      }
+      return {
+        'securityImage': res.pwdImg,
+        'securityImageDescription': res.imageDescription || UNKNOWN_IMAGE_DESCRIPTION
+      };
+    });
+  }
+
+  function getMinutesString(factorLifetimeInMinutes) {
+    if (factorLifetimeInMinutes > 60 && factorLifetimeInMinutes <= 1440) {
+      var lifetimeInHours = factorLifetimeInMinutes / 60;
+      return Okta.loc('hours', 'login', [lifetimeInHours]);
+    } else if (factorLifetimeInMinutes > 1440) {
+      var lifetimeInDays = factorLifetimeInMinutes / 1440;
+      return Okta.loc('days', 'login', [lifetimeInDays]);
+    }
+    //Use minutes as the time unit by default
+    if (factorLifetimeInMinutes === 1) {
+      return Okta.loc('minutes.oneMinute', 'login');
+    }
+    return Okta.loc('minutes', 'login', [factorLifetimeInMinutes]);
+  }
+
+  function getGracePeriodRemainingDays(gracePeriodEndDate) {
+    var endDate = new Date(gracePeriodEndDate).getTime();
+    var remainingDays = Math.floor((endDate - new Date().getTime()) / (1000 * 3600 * 24));
+    return remainingDays;
+  }
+
+  function combineFactorsObjects(factorTypes, factors) {
+    var addedFactorTypes = [];
+    var combinedFactors = [];
+    _.each(factors, function (factor) {
+      var factorType = factor.factorType;
+      if (!_.contains(addedFactorTypes, factorType)) {
+        var factorTypeObj = _.findWhere(factorTypes, { factorType: factorType });
+        if (factorTypeObj) {
+          addedFactorTypes.push(factorType);
+          combinedFactors.push(factorTypeObj);
+        } else {
+          combinedFactors.push(factor);
+        }
+      }
+    });
+    return combinedFactors;
+  }
+
+  return Okta.Model.extend({
+
+    initialize: function initialize() {
+      // Handle this in initialize (as opposed to a derived property) because
+      // the operation is asynchronous
+      if (this.settings.get('features.securityImage')) {
+        var self = this;
+        this.listenTo(this, 'change:username', function (model, username) {
+          getSecurityImage(this.get('baseUrl'), username, this.get('deviceFingerprint')).then(function (image) {
+            model.set('securityImage', image.securityImage);
+            model.set('securityImageDescription', image.securityImageDescription);
+            model.unset('deviceFingerprint'); //Fingerprint can only be used once
+          }).fail(function (jqXhr) {
+            // Only notify the consumer on a CORS error
+            if (BrowserFeatures.corsIsNotEnabled(jqXhr)) {
+              self.settings.callGlobalError(new Errors.UnsupportedBrowserError(Okta.loc('error.enabled.cors')));
+            } else {
+              throw jqXhr;
+            }
+          }).done();
+        });
+      }
+    },
+
+    local: {
+      baseUrl: 'string',
+      lastAuthResponse: ['object', true, {}],
+      transaction: 'object',
+      transactionError: 'object',
+      username: 'string',
+      factors: 'object',
+      policy: 'object',
+      securityImage: ['string', true, UNDEFINED_USER],
+      securityImageDescription: ['string', true, UNDEFINED_USER_IMAGE_DESCRIPTION],
+      userCountryCode: 'string',
+      userPhoneNumber: 'string',
+      factorActivationType: 'string',
+      flashError: 'object',
+      beaconType: 'string',
+      deviceFingerprint: 'string', // valid only once
+      typingPattern: 'string',
+      // Note: languageCode is special in that it is shared between Settings
+      // and AppState. Settings is the *configured* language, and is static.
+      // AppState is the dynamic language state - it can be changed via a
+      // language picker, etc.
+      languageCode: ['string', true],
+      disableUsername: ['boolean', false, false],
+      trapMfaRequiredResponse: ['boolean', false, false]
+    },
+
+    setAuthResponse: function setAuthResponse(res) {
+      var _this = this;
+
+      // Because of MFA_CHALLENGE (i.e. DUO), we need to remember factors
+      // across auth responses. Not doing this, for example, results in being
+      // unable to switch away from the duo factor dropdown.
+      if (res._embedded && res._embedded.policy) {
+        this.set('policy', res._embedded.policy);
+      }
+
+      if (res._embedded && res._embedded.factors) {
+        var factors = res._embedded.factors;
+        if (res._embedded.factorTypes) {
+          factors = combineFactorsObjects(res._embedded.factorTypes, factors);
+        }
+
+        var factorsObject = _.map(factors, function (factor) {
+          factor.settings = _this.settings;
+          factor.appState = _this;
+          return factor;
+        });
+        this.set('factors', new Factor.Collection(factorsObject, { parse: true }));
+      }
+
+      this.set('lastAuthResponse', res);
+    },
+
+    derived: {
+      'isSuccessResponse': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'SUCCESS';
+        }
+      },
+      'isMfaRequired': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'MFA_REQUIRED' || res.status === 'FACTOR_REQUIRED';
+        }
+      },
+      'isProfileRequired': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'PROFILE_REQUIRED';
+        }
+      },
+      'isMfaEnroll': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'MFA_ENROLL' || res.status === 'FACTOR_ENROLL';
+        }
+      },
+      'isMfaChallenge': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'MFA_CHALLENGE' || res.status === 'FACTOR_CHALLENGE';
+        }
+      },
+      'isUnauthenticated': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'UNAUTHENTICATED';
+        }
+      },
+      'isMfaRejectedByUser': {
+        // MFA failures are usually error responses
+        // except in the case of Okta Push, when a
+        // user clicks 'deny' on his phone.
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.factorResult === 'REJECTED';
+        }
+      },
+      'isMfaTimeout': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.factorResult === 'TIMEOUT';
+        }
+      },
+      'isMfaEnrollActivate': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'MFA_ENROLL_ACTIVATE' || res.status === 'FACTOR_ENROLL_ACTIVATE';
+        }
+      },
+      'isWaitingForActivation': {
+        deps: ['isMfaEnrollActivate', 'lastAuthResponse'],
+        fn: function fn(isMfaEnrollActivate, res) {
+          return isMfaEnrollActivate && res.factorResult === 'WAITING';
+        }
+      },
+      'hasMultipleFactorsAvailable': {
+        deps: ['factors', 'isMfaRequired', 'isMfaChallenge', 'isUnauthenticated'],
+        fn: function fn(factors, isMfaRequired, isMfaChallenge, isUnauthenticated) {
+          if (!isMfaRequired && !isMfaChallenge && !isUnauthenticated) {
+            return false;
+          }
+          return factors && factors.length > 1;
+        }
+      },
+      'promptForFactorInUnauthenticated': {
+        deps: ['lastAuthResponse', 'factors'],
+        fn: function fn(res, factors) {
+          if (res.status !== 'UNAUTHENTICATED') {
+            return false;
+          }
+          return factors && factors.length > 0;
+        }
+      },
+      'userId': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded || !res._embedded.user) {
+            return null;
+          }
+          return res._embedded.user.id;
+        }
+      },
+      'isIdxStateToken': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res && _.isString(res.stateToken) && res.stateToken.startsWith('01');
+        }
+      },
+      'isPwdExpiringSoon': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.status === 'PASSWORD_WARN';
+        }
+      },
+      'passwordExpireDays': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded || !res._embedded.policy || !res._embedded.policy.expiration) {
+            return null;
+          }
+          return res._embedded.policy.expiration.passwordExpireDays;
+        }
+      },
+      'isPwdManagedByOkta': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._links || !res._links.next || !res._links.next.title) {
+            return true;
+          }
+          return false;
+        }
+      },
+      'passwordExpiredWebsiteName': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._links || !res._links.next || !res._links.next.title) {
+            return null;
+          }
+          return res._links.next.title;
+        }
+      },
+      'passwordExpiredLinkUrl': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._links || !res._links.next || !res._links.next.title || !res._links.next.href) {
+            return null;
+          }
+          return res._links.next.href;
+        }
+      },
+      'recoveryType': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.recoveryType;
+        }
+      },
+      'factorType': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.factorType;
+        }
+      },
+      'factor': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded || !res._embedded.factor) {
+            return null;
+          }
+          return res._embedded.factor;
+        }
+      },
+      'activatedFactorId': {
+        deps: ['factor'],
+        fn: function fn(factor) {
+          return factor ? factor.id : null;
+        }
+      },
+      'activatedFactorType': {
+        deps: ['factor'],
+        fn: function fn(factor) {
+          return factor ? factor.factorType : null;
+        }
+      },
+      'activatedFactorProvider': {
+        deps: ['factor'],
+        fn: function fn(factor) {
+          return factor ? factor.provider : null;
+        }
+      },
+      'qrcode': {
+        deps: ['factor'],
+        fn: function fn(factor) {
+          try {
+            return factor._embedded.activation._links.qrcode.href;
+          } catch (err) {
+            return null;
+          }
+        }
+      },
+      'activationSendLinks': {
+        deps: ['factor'],
+        fn: function fn(factor) {
+          var sendLinks;
+          try {
+            sendLinks = factor._embedded.activation._links.send;
+          } catch (err) {
+            sendLinks = [];
+          }
+          return sendLinks;
+        }
+      },
+      'textActivationLinkUrl': {
+        deps: ['activationSendLinks'],
+        fn: function fn(activationSendLinks) {
+          var item = _.findWhere(activationSendLinks, { name: 'sms' });
+          return item ? item.href : null;
+        }
+      },
+      'emailActivationLinkUrl': {
+        deps: ['activationSendLinks'],
+        fn: function fn(activationSendLinks) {
+          var item = _.findWhere(activationSendLinks, { name: 'email' });
+          return item ? item.href : null;
+        }
+      },
+      'sharedSecret': {
+        deps: ['factor'],
+        fn: function fn(factor) {
+          try {
+            return factor._embedded.activation.sharedSecret;
+          } catch (err) {
+            return null;
+          }
+        }
+      },
+      'duoEnrollActivation': {
+        deps: ['factor'],
+        fn: function fn(factor) {
+          if (!factor || !factor._embedded || !factor._embedded.activation) {
+            return null;
+          }
+          return factor._embedded.activation;
+        }
+      },
+      'prevLink': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (res._links && res._links.prev) {
+            return res._links.prev.href;
+          }
+          return null;
+        }
+      },
+      'skipLink': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (res._links && res._links.skip) {
+            return res._links.skip.href;
+          }
+          return null;
+        }
+      },
+      'gracePeriodRemainingDays': {
+        deps: ['policy'],
+        fn: function fn(policy) {
+          if (policy && policy.gracePeriod && policy.gracePeriod.endDate) {
+            return getGracePeriodRemainingDays(policy.gracePeriod.endDate);
+          }
+          return null;
+        }
+      },
+      'user': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded || !res._embedded.user) {
+            return null;
+          }
+          return res._embedded.user;
+        }
+      },
+      'recoveryQuestion': {
+        deps: ['user'],
+        fn: function fn(user) {
+          if (!user || !user.recovery_question) {
+            return null;
+          }
+          return user.recovery_question.question;
+        }
+      },
+      'userProfile': {
+        deps: ['user'],
+        fn: function fn(user) {
+          if (!user || !user.profile) {
+            return null;
+          }
+          return user.profile;
+        }
+      },
+      'userConsentName': {
+        deps: ['userProfile', 'username'],
+        fn: function fn(userProfile, username) {
+          if (!userProfile || _.isEmpty(userProfile.firstName)) {
+            return username;
+          }
+          if (_.isEmpty(userProfile.lastName)) {
+            return userProfile.firstName;
+          }
+          return userProfile.firstName + ' ' + userProfile.lastName.charAt(0) + '.';
+        }
+      },
+      'userEmail': {
+        deps: ['userProfile'],
+        fn: function fn(userProfile) {
+          if (!userProfile || !userProfile.login) {
+            return null;
+          }
+          return userProfile.login;
+        }
+      },
+      'userFullName': {
+        deps: ['userProfile'],
+        fn: function fn(userProfile) {
+          if (!userProfile || !userProfile.firstName && !userProfile.lastName) {
+            return '';
+          }
+          return userProfile.firstName + ' ' + userProfile.lastName;
+        }
+      },
+      'defaultAppLogo': {
+        deps: ['baseUrl'],
+        fn: function fn(baseUrl) {
+          return baseUrl + DEFAULT_APP_LOGO;
+        }
+      },
+      'expiresAt': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          return res.expiresAt;
+        }
+      },
+      'target': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded) {
+            return null;
+          }
+          return res._embedded.target;
+        }
+      },
+      'targetLabel': {
+        deps: ['target'],
+        fn: function fn(target) {
+          if (!target) {
+            return null;
+          }
+          return target.label;
+        }
+      },
+      'targetLogo': {
+        deps: ['target'],
+        fn: function fn(target) {
+          if (!target || !target._links) {
+            return null;
+          }
+          return target._links.logo;
+        }
+      },
+      'targetTermsOfService': {
+        deps: ['target'],
+        fn: function fn(target) {
+          if (!target || !target._links) {
+            return null;
+          }
+          return target._links['terms-of-service'];
+        }
+      },
+      'targetPrivacyPolicy': {
+        deps: ['target'],
+        fn: function fn(target) {
+          if (!target || !target._links) {
+            return null;
+          }
+          return target._links['privacy-policy'];
+        }
+      },
+      'targetClientURI': {
+        deps: ['target'],
+        fn: function fn(target) {
+          if (!target || !target._links) {
+            return null;
+          }
+          return target._links['client-uri'];
+        }
+      },
+      'scopes': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded) {
+            return null;
+          }
+          return res._embedded.scopes;
+        }
+      },
+      'hasExistingPhones': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded || !res._embedded.factors) {
+            return false;
+          }
+          var factors = res._embedded.factors;
+          var factor = _.findWhere(factors, { factorType: 'sms', provider: 'OKTA' });
+          if (!factor || !factor._embedded) {
+            return false;
+          }
+
+          return !!factor._embedded.phones.length;
+        }
+      },
+      'hasExistingPhonesForCall': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._embedded || !res._embedded.factors) {
+            return false;
+          }
+          var factors = res._embedded.factors;
+          var factor = _.findWhere(factors, { factorType: 'call', provider: 'OKTA' });
+          if (!factor || !factor._embedded) {
+            return false;
+          }
+
+          return !!factor._embedded.phones.length;
+        }
+      },
+      'isUndefinedUser': {
+        deps: ['securityImage'],
+        fn: function fn(securityImage) {
+          return securityImage === UNDEFINED_USER;
+        }
+      },
+      'isNewUser': {
+        deps: ['securityImage'],
+        fn: function fn(securityImage) {
+          return securityImage === NEW_USER;
+        }
+      },
+      'allowRememberDevice': {
+        deps: ['policy'],
+        fn: function fn(policy) {
+          return policy && policy.allowRememberDevice;
+        }
+      },
+      'rememberDeviceLabel': {
+        deps: ['policy'],
+        fn: function fn(policy) {
+          if (policy && policy.rememberDeviceLifetimeInMinutes > 0) {
+            var timeString = getMinutesString(policy.rememberDeviceLifetimeInMinutes);
+            return Okta.loc('rememberDevice.timebased', 'login', [timeString]);
+          } else if (policy && policy.rememberDeviceLifetimeInMinutes === 0) {
+            return Okta.loc('rememberDevice.devicebased', 'login');
+          }
+          return Okta.loc('rememberDevice', 'login');
+        }
+      },
+      'rememberDeviceByDefault': {
+        deps: ['policy'],
+        fn: function fn(policy) {
+          return policy && policy.rememberDeviceByDefault;
+        }
+      },
+      'factorsPolicyInfo': {
+        deps: ['policy'],
+        fn: function fn(policy) {
+          return policy && policy.factorsPolicyInfo ? policy.factorsPolicyInfo : null;
+        }
+      },
+      'verifyCustomFactorRedirectUrl': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._links || !res._links.next || res._links.next.name !== 'redirect' || !res._links.next.href) {
+            return null;
+          }
+          return res._links.next.href;
+        }
+      },
+      'enrollCustomFactorRedirectUrl': {
+        deps: ['lastAuthResponse'],
+        fn: function fn(res) {
+          if (!res._links || !res._links.next || res._links.next.name !== 'activate' || !res._links.next.href) {
+            return null;
+          }
+          return res._links.next.href;
+        }
+      }
+    },
+
+    parse: function parse(options) {
+      this.settings = options.settings;
+      return _.extend(_.omit(options, 'settings'), { languageCode: this.settings.get('languageCode') });
+    }
+
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 589 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2018-Present, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Enums) {
+  var fn = {};
+
+  var template = function template(colors) {
+    return '\n#okta-sign-in.auth-container .button-primary,\n#okta-sign-in.auth-container .button-primary:active,\n#okta-sign-in.auth-container .button-primary:focus { background: ' + colors.brand + '; }\n#okta-sign-in.auth-container .button-primary:hover { background: ' + fn.lighten(colors.brand, 0.05) + '; }\n#okta-sign-in.auth-container .button.button-primary.link-button-disabled {\n  background: ' + colors.brand + ';\n  opacity: 0.5;\n}\n    ';
+  };
+
+  // visible for testing
+  fn.lighten = function (hex, lum) {
+    lum = lum || 0;
+    hex = hex.substr(1);
+    var newHex = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(hex.substr(i * 2, 2), 16);
+      c = Math.round(Math.min(Math.max(0, c + c * lum), 255)).toString(16);
+      newHex += ('00' + c).substr(c.length);
+    }
+    return newHex;
+  };
+
+  fn.addStyle = function (colors) {
+    var css = template(colors);
+    var main = document.getElementById(Enums.WIDGET_CONTAINER_ID);
+    var style = document.createElement('style');
+
+    style.id = Enums.WIDGET_CONFIG_COLORS_ID;
+    style.type = 'text/css';
+    style.appendChild(document.createTextNode(css));
+
+    main.appendChild(style);
+  };
+
+  fn.isLoaded = function () {
+    return !!document.getElementById(Enums.WIDGET_CONFIG_COLORS_ID);
+  };
+
+  return fn;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 590 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(241), __webpack_require__(19)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, EnterPasscodeForm, Footer) {
 
   return FormController.extend({
     className: 'activate-totp',
@@ -68439,7 +65400,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 587 */
+/* 591 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68457,7 +65418,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(3), __webpack_require__(5), __webpack_require__(22), __webpack_require__(588), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, ManualSetupFooter, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(18), __webpack_require__(3), __webpack_require__(5), __webpack_require__(23), __webpack_require__(592), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, ManualSetupFooter, TextBox) {
 
   var _ = Okta._;
 
@@ -68483,11 +65444,21 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       attributes: { 'data-se': 'step-manual-setup' },
 
       formChildren: function formChildren() {
-        return [FormType.View({ View: '\
-            <p class="okta-form-subtitle o-form-explain text-align-c">\
-              {{i18n code="enroll.totp.manualSetupInstructions" bundle="login"}}\
-            </p>\
-          ' }), FormType.Input({
+        var instructions = this.settings.get('brandName') ? Okta.loc('enroll.totp.manualSetupInstructions.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('enroll.totp.manualSetupInstructions.generic', 'login');
+        return [FormType.View({
+          View: Okta.View.extend({
+            template: '\
+                <p class="okta-form-subtitle o-form-explain text-align-c">\
+                  {{instructions}}\
+                </p>\
+              ',
+            getTemplateData: function getTemplateData() {
+              return {
+                instructions: instructions
+              };
+            }
+          })
+        }), FormType.Input({
           name: 'sharedSecret',
           input: TextBox,
           type: 'text',
@@ -68512,7 +65483,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 588 */
+/* 592 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68530,7 +65501,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(22), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil, Enums) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(23), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil, Enums) {
 
   return Okta.View.extend({
     template: '\
@@ -68574,7 +65545,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 589 */
+/* 593 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68592,7 +65563,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(168), __webpack_require__(17), __webpack_require__(3), __webpack_require__(5), __webpack_require__(22), __webpack_require__(590), __webpack_require__(240), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, CountryUtil, FactorUtil, FormController, FormType, RouterUtil, Footer, PhoneTextBox, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(165), __webpack_require__(18), __webpack_require__(3), __webpack_require__(5), __webpack_require__(23), __webpack_require__(594), __webpack_require__(235), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, CountryUtil, FactorUtil, FormController, FormType, RouterUtil, Footer, PhoneTextBox, TextBox) {
 
   var _ = Okta._;
 
@@ -68701,6 +65672,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       attributes: { 'data-se': 'step-manual-setup' },
 
       formChildren: function formChildren() {
+        var instructions = this.settings.get('brandName') ? Okta.loc('enroll.totp.sharedSecretInstructions.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('enroll.totp.sharedSecretInstructions.generic', 'login');
         var children = [FormType.Input({
           name: 'activationType',
           type: 'select',
@@ -68717,18 +65689,26 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
           options: CountryUtil.getCountries(),
           showWhen: { activationType: 'SMS' }
         }), FormType.Input({
-          placeholder: Okta.loc('mfa.phoneNumber.placeholder', 'login'),
+          label: Okta.loc('mfa.phoneNumber.placeholder', 'login'),
+          'label-top': true,
           className: 'enroll-sms-phone',
           name: 'phoneNumber',
           input: PhoneTextBox,
           type: 'text',
           showWhen: { activationType: 'SMS' }
         }), FormType.View({
-          View: '\
-              <p class="okta-form-subtitle o-form-explain text-align-c">\
-                {{i18n code="enroll.totp.sharedSecretInstructions" bundle="login"}}\
-              </p>\
-            ',
+          View: Okta.View.extend({
+            template: '\
+                <p class="okta-form-subtitle o-form-explain text-align-c">\
+                  {{instructions}}\
+                </p>\
+              ',
+            getTemplateData: function getTemplateData() {
+              return {
+                instructions: instructions
+              };
+            }
+          }),
           showWhen: { activationType: 'MANUAL' }
         }), FormType.Input({
           name: 'sharedSecret',
@@ -68820,7 +65800,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 590 */
+/* 594 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68838,7 +65818,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(22)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(23)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil) {
 
   var _ = Okta._;
 
@@ -68906,7 +65886,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 591 */
+/* 595 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -68924,7 +65904,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(168), __webpack_require__(3), __webpack_require__(5), __webpack_require__(22)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, CountryUtil, FormController, FormType, RouterUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(165), __webpack_require__(3), __webpack_require__(5), __webpack_require__(23)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, CountryUtil, FormController, FormType, RouterUtil) {
 
   var _ = Okta._;
 
@@ -69051,7 +66031,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 592 */
+/* 596 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69069,7 +66049,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(22), __webpack_require__(241)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, RouterUtil, EnterPasscodeForm) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(23), __webpack_require__(241)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, RouterUtil, EnterPasscodeForm) {
 
   var Footer = Okta.View.extend({
     template: '\
@@ -69121,7 +66101,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 593 */
+/* 597 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69139,7 +66119,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(92), __webpack_require__(17), __webpack_require__(242), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, FormType, ValidationUtil, FactorUtil, Footer, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(90), __webpack_require__(18), __webpack_require__(17), __webpack_require__(242), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, FormType, ValidationUtil, FactorUtil, Util, Footer, TextBox) {
 
   var _ = Okta._;
 
@@ -69176,12 +66156,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         } else if (expiringSoon) {
           return Okta.loc('password.expiring.soon', 'login');
         } else {
-          return Okta.loc('password.expired.title', 'login');
+          return this.settings.get('brandName') ? Okta.loc('password.expired.title.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('password.expired.title.generic', 'login');
         }
       },
       subtitle: function subtitle() {
         if (this.options.appState.get('isPwdExpiringSoon')) {
-          return Okta.loc('password.expiring.subtitle', 'login');
+          return this.settings.get('brandName') ? Okta.loc('password.expiring.subtitle.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('password.expiring.subtitle.generic', 'login');
         }
 
         var policy = this.options.appState.get('policy');
@@ -69194,37 +66174,29 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       formChildren: function formChildren() {
         return [FormType.Input({
           'label-top': true,
-          label: false,
-          placeholder: Okta.loc('password.oldPassword.placeholder', 'login'),
+          label: Okta.loc('password.oldPassword.placeholder', 'login'),
+          explain: Util.createInputExplain('password.oldPassword.tooltip', 'password.oldPassword.placeholder', 'login'),
+          'explain-top': true,
           name: 'oldPassword',
           input: TextBox,
-          type: 'password',
-          params: {
-            innerTooltip: Okta.loc('password.oldPassword.tooltip', 'login'),
-            icon: 'credentials-16'
-          }
+          type: 'password'
         }), FormType.Divider(), FormType.Input({
+          className: 'margin-btm-5',
           'label-top': true,
-          label: false,
-          placeholder: Okta.loc('password.newPassword.placeholder', 'login'),
+          label: Okta.loc('password.newPassword.placeholder', 'login'),
+          explain: Util.createInputExplain('password.newPassword.tooltip', 'password.newPassword.placeholder', 'login'),
+          'explain-top': true,
           name: 'newPassword',
           input: TextBox,
-          type: 'password',
-          params: {
-            innerTooltip: Okta.loc('password.newPassword.tooltip', 'login'),
-            icon: 'credentials-16'
-          }
+          type: 'password'
         }), FormType.Input({
           'label-top': true,
-          label: false,
-          placeholder: Okta.loc('password.confirmPassword.placeholder', 'login'),
+          label: Okta.loc('password.confirmPassword.placeholder', 'login'),
+          explain: Util.createInputExplain('password.confirmPassword.tooltip', 'password.confirmPassword.placeholder', 'login'),
+          'explain-top': true,
           name: 'confirmPassword',
           input: TextBox,
-          type: 'password',
-          params: {
-            innerTooltip: Okta.loc('password.confirmPassword.tooltip', 'login'),
-            icon: 'credentials-16'
-          }
+          type: 'password'
         })];
       }
     },
@@ -69245,7 +66217,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 594 */
+/* 598 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69284,12 +66256,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         } else if (expiringSoon) {
           return Okta.loc('password.expiring.soon', 'login');
         } else {
-          return Okta.loc('password.expired.title', 'login');
+          return this.settings.get('brandName') ? Okta.loc('password.expired.title.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('password.expired.title.generic', 'login');
         }
       },
       subtitle: function subtitle() {
         if (this.options.appState.get('isPwdExpiringSoon')) {
-          return Okta.loc('password.expiring.subtitle', 'login') + ' ' + Okta.loc('password.expired.custom.subtitle', 'login');
+          var subtitle = this.settings.get('brandName') ? Okta.loc('password.expiring.subtitle.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('password.expiring.subtitle.generic', 'login');
+          return subtitle + ' ' + Okta.loc('password.expired.custom.subtitle', 'login');
         }
 
         return Okta.loc('password.expired.custom.subtitle', 'login');
@@ -69311,7 +66284,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 595 */
+/* 599 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69329,7 +66302,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(92), __webpack_require__(68), __webpack_require__(243), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, FormType, ValidationUtil, Util, ContactSupport, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(90), __webpack_require__(17), __webpack_require__(243), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, FormType, ValidationUtil, Util, ContactSupport, TextBox) {
 
   var _ = Okta._;
   var noFactorsError = '<div class="okta-form-infobox-error infobox infobox-error" role="alert">\
@@ -69413,15 +66386,15 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
           this.add(noFactorsError, '.o-form-error-container');
         } else {
           formChildren.push(FormType.Input({
-            placeholder: Okta.loc('password.forgot.email.or.username.placeholder', 'login'),
+            label: Okta.loc('password.forgot.email.or.username.placeholder', 'login'),
+            'label-top': true,
+            explain: Util.createInputExplain('password.forgot.email.or.username.tooltip', 'password.forgot.email.or.username.placeholder', 'login'),
+            'explain-top': true,
             name: 'username',
             input: TextBox,
+            inputId: 'account-recovery-username',
             type: 'text',
-            inlineValidation: false,
-            params: {
-              innerTooltip: Okta.loc('password.forgot.email.or.username.tooltip', 'login'),
-              icon: 'person-16-gray'
-            }
+            inlineValidation: false
           }));
           if (smsEnabled || callEnabled) {
             formChildren.push(FormType.View({
@@ -69504,7 +66477,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 596 */
+/* 600 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69522,7 +66495,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(8), __webpack_require__(46), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, Enums, FooterSignout, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(8), __webpack_require__(48), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, Enums, FooterSignout, TextBox) {
 
   var _ = Okta._;
   var API_RATE_LIMIT = 30000; //milliseconds
@@ -69576,7 +66549,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         return [FormType.Button({
           title: Okta.loc('mfa.resendCode', 'login'),
           attributes: { 'data-se': 'resend-button' },
-          className: 'button sms-request-button',
+          className: 'button sms-request-button margin-top-30',
           click: function click() {
             this.model.resendCode();
           },
@@ -69594,7 +66567,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
             });
           }
         }), FormType.Input({
-          placeholder: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+          label: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+          'label-top': true,
           className: 'enroll-sms-phone',
           name: 'passCode',
           input: TextBox,
@@ -69669,7 +66643,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 597 */
+/* 601 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69752,7 +66726,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 598 */
+/* 602 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69770,7 +66744,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(46), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, FooterSignout, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(48), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, FooterSignout, TextBox) {
 
   return FormController.extend({
     className: 'recovery-question',
@@ -69841,7 +66815,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 599 */
+/* 603 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69859,7 +66833,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(92), __webpack_require__(17), __webpack_require__(46), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, ValidationUtil, FactorUtil, FooterSignout, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(90), __webpack_require__(18), __webpack_require__(17), __webpack_require__(48), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, ValidationUtil, FactorUtil, Util, FooterSignout, TextBox) {
 
   var _ = Okta._;
 
@@ -69885,7 +66859,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
     },
     Form: {
       save: _.partial(Okta.loc, 'password.reset', 'login'),
-      title: _.partial(Okta.loc, 'password.reset.title', 'login'),
+      title: function title() {
+        return this.settings.get('brandName') ? Okta.loc('password.reset.title.specific', 'login', [this.settings.get('brandName')]) : Okta.loc('password.reset.title.generic', 'login');
+      },
       subtitle: function subtitle() {
         var policy = this.options.appState.get('policy');
         if (!policy) {
@@ -69896,23 +66872,22 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       },
       formChildren: function formChildren() {
         return [FormType.Input({
-          placeholder: Okta.loc('password.newPassword.placeholder', 'login'),
+          className: 'margin-btm-5',
+          label: Okta.loc('password.newPassword.placeholder', 'login'),
+          'label-top': true,
+          explain: Util.createInputExplain('password.newPassword.tooltip', 'password.newPassword.placeholder', 'login'),
+          'explain-top': true,
           name: 'newPassword',
           input: TextBox,
-          type: 'password',
-          params: {
-            innerTooltip: Okta.loc('password.newPassword.tooltip', 'login'),
-            icon: 'credentials-16'
-          }
+          type: 'password'
         }), FormType.Input({
-          placeholder: Okta.loc('password.confirmPassword.placeholder', 'login'),
+          label: Okta.loc('password.confirmPassword.placeholder', 'login'),
+          'label-top': true,
+          explain: Util.createInputExplain('password.confirmPassword.tooltip', 'password.confirmPassword.placeholder', 'login'),
+          'explain-top': true,
           name: 'confirmPassword',
           input: TextBox,
-          type: 'password',
-          params: {
-            innerTooltip: Okta.loc('password.confirmPassword.tooltip', 'login'),
-            icon: 'credentials-16'
-          }
+          type: 'password'
         })];
       }
     },
@@ -69936,7 +66911,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 600 */
+/* 604 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -69990,7 +66965,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 601 */
+/* 605 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70008,7 +66983,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(92), __webpack_require__(243), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, FormType, ValidationUtil, ContactSupport, TextBox) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(8), __webpack_require__(5), __webpack_require__(17), __webpack_require__(90), __webpack_require__(243), __webpack_require__(14)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, Enums, FormType, Util, ValidationUtil, ContactSupport, TextBox) {
 
   var _ = Okta._;
   var noFactorsError = '<div class="okta-form-infobox-error infobox infobox-error" role="alert">\
@@ -70086,15 +67061,15 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
           this.add(noFactorsError, '.o-form-error-container');
         } else {
           formChildren.push(FormType.Input({
-            placeholder: Okta.loc('account.unlock.email.or.username.placeholder', 'login'),
+            label: Okta.loc('account.unlock.email.or.username.placeholder', 'login'),
+            'label-top': true,
+            explain: Util.createInputExplain('account.unlock.email.or.username.tooltip', 'account.unlock.email.or.username.placeholder', 'login'),
+            'explain-top': true,
             name: 'username',
             input: TextBox,
+            inputId: 'account-recovery-username',
             type: 'text',
-            inlineValidation: false,
-            params: {
-              innerTooltip: Okta.loc('account.unlock.email.or.username.tooltip', 'login'),
-              icon: 'person-16-gray'
-            }
+            inlineValidation: false
           }));
 
           if (smsEnabled || callEnabled) {
@@ -70175,7 +67150,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 602 */
+/* 606 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70230,7 +67205,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 603 */
+/* 607 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70294,7 +67269,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 604 */
+/* 608 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70353,7 +67328,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 605 */
+/* 609 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70370,7 +67345,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  *
  * See the License for the specific language governing permissions and limitations under the License.
  */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(606), __webpack_require__(607), __webpack_require__(79), __webpack_require__(8), __webpack_require__(244), __webpack_require__(608), __webpack_require__(35)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RegistrationSchema, LoginModel, BaseLoginController, Enums, RegistrationFormFactory, SubSchema, Errors) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(610), __webpack_require__(611), __webpack_require__(79), __webpack_require__(8), __webpack_require__(244), __webpack_require__(612), __webpack_require__(36), __webpack_require__(17)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RegistrationSchema, LoginModel, BaseLoginController, Enums, RegistrationFormFactory, SubSchema, Errors, Util) {
   var _ = Okta._,
       Backbone = Okta.Backbone;
 
@@ -70451,7 +67426,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         var responseJSON = err.responseJSON;
         if (responseJSON && responseJSON.errorCauses.length) {
           var errMsg = responseJSON.errorCauses[0].errorSummary;
-          self.settings.callGlobalError(new Errors.RegistrationError(errMsg));
+          Util.triggerAfterError(self, new Errors.RegistrationError(errMsg));
         }
       });
     },
@@ -70498,9 +67473,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
         responseJSON: error
       });
 
-      //throw global error
+      //throw registration error
       var errMsg = error.callback ? error.callback + ':' + error.errorSummary : error.errorSummary;
-      this.settings.callGlobalError(new Errors.RegistrationError(errMsg));
+      Util.triggerAfterError(this, new Errors.RegistrationError(errMsg));
 
       if (hideRegisterButton) {
         this.$el.find('.button-primary').hide();
@@ -70558,7 +67533,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 606 */
+/* 610 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70647,7 +67622,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 607 */
+/* 611 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70665,7 +67640,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(91)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginModel) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(89)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginModel) {
 
   return BaseLoginModel.extend({
     constructor: function constructor(options) {
@@ -70682,7 +67657,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 608 */
+/* 612 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70743,7 +67718,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 609 */
+/* 613 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70810,7 +67785,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 610 */
+/* 614 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70829,7 +67804,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint max-len: [2, 160] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(611)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, ScopeList) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(3), __webpack_require__(5), __webpack_require__(615)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FormController, FormType, ScopeList) {
 
   var _ = Okta._;
 
@@ -70919,7 +67894,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 611 */
+/* 615 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -70937,7 +67912,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(612)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, ScopeItem) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(616)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, ScopeItem) {
 
   return Okta.View.extend({
     className: 'scope-list',
@@ -70961,7 +67936,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 612 */
+/* 616 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71013,7 +67988,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 613 */
+/* 617 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71030,7 +68005,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  *
  * See the License for the specific language governing permissions and limitations under the License.
  */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(614), __webpack_require__(79), __webpack_require__(615), __webpack_require__(617)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, EnrollUser, BaseLoginController, EnrollUserForm, FooterWithBackLink) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(618), __webpack_require__(79), __webpack_require__(619), __webpack_require__(621)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, EnrollUser, BaseLoginController, EnrollUserForm, FooterWithBackLink) {
   return BaseLoginController.extend({
     className: 'enroll-user',
     initialize: function initialize(options) {
@@ -71062,7 +68037,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 614 */
+/* 618 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71080,7 +68055,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(91)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginModel) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(89)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, BaseLoginModel) {
   var _ = Okta._;
 
 
@@ -71131,7 +68106,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 615 */
+/* 619 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71149,7 +68124,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 /* eslint max-len: [2, 130] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(244), __webpack_require__(616)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RegistrationFormFactory, ProfileSchema) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(244), __webpack_require__(620)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RegistrationFormFactory, ProfileSchema) {
   return Okta.Form.extend({
     layout: 'o-form-theme',
     autoSave: true,
@@ -71175,7 +68150,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 616 */
+/* 620 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71225,7 +68200,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 617 */
+/* 621 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71266,7 +68241,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 618 */
+/* 622 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71285,7 +68260,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint complexity: [2, 8] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(17), __webpack_require__(619), __webpack_require__(164)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, FactorUtil, FactorsDropDown, Factor) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(12), __webpack_require__(18), __webpack_require__(623), __webpack_require__(169)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, Q, FactorUtil, FactorsDropDown, Factor) {
 
   return Okta.View.extend({
 
@@ -71355,7 +68330,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 619 */
+/* 623 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71373,7 +68348,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(17), __webpack_require__(164), __webpack_require__(620)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, Factor, FactorsDropDownOptions) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(18), __webpack_require__(169), __webpack_require__(624)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, Factor, FactorsDropDownOptions) {
   var _ = Okta._,
       $ = Okta.$;
   var BaseDropDown = Okta.internal.views.components.BaseDropDown;
@@ -71440,7 +68415,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 620 */
+/* 624 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71459,7 +68434,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
  */
 
 /* eslint max-statements: [2, 16], complexity: [2, 10] */
-!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(22)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil) {
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(23)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, RouterUtil) {
 
   var _ = Okta._;
 
@@ -71732,7 +68707,19 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       action: function action() {
         _action.call(this, this.model);
       }
+    },
+
+    'CUSTOM_CLAIMS': {
+      icon: 'factor-icon mfa-custom-factor-30',
+      className: 'factor-option',
+      title: function title() {
+        return this.model.get('factorLabel');
+      },
+      action: function action() {
+        _action.call(this, this.model);
+      }
     }
+
   };
 
   return {
@@ -71744,7 +68731,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
-/* 621 */
+/* 625 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -71809,6 +68796,83 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
       return Beacon && this instanceof Beacon;
     }
 
+  });
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+/***/ }),
+/* 626 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
+
+/*!
+ * Copyright (c) 2015-2016, Okta, Inc. and/or its affiliates. All rights reserved.
+ * The Okta software accompanied by this notice is provided pursuant to the Apache License, Version 2.0 (the "License.")
+ *
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(1), __webpack_require__(18), __webpack_require__(3), __webpack_require__(5), __webpack_require__(23), __webpack_require__(166), __webpack_require__(19)], __WEBPACK_AMD_DEFINE_RESULT__ = (function (Okta, FactorUtil, FormController, FormType, RouterUtil, BarcodeView, Footer) {
+
+  var _ = Okta._;
+
+  // Note: Keep-alive is set to 5 seconds - using 5 seconds here will result
+  // in network connection lost errors in Safari and IE.
+  var PUSH_INTERVAL = 6000;
+
+  return FormController.extend({
+    className: 'barcode-push',
+    Model: function Model() {
+      return {
+        local: {
+          '__factorType__': ['string', false, this.options.factorType],
+          '__provider__': ['string', false, this.options.provider]
+        }
+      };
+    },
+
+    Form: {
+      title: function title() {
+        var factorName = FactorUtil.getFactorLabel(this.model.get('__provider__'), this.model.get('__factorType__'));
+        return Okta.loc('enroll.totp.title', 'login', [factorName]);
+      },
+      subtitle: _.partial(Okta.loc, 'mfa.scanBarcode', 'login'),
+      noButtonBar: true,
+      attributes: { 'data-se': 'step-scan' },
+      className: 'barcode-scan',
+      initialize: function initialize() {
+        this.listenTo(this.model, 'error errors:clear', function () {
+          this.clearErrors();
+        });
+      },
+
+      formChildren: [FormType.View({ View: BarcodeView })]
+    },
+
+    Footer: Footer,
+
+    initialize: function initialize() {
+      this.pollForEnrollment();
+    },
+
+    pollForEnrollment: function pollForEnrollment() {
+      return this.model.doTransaction(function (transaction) {
+        return transaction.poll(PUSH_INTERVAL);
+      });
+    },
+
+    trapAuthResponse: function trapAuthResponse() {
+      if (this.options.appState.get('isMfaEnrollActivate')) {
+        return true;
+      }
+    }
   });
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));

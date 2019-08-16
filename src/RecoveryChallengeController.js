@@ -73,7 +73,7 @@ function (Okta, FormController, FormType, Enums, FooterSignout, TextBox) {
           FormType.Button({
             title: Okta.loc('mfa.resendCode', 'login'),
             attributes: { 'data-se': 'resend-button' },
-            className: 'button sms-request-button',
+            className: 'button sms-request-button margin-top-30',
             click: function () {
               this.model.resendCode();
             },
@@ -92,7 +92,8 @@ function (Okta, FormController, FormType, Enums, FooterSignout, TextBox) {
             }
           }),
           FormType.Input({
-            placeholder: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+            label: Okta.loc('mfa.challenge.enterCode.placeholder', 'login'),
+            'label-top': true,
             className: 'enroll-sms-phone',
             name: 'passCode',
             input: TextBox,

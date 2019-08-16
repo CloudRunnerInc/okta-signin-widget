@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-define(['okta', './Enums', './Errors'], function (Okta, Enums, Errors) {
+define(['okta', './Enums', './Errors', './Util'], function (Okta, Enums, Errors, Util) {
 
   var util = {};
   var _ = Okta._;
@@ -42,9 +42,8 @@ define(['okta', './Enums', './Errors'], function (Okta, Enums, Errors) {
       if (error.errorCode === 'access_denied') {
         controller.model.trigger('error', controller.model, {'responseJSON': error});
         controller.model.appState.trigger('removeLoading');
-      } else {
-        settings.callGlobalError(new Errors.OAuthError(error.message));
       }
+      Util.triggerAfterError(controller, new Errors.OAuthError(error.message), settings);
     }
 
     var authClient = settings.getAuthClient(),
@@ -55,7 +54,7 @@ define(['okta', './Enums', './Errors'], function (Okta, Enums, Errors) {
     _.extend(
       oauthParams,
       _.pick(options, 'clientId', 'redirectUri'),
-      _.pick(options.authParams, 'responseType', 'responseMode', 'display', 'scopes', 'state', 'nonce'),
+      _.pick(options.authParams, 'grantType', 'responseType', 'responseMode', 'display', 'scopes', 'state', 'nonce'),
       params
     );
 
@@ -72,7 +71,8 @@ define(['okta', './Enums', './Errors'], function (Okta, Enums, Errors) {
     // converting the Okta sessionToken to an access_token, id_token, and/or
     // authorization code. Note: The authorization code flow will always redirect.
     if (oauthParams.display === 'page' || hasResponseType(oauthParams, 'code')) {
-      authClient.token.getWithRedirect(oauthParams, extraOptions);
+      authClient.token.getWithRedirect(oauthParams, extraOptions)
+        .fail(error);
     }
 
     // Default flow if logging in with Okta as the IDP - convert sessionToken to

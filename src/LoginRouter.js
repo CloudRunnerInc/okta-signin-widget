@@ -123,6 +123,7 @@ function (BaseLoginRouter,
       'signin/verify/u2f': 'verifyU2F',
       'signin/verify/generic_saml/assertion:saml2': 'verifySAMLFactor',
       'signin/verify/generic_oidc/assertion:oidc': 'verifyOIDCFactor',
+      'signin/verify/custom/claims_provider': 'verifyClaimsFactor',
       'signin/verify/:factorType': 'verifyNoProvider',
       'signin/verify/:provider/:factorType(/:factorIndex)': 'verify',
       'signin/enroll': 'enrollChoices',
@@ -140,6 +141,7 @@ function (BaseLoginRouter,
       'signin/enroll/fido/u2f': 'enrollU2F',
       'signin/enroll/generic_saml/assertion:saml2': 'enrollSAMLFactor',
       'signin/enroll/generic_oidc/assertion:oidc': 'enrollOIDCFactor',
+      'signin/enroll/custom/claims_provider': 'enrollClaimsFactor',
       'signin/enroll/custom/token:hotp': 'enrollHotpFactor',
       'signin/enroll/:provider/:factorType': 'enrollTotpFactor',
       'signin/enroll-activate/okta/push': 'scanBarcodePushFactor',
@@ -238,6 +240,14 @@ function (BaseLoginRouter,
       this.render(VerifyCustomFactorController, {
         provider: 'GENERIC_OIDC',
         factorType: 'assertion:oidc',
+        Beacon: FactorBeacon
+      });
+    },
+
+    verifyClaimsFactor: function () {
+      this.render(VerifyCustomFactorController, {
+        provider: 'CUSTOM',
+        factorType: 'claims_provider',
         Beacon: FactorBeacon
       });
     },
@@ -350,6 +360,14 @@ function (BaseLoginRouter,
       });
     },
 
+    enrollClaimsFactor: function () {
+      this.render(EnrollCustomFactorController, {
+        provider: 'CUSTOM',
+        factorType: 'claims_provider',
+        Beacon: FactorBeacon
+      });
+    },
+
     enrollTotpFactor: function (provider, factorType) {
       this.render(EnrollTotpController, {
         provider: provider.toUpperCase(),
@@ -358,10 +376,10 @@ function (BaseLoginRouter,
       });
     },
 
-    enrollHotpFactor: function (provider, factorType) {
+    enrollHotpFactor: function () {
       this.render(EnrollHotpController, {
-        provider: provider.toUpperCase(),
-        factorType: factorType,
+        provider: 'CUSTOM',
+        factorType: 'token:hotp',
         Beacon: FactorBeacon
       });
     },

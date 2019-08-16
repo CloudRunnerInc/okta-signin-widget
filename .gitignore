@@ -1,7 +1,7 @@
 node_modules
 npm-debug.log
 yarn-error.log
-target
+target*
 build2
 .grunt
 .sass-cache
@@ -15,3 +15,4 @@ packages/@okta/courage-dist/*.html
 packages/@okta/courage-dist/*.map
 .yalc
 .env
+packages/@okta/i18n/dist/json/

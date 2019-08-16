@@ -2,11 +2,14 @@
 const { resolve } = require('path');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const { BannerPlugin } = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const PACKAGE_JSON = require('./package.json');
 
 const EMPTY = resolve(__dirname, 'src/empty');
 const SHARED_JS = resolve(__dirname, 'node_modules/@okta/courage/src');
+const COURAGE_DIST = resolve(__dirname, 'node_modules/@okta/courage/dist');
 const PUBLISH_DIR = resolve(__dirname, '../courage-dist');
+const I18N_DIR = resolve(__dirname, '../i18n');
 const DIST_FILE_NAME = 'okta';
 
 const EXTERNAL_PATHS = [
@@ -73,7 +76,24 @@ const webpackConfig = {
       openAnalyzer: false,
       reportFilename: `${DIST_FILE_NAME}.html`,
       analyzerMode: 'static',
-    })
+    }),
+    new CopyWebpackPlugin([
+      {
+        from: `${SHARED_JS}/vendor/lib/jquery-1.12.4.js`,
+        to: `${PUBLISH_DIR}/jquery.js`,
+        toType: 'file',
+      },
+      {
+        from: `${COURAGE_DIST}/properties/country.properties`,
+        to: `${I18N_DIR}/dist/properties/country.properties`,
+      },
+      {
+        context: `${COURAGE_DIST}/properties/translations/`,
+        from: 'country_*.properties',
+        to: `${I18N_DIR}/dist/properties/`,
+      }
+    ]),
+
   ]
 
 };

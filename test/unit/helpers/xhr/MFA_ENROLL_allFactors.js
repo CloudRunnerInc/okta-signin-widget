@@ -182,6 +182,13 @@ define({
         "factorType": "webauthn",
         "provider": "FIDO",
         "vendorName": "FIDO",
+        "policy": {
+          "enrollment": {
+            "enrolled": 0,
+            "minimum": 0,
+            "maximum": 2
+          }
+        },
         "_links": {
           "enroll": {
             "href": "https:\/\/foo.com\/api\/v1\/authn\/factors",
@@ -254,6 +261,22 @@ define({
           "user":"inca@clouditude.net"
        }
     }, {
+        "enrollment": "OPTIONAL",
+        "status": "NOT_SETUP",
+        "factorType":"claims_provider",
+        "provider":"CUSTOM",
+        "vendorName":"IDP factor",
+        "_links":{
+          "enroll":{
+            "href":"http://rain.okta1.com:1802/api/v1/authn/factors",
+            "hints":{
+              "allow":[
+                "POST"
+              ]
+            }
+          }
+        }
+     }, {
         "enrollment": "OPTIONAL",
         "status": "NOT_SETUP",
         "factorType": "token:hotp",
