@@ -116,7 +116,7 @@
     "webpack-dev-server": "2.11.3"
   },
   "dependencies": {
-    "@okta/okta-auth-js": "https://github.com/CloudRunnerInc/okta-auth-js.git",
+    "@okta/okta-auth-js": "https://github.com/CloudRunnerInc/okta-auth-js.git#okta-url-option",
     "babel-polyfill": "^6.23.0",
     "babel-runtime": "^6.26.0",
     "grunt-properties-to-json": "^0.6.0",
