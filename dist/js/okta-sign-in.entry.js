@@ -12611,84 +12611,6 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 
 /***/ }),
 /* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var global = __webpack_require__(10);
-var core = __webpack_require__(6);
-var ctx = __webpack_require__(42);
-var hide = __webpack_require__(22);
-var has = __webpack_require__(23);
-var PROTOTYPE = 'prototype';
-
-var $export = function (type, name, source) {
-  var IS_FORCED = type & $export.F;
-  var IS_GLOBAL = type & $export.G;
-  var IS_STATIC = type & $export.S;
-  var IS_PROTO = type & $export.P;
-  var IS_BIND = type & $export.B;
-  var IS_WRAP = type & $export.W;
-  var exports = IS_GLOBAL ? core : core[name] || (core[name] = {});
-  var expProto = exports[PROTOTYPE];
-  var target = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE];
-  var key, own, out;
-  if (IS_GLOBAL) source = name;
-  for (key in source) {
-    // contains in native
-    own = !IS_FORCED && target && target[key] !== undefined;
-    if (own && has(exports, key)) continue;
-    // export native or passed
-    out = own ? target[key] : source[key];
-    // prevent global pollution for namespaces
-    exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
-    // bind timers to global for call from export context
-    : IS_BIND && own ? ctx(out, global)
-    // wrap global constructors for prevent change them in library
-    : IS_WRAP && target[key] == out ? (function (C) {
-      var F = function (a, b, c) {
-        if (this instanceof C) {
-          switch (arguments.length) {
-            case 0: return new C();
-            case 1: return new C(a);
-            case 2: return new C(a, b);
-          } return new C(a, b, c);
-        } return C.apply(this, arguments);
-      };
-      F[PROTOTYPE] = C[PROTOTYPE];
-      return F;
-    // make static versions for prototype methods
-    })(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
-    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
-    if (IS_PROTO) {
-      (exports.virtual || (exports.virtual = {}))[key] = out;
-      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
-      if (type & $export.R && expProto && !expProto[key]) hide(expProto, key, out);
-    }
-  }
-};
-// type bitmap
-$export.F = 1;   // forced
-$export.G = 2;   // global
-$export.S = 4;   // static
-$export.P = 8;   // proto
-$export.B = 16;  // bind
-$export.W = 32;  // wrap
-$export.U = 64;  // safe
-$export.R = 128; // real proto method for `library`
-module.exports = $export;
-
-
-/***/ }),
-/* 15 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// Thank's IE8 for his funny defineProperty
-module.exports = !__webpack_require__(27)(function () {
-  return Object.defineProperty({}, 'a', { get: function () { return 7; } }).a != 7;
-});
-
-
-/***/ }),
-/* 16 */
 /***/ (function(module, exports) {
 
 /*!
@@ -12820,15 +12742,19 @@ util.genRandomString = function(length) {
 };
 
 util.extend = function() {
+  // First object will be modified!
   var obj1 = arguments[0];
+  // Properties from other objects will be copied over
   var objArray = [].slice.call(arguments, 1);
   objArray.forEach(function(obj) {
     for (var prop in obj) {
-      if (obj.hasOwnProperty(prop)) {
+      // copy over all properties with defined values
+      if (obj.hasOwnProperty(prop) && obj[prop] !== undefined) {
         obj1[prop] = obj[prop];
       }
     }
   });
+  return obj1; // return the modified object
 };
 
 util.removeNils = function(obj) {
@@ -12964,6 +12890,84 @@ util.isFunction = function(fn) {
 
 
 /***/ }),
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var global = __webpack_require__(10);
+var core = __webpack_require__(6);
+var ctx = __webpack_require__(42);
+var hide = __webpack_require__(22);
+var has = __webpack_require__(23);
+var PROTOTYPE = 'prototype';
+
+var $export = function (type, name, source) {
+  var IS_FORCED = type & $export.F;
+  var IS_GLOBAL = type & $export.G;
+  var IS_STATIC = type & $export.S;
+  var IS_PROTO = type & $export.P;
+  var IS_BIND = type & $export.B;
+  var IS_WRAP = type & $export.W;
+  var exports = IS_GLOBAL ? core : core[name] || (core[name] = {});
+  var expProto = exports[PROTOTYPE];
+  var target = IS_GLOBAL ? global : IS_STATIC ? global[name] : (global[name] || {})[PROTOTYPE];
+  var key, own, out;
+  if (IS_GLOBAL) source = name;
+  for (key in source) {
+    // contains in native
+    own = !IS_FORCED && target && target[key] !== undefined;
+    if (own && has(exports, key)) continue;
+    // export native or passed
+    out = own ? target[key] : source[key];
+    // prevent global pollution for namespaces
+    exports[key] = IS_GLOBAL && typeof target[key] != 'function' ? source[key]
+    // bind timers to global for call from export context
+    : IS_BIND && own ? ctx(out, global)
+    // wrap global constructors for prevent change them in library
+    : IS_WRAP && target[key] == out ? (function (C) {
+      var F = function (a, b, c) {
+        if (this instanceof C) {
+          switch (arguments.length) {
+            case 0: return new C();
+            case 1: return new C(a);
+            case 2: return new C(a, b);
+          } return new C(a, b, c);
+        } return C.apply(this, arguments);
+      };
+      F[PROTOTYPE] = C[PROTOTYPE];
+      return F;
+    // make static versions for prototype methods
+    })(out) : IS_PROTO && typeof out == 'function' ? ctx(Function.call, out) : out;
+    // export proto methods to core.%CONSTRUCTOR%.methods.%NAME%
+    if (IS_PROTO) {
+      (exports.virtual || (exports.virtual = {}))[key] = out;
+      // export proto methods to core.%CONSTRUCTOR%.prototype.%NAME%
+      if (type & $export.R && expProto && !expProto[key]) hide(expProto, key, out);
+    }
+  }
+};
+// type bitmap
+$export.F = 1;   // forced
+$export.G = 2;   // global
+$export.S = 4;   // static
+$export.P = 8;   // proto
+$export.B = 16;  // bind
+$export.W = 32;  // wrap
+$export.U = 64;  // safe
+$export.R = 128; // real proto method for `library`
+module.exports = $export;
+
+
+/***/ }),
+/* 16 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// Thank's IE8 for his funny defineProperty
+module.exports = !__webpack_require__(27)(function () {
+  return Object.defineProperty({}, 'a', { get: function () { return 7; } }).a != 7;
+});
+
+
+/***/ }),
 /* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -13049,7 +13053,7 @@ var IE8_DOM_DEFINE = __webpack_require__(77);
 var toPrimitive = __webpack_require__(58);
 var dP = Object.defineProperty;
 
-exports.f = __webpack_require__(15) ? Object.defineProperty : function defineProperty(O, P, Attributes) {
+exports.f = __webpack_require__(16) ? Object.defineProperty : function defineProperty(O, P, Attributes) {
   anObject(O);
   P = toPrimitive(P, true);
   anObject(Attributes);
@@ -13102,7 +13106,7 @@ module.exports = AuthSdkError;
 
 var dP = __webpack_require__(20);
 var createDesc = __webpack_require__(44);
-module.exports = __webpack_require__(15) ? function (object, key, value) {
+module.exports = __webpack_require__(16) ? function (object, key, value) {
   return dP.f(object, key, createDesc(1, value));
 } : function (object, key, value) {
   object[key] = value;
@@ -13329,7 +13333,7 @@ module.exports = {
   "TOKEN_STORAGE_NAME": "okta-token-storage",
   "CACHE_STORAGE_NAME": "okta-cache-storage",
   "PKCE_STORAGE_NAME": "okta-pkce-storage",
-  "SDK_VERSION": "2.7.0"
+  "SDK_VERSION": "2.6.3"
 };
 
 /***/ }),
@@ -13350,7 +13354,7 @@ module.exports = {
  */
 
 /* eslint-disable complexity */
-var util = __webpack_require__(16);
+var util = __webpack_require__(14);
 var Q = __webpack_require__(4);
 var AuthApiError = __webpack_require__(152);
 var config = __webpack_require__(30);
@@ -26892,7 +26896,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;
 "use strict";
 
 var LIBRARY = __webpack_require__(33);
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 var redefine = __webpack_require__(78);
 var hide = __webpack_require__(22);
 var Iterators = __webpack_require__(28);
@@ -26965,7 +26969,7 @@ module.exports = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCE
 /* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = !__webpack_require__(15) && !__webpack_require__(27)(function () {
+module.exports = !__webpack_require__(16) && !__webpack_require__(27)(function () {
   return Object.defineProperty(__webpack_require__(57)('div'), 'a', { get: function () { return 7; } }).a != 7;
 });
 
@@ -27258,7 +27262,7 @@ module.exports = storageBuilder;
 
 /* eslint-disable complexity, max-statements */
 var http              = __webpack_require__(31);
-var util              = __webpack_require__(16);
+var util              = __webpack_require__(14);
 var Q                 = __webpack_require__(4);
 var AuthSdkError      = __webpack_require__(21);
 var AuthPollStopError = __webpack_require__(153);
@@ -27620,7 +27624,7 @@ module.exports = {
 
 /* eslint-disable complexity, max-statements */
 var http = __webpack_require__(31);
-var util = __webpack_require__(16);
+var util = __webpack_require__(14);
 var storageUtil = __webpack_require__(36);
 var AuthSdkError = __webpack_require__(21);
 
@@ -29031,7 +29035,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 /***/ (function(module, exports, __webpack_require__) {
 
 // most Object methods by ES6 should accept primitives
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 var core = __webpack_require__(6);
 var fails = __webpack_require__(27);
 module.exports = function (KEY, exec) {
@@ -30266,7 +30270,7 @@ var dP = __webpack_require__(20);
 var anObject = __webpack_require__(17);
 var getKeys = __webpack_require__(29);
 
-module.exports = __webpack_require__(15) ? Object.defineProperties : function defineProperties(O, Properties) {
+module.exports = __webpack_require__(16) ? Object.defineProperties : function defineProperties(O, Properties) {
   anObject(O);
   var keys = getKeys(Properties);
   var length = keys.length;
@@ -30421,8 +30425,8 @@ module.exports = __webpack_require__(6).Symbol;
 // ECMAScript 6 symbols shim
 var global = __webpack_require__(10);
 var has = __webpack_require__(23);
-var DESCRIPTORS = __webpack_require__(15);
-var $export = __webpack_require__(14);
+var DESCRIPTORS = __webpack_require__(16);
+var $export = __webpack_require__(15);
 var redefine = __webpack_require__(78);
 var META = __webpack_require__(84).KEY;
 var $fails = __webpack_require__(27);
@@ -30734,7 +30738,7 @@ var has = __webpack_require__(23);
 var IE8_DOM_DEFINE = __webpack_require__(77);
 var gOPD = Object.getOwnPropertyDescriptor;
 
-exports.f = __webpack_require__(15) ? gOPD : function getOwnPropertyDescriptor(O, P) {
+exports.f = __webpack_require__(16) ? gOPD : function getOwnPropertyDescriptor(O, P) {
   O = toIObject(O);
   P = toPrimitive(P, true);
   if (IE8_DOM_DEFINE) try {
@@ -30773,9 +30777,9 @@ module.exports = function defineProperty(it, key, desc) {
 /* 139 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 // 19.1.2.4 / 15.2.3.6 Object.defineProperty(O, P, Attributes)
-$export($export.S + $export.F * !__webpack_require__(15), 'Object', { defineProperty: __webpack_require__(20).f });
+$export($export.S + $export.F * !__webpack_require__(16), 'Object', { defineProperty: __webpack_require__(20).f });
 
 
 /***/ }),
@@ -33540,13 +33544,14 @@ var session           = __webpack_require__(154);
 var token             = __webpack_require__(155);
 var TokenManager      = __webpack_require__(159);
 var tx                = __webpack_require__(90);
-var clock             = __webpack_require__(161);
-var util              = __webpack_require__(16);
+var util              = __webpack_require__(14);
 
 function OktaAuthBuilder(args) {
   var sdk = this;
 
   var url = builderUtil.getValidUrl(args);
+  // OKTA-242989: support for grantType will be removed in 3.0 
+  var usePKCE = args.pkce || args.grantType === 'authorization_code';
   this.options = {
     url: util.removeTrailingSlash(url),
     oktaUrl: args.oktaUrl,
@@ -33555,7 +33560,7 @@ function OktaAuthBuilder(args) {
     authorizeUrl: util.removeTrailingSlash(args.authorizeUrl),
     userinfoUrl: util.removeTrailingSlash(args.userinfoUrl),
     tokenUrl: util.removeTrailingSlash(args.tokenUrl),
-    grantType: args.grantType,
+    pkce: usePKCE,
     redirectUri: args.redirectUri,
     httpRequestClient: args.httpRequestClient,
     storageUtil: args.storageUtil,
@@ -33563,7 +33568,7 @@ function OktaAuthBuilder(args) {
     headers: args.headers
   };
 
-  if (this.options.grantType === 'authorization_code' && !sdk.features.isPKCESupported()) {
+  if (this.options.pkce && !sdk.features.isPKCESupported()) {
     throw new AuthSdkError('This browser doesn\'t support PKCE');
   }
 
@@ -33581,12 +33586,6 @@ function OktaAuthBuilder(args) {
   } else {
     this.options.maxClockSkew = args.maxClockSkew;
   }
-
-  // Calculated local clock offset from server time (in milliseconds). Can be positive or negative.
-  this.options.localClockOffset = args.localClockOffset || 0;
-  sdk.clock = {
-    now: util.bind(clock.getLocalAdjustedTime, null, sdk)
-  };
 
   // Give the developer the ability to disable token signature
   // validation.
@@ -33953,7 +33952,7 @@ if (!Array.isArray) {
 
 var AuthSdkError = __webpack_require__(21);
 var tx = __webpack_require__(90);
-var util = __webpack_require__(16);
+var util = __webpack_require__(14);
 
 function getValidUrl(args) {
   if (!args) {
@@ -34111,7 +34110,7 @@ module.exports = AuthPollStopError;
  *
  */
 
-var util = __webpack_require__(16);
+var util = __webpack_require__(14);
 var http = __webpack_require__(31);
 
 function sessionExists(sdk) {
@@ -34197,7 +34196,7 @@ module.exports = {
 
 /* eslint-disable complexity, max-statements */
 var http          = __webpack_require__(31);
-var util          = __webpack_require__(16);
+var util          = __webpack_require__(14);
 var oauthUtil     = __webpack_require__(91);
 var Q             = __webpack_require__(4);
 var sdkCrypto     = __webpack_require__(156);
@@ -34205,7 +34204,7 @@ var AuthSdkError  = __webpack_require__(21);
 var OAuthError    = __webpack_require__(157);
 var config        = __webpack_require__(30);
 var cookies       = __webpack_require__(36).storage;
-var pkce          = __webpack_require__(158);
+var PKCE          = __webpack_require__(158);
 
 function decodeToken(token) {
   var jwt = token.split('.');
@@ -34315,21 +34314,20 @@ function addFragmentListener(sdk, windowEl, timeout) {
 function exchangeCodeForToken(sdk, oauthParams, authorizationCode, urls) {
   // PKCE authorization_code flow
   // Retrieve saved values and build oauthParams for call to /token
-  var meta = pkce.loadMeta(sdk);
+  var meta = PKCE.loadMeta(sdk);
   var getTokenParams = {
     clientId: oauthParams.clientId,
-    grantType: 'authorization_code',
     authorizationCode: authorizationCode,
     codeVerifier: meta.codeVerifier,
     redirectUri: meta.redirectUri
   };
-  return pkce.getToken(sdk, getTokenParams, urls)
+  return PKCE.getToken(sdk, getTokenParams, urls)
   .then(function(res) {
     validateResponse(res, getTokenParams);
     return res;
   })
   .fin(function() {
-    pkce.clearMeta(sdk);
+    PKCE.clearMeta(sdk);
   });
 }
 
@@ -34429,29 +34427,18 @@ function handleOAuthResponse(sdk, oauthParams, res, urls) {
   });
 }
 
-function getDefaultOAuthParams(sdk, oauthOptions) {
-  oauthOptions = util.clone(oauthOptions) || {};
-
-  var grantType = sdk.options.grantType || 'implicit';
-  var responseType = grantType === 'authorization_code' ? 'code' : 'id_token';
-  var defaults = {
-    grantType: grantType,
+function getDefaultOAuthParams(sdk) {
+  return {
+    pkce: sdk.options.pkce || false,
     clientId: sdk.options.clientId,
     redirectUri: sdk.options.redirectUri || window.location.href,
-    responseType: responseType,
+    responseType: 'id_token',
     responseMode: 'okta_post_message',
     state: oauthUtil.generateState(),
     nonce: oauthUtil.generateNonce(),
     scopes: ['openid', 'email'],
     ignoreSignature: sdk.options.ignoreSignature
   };
-  util.extend(defaults, oauthOptions);
-
-  if (defaults.grantType === 'authorization_code' && !defaults.codeChallengeMethod) {
-    defaults.codeChallengeMethod = pkce.DEFAULT_CODE_CHALLENGE_METHOD;
-  }
-
-  return defaults;
 }
 
 function convertOAuthParamsToQueryParams(oauthParams) {
@@ -34705,27 +34692,34 @@ function getWithPopup(sdk, oauthOptions, options) {
 }
 
 function prepareOauthParams(sdk, oauthOptions) {
-  var oauthParams = getDefaultOAuthParams(sdk, oauthOptions);
+  // clone and prepare options
+  oauthOptions = util.clone(oauthOptions) || {};
 
-  var responseType = oauthParams.responseType;
-  if (typeof responseType === 'string') {
-    responseType = [responseType];
+  // OKTA-242989: support for grantType will be removed in 3.0 
+  if (oauthOptions.grantType === 'authorization_code') {
+    oauthOptions.pkce = true;
   }
 
-  if (oauthParams.grantType !== 'authorization_code') {
-    if (responseType.includes('code')) {
-      return Q.reject(new AuthSdkError('When responseType is "code", grantType should be "authorization_code"'));
-    }
+  // build params using defaults + options
+  var oauthParams = getDefaultOAuthParams(sdk);
+  util.extend(oauthParams, oauthOptions);
+
+  if (oauthParams.pkce !== true) {
     return Q.resolve(oauthParams);
   }
 
+  // PKCE flow
   if (!sdk.features.isPKCESupported()) {
     return Q.reject(new AuthSdkError('This browser doesn\'t support PKCE'));
   }
 
-  if (responseType.length !== 1 || responseType[0] !== 'code') {
-    return Q.reject(new AuthSdkError('When grantType is "authorization_code", responseType should be "code"'));
+  // set default code challenge method, if none provided
+  if (!oauthParams.codeChallengeMethod) {
+    oauthParams.codeChallengeMethod = PKCE.DEFAULT_CODE_CHALLENGE_METHOD;
   }
+
+  // responseType is forced
+  oauthParams.responseType = 'code';
 
   return oauthUtil.getWellKnown(sdk, null)
     .then(function(res) {
@@ -34736,20 +34730,20 @@ function prepareOauthParams(sdk, oauthOptions) {
     })
     .then(function() {
       // PKCE authorization_code flow
-      var codeVerifier = pkce.generateVerifier(oauthParams.codeVerifier);
+      var codeVerifier = PKCE.generateVerifier(oauthParams.codeVerifier);
 
       // We will need these values after redirect when we call /token
       var meta = {
         codeVerifier: codeVerifier,
         redirectUri: oauthParams.redirectUri
       };
-      pkce.saveMeta(sdk, meta);
+      PKCE.saveMeta(sdk, meta);
 
-      return pkce.computeChallenge(codeVerifier);
+      return PKCE.computeChallenge(codeVerifier);
     })
     .then(function(codeChallenge) {
 
-      // Clone/copy the params. Set codeChallenge and responseType for authorization_code
+      // Clone/copy the params. Set codeChallenge
       var clonedParams = util.clone(oauthParams) || {};
       util.extend(clonedParams, oauthParams, {
         codeChallenge: codeChallenge,
@@ -34760,11 +34754,22 @@ function prepareOauthParams(sdk, oauthOptions) {
 
 function getWithRedirect(sdk, oauthOptions, options) {
   oauthOptions = util.clone(oauthOptions) || {};
-  if (!oauthOptions.responseMode) {
-    oauthOptions.responseMode = 'fragment';
-  }
+
   return prepareOauthParams(sdk, oauthOptions)
     .then(function(oauthParams) {
+
+      // Dynamically set the responseMode unless the user has provided one
+      // Server-side flow requires query. Client-side apps usually prefer fragment.
+      if (!oauthOptions.responseMode) {
+        if (oauthParams.responseType.includes('code') && !oauthParams.pkce) {
+          // server-side flows using authorization_code
+          oauthParams.responseMode = 'query';
+        } else {
+          // general case, client-side flow.
+          oauthParams.responseMode = 'fragment';
+        }
+      }
+
       var urls = oauthUtil.getOAuthUrls(sdk, oauthParams, options);
       var requestUrl = urls.authorizeUrl + buildAuthorizeParams(oauthParams);
 
@@ -34796,7 +34801,7 @@ function renewToken(sdk, token) {
   }
 
   var responseType;
-  if (sdk.options.grantType === 'authorization_code') {
+  if (sdk.options.pkce) {
     responseType = 'code';
   } else if (token.accessToken) {
     responseType = 'token';
@@ -34924,7 +34929,7 @@ module.exports = {
  * See the License for the specific language governing permissions and limitations under the License.
  */
 
-var util = __webpack_require__(16);
+var util = __webpack_require__(14);
 
 function verifyToken(idToken, key) {
   key = util.clone(key);
@@ -35017,7 +35022,7 @@ module.exports = OAuthError;
  /* eslint-disable complexity, max-statements */
 var AuthSdkError  = __webpack_require__(21);
 var http          = __webpack_require__(31);
-var util          = __webpack_require__(16);
+var util          = __webpack_require__(14);
 
 // Code verifier: Random URL-safe string with a minimum length of 43 characters.
 // Code challenge: Base64 URL-encoded SHA-256 hash of the code verifier.
@@ -35088,10 +35093,6 @@ function validateOptions(oauthOptions) {
   if (!oauthOptions.codeVerifier) {
     throw new AuthSdkError('The "codeVerifier" (generated and saved by your app) must be passed to /token');
   }
-
-  if (oauthOptions.grantType !== 'authorization_code') {
-    throw new AuthSdkError('Expecting "grantType" to equal "authorization_code"');
-  }
 }
 
 function getPostData(options) {
@@ -35099,7 +35100,7 @@ function getPostData(options) {
   var params = util.removeNils({
     'client_id': options.clientId,
     'redirect_uri': options.redirectUri,
-    'grant_type': options.grantType,
+    'grant_type': 'authorization_code',
     'code': options.authorizationCode,
     'code_verifier': options.codeVerifier
   });
@@ -35152,13 +35153,30 @@ module.exports = {
  */
 
 /* eslint complexity:[0,8] max-statements:[0,21] */
-var util = __webpack_require__(16);
+var util = __webpack_require__(14);
 var AuthSdkError = __webpack_require__(21);
 var storageUtil = __webpack_require__(36);
 var Q = __webpack_require__(4);
 var Emitter = __webpack_require__(160);
 var config = __webpack_require__(30);
 var storageBuilder = __webpack_require__(89);
+var SdkClock = __webpack_require__(161);
+
+var DEFAULT_OPTIONS = {
+  autoRenew: true,
+  storage: 'localStorage',
+  expireEarlySeconds: 30
+};
+
+function getExpireTime(tokenMgmtRef, token) {
+  var expireTime = token.expiresAt - tokenMgmtRef.options.expireEarlySeconds;
+  return expireTime;
+}
+
+function hasExpired(tokenMgmtRef, token) {
+  var expireTime = getExpireTime(tokenMgmtRef, token);
+  return expireTime <= tokenMgmtRef.clock.now();
+}
 
 function emitExpired(tokenMgmtRef, key, token) {
   tokenMgmtRef.emitter.emit('expired', key, token);
@@ -35187,7 +35205,8 @@ function clearExpireEventTimeoutAll(tokenMgmtRef) {
 }
 
 function setExpireEventTimeout(sdk, tokenMgmtRef, key, token) {
-  var expireEventWait = Math.max(token.expiresAt - sdk.clock.now(), 0) * 1000;
+  var expireTime = getExpireTime(tokenMgmtRef, token);
+  var expireEventWait = Math.max(expireTime - tokenMgmtRef.clock.now(), 0) * 1000;
 
   // Clear any existing timeout
   clearExpireEventTimeout(tokenMgmtRef, key);
@@ -35240,11 +35259,11 @@ function get(storage, key) {
 function getAsync(sdk, tokenMgmtRef, storage, key) {
   return Q.Promise(function(resolve) {
     var token = get(storage, key);
-    if (!token || token.expiresAt > sdk.clock.now()) {
+    if (!token || !hasExpired(tokenMgmtRef, token)) {
       return resolve(token);
     }
 
-    var tokenPromise = tokenMgmtRef.autoRenew
+    var tokenPromise = tokenMgmtRef.options.autoRenew
       ? renew(sdk, tokenMgmtRef, storage, key)
       : remove(tokenMgmtRef, storage, key);
 
@@ -35319,11 +35338,7 @@ function clear(tokenMgmtRef, storage) {
 }
 
 function TokenManager(sdk, options) {
-  options = options || {};
-  options.storage = options.storage || 'localStorage';
-  if (!options.autoRenew && options.autoRenew !== false) {
-    options.autoRenew = true;
-  }
+  options = util.extend({}, DEFAULT_OPTIONS, util.removeNils(options));
 
   if (options.storage === 'localStorage' && !storageUtil.browserHasLocalStorage()) {
     util.warn('This browser doesn\'t support localStorage. Switching to sessionStorage.');
@@ -35350,9 +35365,11 @@ function TokenManager(sdk, options) {
       throw new AuthSdkError('Unrecognized storage option');
   }
 
+  var clock = SdkClock.create(sdk, options);
   var tokenMgmtRef = {
+    clock: clock,
+    options: options,
     emitter: new Emitter(),
-    autoRenew: options.autoRenew,
     expireTimeouts: {},
     renewPromise: {}
   };
@@ -35445,17 +35462,31 @@ module.exports = E;
 
 /***/ }),
 /* 161 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-function getLocalAdjustedTime(sdk) {
-  var localClockOffset = parseInt(sdk.options.localClockOffset || 0);
-  var now = (Date.now() + localClockOffset) / 1000;
-  return now;
+var util = __webpack_require__(14);
+
+function SdkClock(localOffset) {
+  // Calculated local clock offset from server time (in milliseconds). Can be positive or negative.
+  this.localOffset = parseInt(localOffset || 0);
 }
 
-module.exports = {
-  getLocalAdjustedTime: getLocalAdjustedTime
+util.extend(SdkClock.prototype, {
+  // Return the current time (in seconds)
+  now: function() {
+    var now = (Date.now() + this.localOffset) / 1000;
+    return now;
+  }
+});
+
+// factory method. Create an instance of a clock from current context.
+SdkClock.create = function(/* sdk, options */) {
+  // TODO: calculate localOffset
+  var localOffset = 0;
+  return new SdkClock(localOffset);
 };
+
+module.exports = SdkClock;
 
 
 /***/ }),
@@ -37896,7 +37927,7 @@ module.exports = __webpack_require__(6).Object.assign;
 /***/ (function(module, exports, __webpack_require__) {
 
 // 19.1.3.1 Object.assign(target, source)
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 
 $export($export.S + $export.F, 'Object', { assign: __webpack_require__(181) });
 
@@ -37908,7 +37939,7 @@ $export($export.S + $export.F, 'Object', { assign: __webpack_require__(181) });
 "use strict";
 
 // 19.1.2.1 Object.assign(target, source, ...)
-var DESCRIPTORS = __webpack_require__(15);
+var DESCRIPTORS = __webpack_require__(16);
 var getKeys = __webpack_require__(29);
 var gOPS = __webpack_require__(64);
 var pIE = __webpack_require__(35);
@@ -38086,7 +38117,7 @@ module.exports = __webpack_require__(6).Object.entries;
 /***/ (function(module, exports, __webpack_require__) {
 
 // https://github.com/tc39/proposal-object-values-entries
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 var $entries = __webpack_require__(190)(true);
 
 $export($export.S, 'Object', {
@@ -38100,7 +38131,7 @@ $export($export.S, 'Object', {
 /* 190 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var DESCRIPTORS = __webpack_require__(15);
+var DESCRIPTORS = __webpack_require__(16);
 var getKeys = __webpack_require__(29);
 var toIObject = __webpack_require__(24);
 var isEnum = __webpack_require__(35).f;
@@ -39929,7 +39960,7 @@ module.exports = __webpack_require__(6).Number.isInteger;
 /***/ (function(module, exports, __webpack_require__) {
 
 // 20.1.2.3 Number.isInteger(number)
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 
 $export($export.S, 'Number', { isInteger: __webpack_require__(211) });
 
@@ -43678,7 +43709,7 @@ var LIBRARY = __webpack_require__(33);
 var global = __webpack_require__(10);
 var ctx = __webpack_require__(42);
 var classof = __webpack_require__(67);
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 var isObject = __webpack_require__(18);
 var aFunction = __webpack_require__(43);
 var anInstance = __webpack_require__(242);
@@ -44164,7 +44195,7 @@ module.exports = function (target, src, safe) {
 var global = __webpack_require__(10);
 var core = __webpack_require__(6);
 var dP = __webpack_require__(20);
-var DESCRIPTORS = __webpack_require__(15);
+var DESCRIPTORS = __webpack_require__(16);
 var SPECIES = __webpack_require__(11)('species');
 
 module.exports = function (KEY) {
@@ -44211,7 +44242,7 @@ module.exports = function (exec, skipClosing) {
 "use strict";
 // https://github.com/tc39/proposal-promise-finally
 
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 var core = __webpack_require__(6);
 var global = __webpack_require__(10);
 var speciesConstructor = __webpack_require__(107);
@@ -44238,7 +44269,7 @@ $export($export.P + $export.R, 'Promise', { 'finally': function (onFinally) {
 "use strict";
 
 // https://github.com/tc39/proposal-promise-try
-var $export = __webpack_require__(14);
+var $export = __webpack_require__(15);
 var newPromiseCapability = __webpack_require__(74);
 var perform = __webpack_require__(109);
 
